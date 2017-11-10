@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 {
 	struct ev_loop *loop = EV_DEFAULT;
 	ev_signal *sig_watcher = NULL;
-	struct uh_server *srv;
+	struct uh_server *srv = NULL;
 
 	uh_log_info("libuhttp version: %s\n", uh_version());
 
@@ -46,15 +46,19 @@ int main(int argc, char **argv)
 	srv = uh_server_new(loop, "0.0.0.0", 8000);
 	if (!srv) {
 		uh_log_err("uh_server_new failed\n");
-		return -1;
+		goto err;
 	}
 
+	if (uh_ssl_init(srv, "server.pem", "server.key") < 0)
+		goto err;
+	
 	uh_register_route(srv, "/test", route_test);
 	
 	uh_log_info("Listen on 8000...\n");
 	
 	ev_run(loop, 0);
-
+	
+err:
 	free(sig_watcher);
 	uh_server_free(srv);
 	

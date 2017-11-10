@@ -1,14 +1,13 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <unistd.h>
 #include <assert.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <http_parser.h>
 
 #include "uhttp.h"
 #include "uhttp_internal.h"
+#include "uhttp_ssl.h"
 
 static struct {
 	int code;
@@ -61,6 +60,8 @@ static void uh_connection_destroy(struct uh_connection *con)
 		ev_timer_stop(loop, &con->timer_watcher);
 
 		list_del(&con->list);
+
+		uh_ssl_free(con);
 		free(con);
 	}
 }
@@ -201,9 +202,9 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
 
 	base = buf->base + buf->len;
 	
-	len = read(w->fd, base, UH_BUFFER_SIZE);
+	len = uh_ssl_read(con, base, UH_BUFFER_SIZE);
 	if (unlikely(len < 0)) {
-		if (errno == EINTR)
+		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
 			return;
 		uh_log_err("read");
 		uh_send_error(con, 500, NULL);
@@ -234,7 +235,7 @@ static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
 	struct uh_buf *buf = &con->write_buf;
 	
 	if (buf->len > 0) {
-		int len = write(w->fd, buf->base, buf->len);
+		int len = uh_ssl_write(con, buf->base, buf->len);
 		uh_buf_remove(buf, len);
 	}
 
@@ -252,8 +253,6 @@ static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
 static void uh_accept_cb(struct ev_loop *loop, ev_io *w, int revents)
 {
 	int sock = -1;
-	struct sockaddr_in addr;
-	socklen_t addr_len = sizeof(addr);
 	struct uh_server *srv = container_of(w, struct uh_server, read_watcher);
 	struct uh_connection *con = NULL;
 	ev_io *read_watcher, *write_watcher;
@@ -268,14 +267,12 @@ static void uh_accept_cb(struct ev_loop *loop, ev_io *w, int revents)
 	con->srv = srv;
 	list_add(&con->list, &srv->connections);
 		
-	sock = accept4(w->fd, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+	sock = uh_ssl_accept(srv, con);
 	if (unlikely(sock < 0)) {
-		if (errno != EINTR)
+		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
 			uh_log_err("accept");
 		goto err;
 	}
-
-	con->sock = sock;
 
 	read_watcher = &con->read_watcher;
 	ev_io_init(read_watcher, connection_read_cb, sock, EV_READ);
@@ -372,6 +369,8 @@ void uh_server_free(struct uh_server *srv)
 			free(r->path);
 			free(r);
 		}
+
+		uh_ssl_ctx_free(srv);
 		
 		free(srv);
 	}

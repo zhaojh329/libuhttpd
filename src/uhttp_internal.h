@@ -1,6 +1,8 @@
 #ifndef _UHTTP_INTERNAL_H
 #define _UHTTP_INTERNAL_H
 
+#include <http_parser.h>
+
 #include "list.h"
 #include "uhttp.h"
 
@@ -21,6 +23,9 @@ struct uh_route {
 
 struct uh_server {
 	int sock;
+#if (UHTTP_SSL_ENABLED)	
+	void *ssl_ctx;
+#endif
 	ev_io read_watcher;
 	struct ev_loop *loop;
 	struct list_head routes;
@@ -41,6 +46,9 @@ struct uh_request {
 
 struct uh_connection {	
 	int sock;
+#if (UHTTP_SSL_ENABLED)	
+	void *ssl;
+#endif
 	unsigned char flags;
 	struct uh_buf read_buf;
 	struct uh_buf write_buf;
