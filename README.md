@@ -32,7 +32,8 @@ A very tiny and fast HTTP library based on [libev](http://software.schmorp.de/pk
 # [Example](https://github.com/zhaojh329/libuhttp/blob/master/example/helloworld.c)
 
 # Contributing
-If you would like to help making libuhttp better, see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttp/blob/master/CONTRIBUTING.md) file.
+If you would like to help making [libuhttp](https://github.com/zhaojh329/libuhttp) better,
+see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttp/blob/master/CONTRIBUTING.md) file.
 
 # Thanks for the following project
 * [libev](http://software.schmorp.de/pkg/libev.html)
