@@ -1,0 +1,5 @@
+[ req ]
+distinguished_name     = req_distinguished_name
+prompt                 = no
+[ req_distinguished_name ]
+CN                     = DONT USE - test cert for libuhttp

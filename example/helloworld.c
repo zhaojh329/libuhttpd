@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 		goto err;
 	}
 
-	if (uh_ssl_init(srv, "server.pem", "server.key") < 0)
+	if (uh_ssl_init(srv, "server-cert.pem", "server-key.pem") < 0)
 		goto err;
 	
 	uh_register_route(srv, "/test", route_test);

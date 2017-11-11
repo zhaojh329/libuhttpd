@@ -86,6 +86,7 @@ int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_
 struct uh_value *uh_get_url(struct uh_connection *con);
 struct uh_value *uh_get_header(struct uh_connection *con, const char *name);
 
+/* Init ssl for the server */
 int uh_ssl_init(struct uh_server *srv, const char *cert, const char *key);
 
 #endif
