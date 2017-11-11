@@ -23,7 +23,8 @@ A very tiny and fast HTTP library based on [libev](http://software.schmorp.de/pk
     make && sudo make install
 
 ## Test
-	$ ./example/helloworld
+	$ cd ../ && ./gen_cert.sh
+	$ ./build/example/helloworld
 	
 	Then use the command curl or browser to access https://127.0.0.1:8000/test
 	
