@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
+#include "uhttp_config.h"
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
@@ -14,7 +15,7 @@
  */
 #define uh_log(priority, format...) __uh_log(__FILENAME__, __LINE__, priority, format)
 
-#ifdef UH_DEBUG
+#if (UHTTP_DEBUG)
 #define uh_log_debug(format...)		uh_log(LOG_DEBUG, format)
 #else
 #define uh_log_debug(format...)

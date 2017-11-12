@@ -5,7 +5,6 @@ project(libuhttp C)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
-#add_definitions(-DUH_DEBUG)
 
 add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
 

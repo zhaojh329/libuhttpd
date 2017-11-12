@@ -56,6 +56,10 @@ Explicit use OpenSSL as its SSL backend
 Explicit use CyaSSl(wolfssl) as its SSL backend
 
 	~/libuhttp/build$ cmake .. -DUHTTP_USE_CYASSL=1
+
+Turn on debug
+
+	~/libuhttp/build$ cmake .. -DUHTTP_DEBUG=1
 	
 ## Build and install libuhttp
 

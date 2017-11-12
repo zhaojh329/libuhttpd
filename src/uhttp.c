@@ -148,18 +148,18 @@ static int on_message_complete(http_parser *parser)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
 	struct uh_route *r;
-#ifdef UH_DEBUG	
+#if (UHTTP_DEBUG)
 	int i;
 	struct uh_header *header = con->req.header;
 	
-	printf("Url:[%.*s]\n", (int)con->req.url.len, con->req.url.at);
+	uh_log_debug("Url:[%.*s]\n", (int)con->req.url.len, con->req.url.at);
 	
 	for (i = 0; i < con->req.header_num; i++) {
-		printf("[%.*s:%.*s]\n", (int)header[i].field.len, header[i].field.at,
+		uh_log_debug("[%.*s:%.*s]\n", (int)header[i].field.len, header[i].field.at,
 			(int)header[i].value.len, header[i].value.at);	
 	}
 
-	printf("Body:[%.*s]\n", (int)con->req.body.len, con->req.body.at);
+	uh_log_debug("Body:[%.*s]\n", (int)con->req.body.len, con->req.body.at);
 #endif
 
 	list_for_each_entry(r, &con->srv->routes, list) {
@@ -217,8 +217,8 @@ handshake_done:
 
 	buf->len += len;
 
-#ifdef UH_DEBUG
-	printf("read:[%.*s]\n", len, base);
+#if (UHTTP_DEBUG)
+	uh_log_debug("read:[%.*s]\n", len, base);
 #endif
 
 	parsered = http_parser_execute(&con->parser, &parser_settings, base, len);

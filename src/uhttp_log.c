@@ -20,7 +20,7 @@ void __uh_log(const char *filename, int line, int priority, const char *format, 
 
 
 
-#ifdef UH_DEBUG
+#if (UHTTP_DEBUG)
 	fprintf(stderr, "%s\n", buf);
 #else
 	if (priority == LOG_ERR)

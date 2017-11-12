@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 #include "uhttp_buf.h"
+#include "uhttp_log.h"
 
 int uh_buf_init(struct uh_buf *buf, size_t initial_size)
 {
@@ -29,6 +30,9 @@ int uh_buf_grow(struct uh_buf *buf, size_t size)
 	
 	buf->base = base;
 	buf->size += size;
+
+	uh_log_debug("uh_buf_grow:%p +%d", buf, size);
+	
 	return 0;
 }
 
