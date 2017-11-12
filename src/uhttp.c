@@ -214,7 +214,7 @@ handshake_done:
 #endif
 
 	if (!(con->flags & UH_CON_PARSERING)) {
-		if (!memmem(buf->base, len, "\r\n\r\n", 4))
+		if (!memmem(buf->base, buf->len, "\r\n\r\n", 4))
 			return;
 
 		con->flags |= UH_CON_PARSERING;
