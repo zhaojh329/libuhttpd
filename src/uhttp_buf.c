@@ -5,7 +5,11 @@
 int uh_buf_init(struct uh_buf *buf, size_t initial_size)
 {
 	buf->len = buf->size = 0;
-	buf->base = NULL;
+
+	if (buf->base) {
+		free(buf->base);
+		buf->base = NULL;
+	}
 
 	if (initial_size > 0) {
 		buf->base = malloc(initial_size);
