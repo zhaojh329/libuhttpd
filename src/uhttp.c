@@ -76,9 +76,6 @@ static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents
 static int on_message_begin(http_parser *parser)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
-	
-	uh_buf_init(&con->read_buf, UH_BUFFER_SIZE);
-	uh_buf_init(&con->write_buf, UH_BUFFER_SIZE);
 
 	memset(&con->req, 0, sizeof(struct uh_request));
 	
@@ -89,10 +86,9 @@ static int on_url(http_parser *parser, const char *at, size_t len)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
 	
-	if (!con->req.url.at)
-		con->req.url.at = at;
-
-	con->req.url.len += len;	
+	con->req.url.at = at;
+	con->req.url.len = len;
+	
     return 0;
 }
 
@@ -101,10 +97,8 @@ static int on_header_field(http_parser *parser, const char *at, size_t len)
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
 	struct uh_header *header = con->req.header;
 
-	if (!header[con->req.header_num].field.at) {
-		header[con->req.header_num].field.at = at;
-	}
-	header[con->req.header_num].field.len += len;
+	header[con->req.header_num].field.at = at;
+	header[con->req.header_num].field.len = len;
 	
     return 0;
 }
@@ -113,12 +107,10 @@ static int on_header_value(http_parser *parser, const char *at, size_t len)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
 	struct uh_header *header = con->req.header;
-
-	con->req.header_num += 1;
 	
-	if (!header[con->req.header_num - 1].value.at)
-		header[con->req.header_num - 1].value.at = at;
-	header[con->req.header_num - 1].value.len += len;
+	header[con->req.header_num].value.at = at;
+	header[con->req.header_num].value.len = len;
+	con->req.header_num += 1;
 	
     return 0;
 }
@@ -221,13 +213,24 @@ handshake_done:
 	uh_log_debug("read:[%.*s]\n", len, base);
 #endif
 
+	if (!(con->flags & UH_CON_PARSERING)) {
+		if (!memmem(buf->base, len, "\r\n\r\n", 4))
+			return;
+
+		con->flags |= UH_CON_PARSERING;
+		
+		base = buf->base;
+		len = buf->len;
+	}
+
+	printf("len:%d\n", len);
 	parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
 	if (unlikely(parsered != len)){
 		uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
 		uh_send_error(con, 400, NULL);
+	} else {
+		ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
 	}
-
-	ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
 }
 
 static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
