@@ -49,9 +49,11 @@ int main(int argc, char **argv)
 		goto err;
 	}
 
+#if (UHTTP_SSL_ENABLED)
 	if (uh_ssl_init(srv, "server-cert.pem", "server-key.pem") < 0)
 		goto err;
-	
+#endif
+
 	uh_register_route(srv, "/test", route_test);
 	
 	uh_log_info("Listen on 8000...\n");
