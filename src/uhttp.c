@@ -13,18 +13,65 @@ static struct {
 	int code;
 	const char *reason;
 } http_status_message[] = {
-	{200, "OK"},
-	{301, "Moved"},
-	{302, "Found"},
-	{400, "Bad Request"},
-	{401, "Unauthorized"},
-	{403, "Forbidden"},
-	{404, "Not Found"},
-	{500, "Internal Server Error"},
-	{501, "Not Implemented"},
-	{502, "Bad Gateway"},
-	{503, "Service Unavailable"},
-	{-1, NULL}
+	{UH_STATUS_CONTINUE,                        "Continue"},
+	{UH_STATUS_SWITCHING_PROTOCOLS,             "Switching Protocols"},
+	{UH_STATUS_PROCESSING,                      "Processing"},
+	{UH_STATUS_OK,                              "OK"},
+	{UH_STATUS_CREATED,                         "Created"},
+	{UH_STATUS_ACCEPTED,                        "Accepted"},
+	{UH_STATUS_NON_AUTHORITATIVE_INFORMATION,   "Non-Authoritative Information"},
+	{UH_STATUS_NO_CONTENT,                      "No Content"},
+	{UH_STATUS_RESET_CONTENT,                   "Reset Content"},
+	{UH_STATUS_PARTIAL_CONTENT,                 "Partial Content"},
+	{UH_STATUS_MULTI_STATUS,                    "Multi-Status"},
+	{UH_STATUS_ALREADY_REPORTED,                "Already Reported"},
+	{UH_STATUS_IM_USED,                         "IM Used"},
+	{UH_STATUS_MULTIPLE_CHOICES,                "Multiple Choices"},
+	{UH_STATUS_MOVED_PERMANENTLY,               "Moved Permanently"},
+	{UH_STATUS_FOUND,                           "Found"},
+	{UH_STATUS_SEE_OTHER,                       "See Other"},
+	{UH_STATUS_NOT_MODIFIED,                    "Not Modified"},
+	{UH_STATUS_USE_PROXY,                       "Use Proxy"},
+	{UH_STATUS_TEMPORARY_REDIRECT,              "Temporary Redirect"},
+	{UH_STATUS_PERMANENT_REDIRECT,              "Permanent Redirect"},
+	{UH_STATUS_BAD_REQUEST,                     "Bad Request"},
+	{UH_STATUS_UNAUTHORIZED,                    "Unauthorized"},
+	{UH_STATUS_PAYMENT_REQUIRED,                "Payment Required"},
+	{UH_STATUS_FORBIDDEN,                       "Forbidden"},
+	{UH_STATUS_NOT_FOUND,                       "Not Found"},
+	{UH_STATUS_METHOD_NOT_ALLOWED,              "Method Not Allowed"},
+	{UH_STATUS_NOT_ACCEPTABLE,                  "Not Acceptable"},
+	{UH_STATUS_PROXY_AUTHENTICATION_REQUIRED,   "Proxy Authentication Required"},
+	{UH_STATUS_REQUEST_TIMEOUT,                 "Request Timeout"},
+	{UH_STATUS_CONFLICT,                        "Conflict"},
+	{UH_STATUS_GONE,                            "Gone"},
+	{UH_STATUS_LENGTH_REQUIRED,                 "Length Required"},
+	{UH_STATUS_PRECONDITION_FAILED,             "Precondition Failed"},
+	{UH_STATUS_PAYLOAD_TOO_LARGE,               "Payload Too Large"},
+	{UH_STATUS_URI_TOO_LONG,                    "URI Too Long"},
+	{UH_STATUS_UNSUPPORTED_MEDIA_TYPE,          "Unsupported Media Type"},
+	{UH_STATUS_RANGE_NOT_SATISFIABLE,           "Range Not Satisfiable"},
+	{UH_STATUS_EXPECTATION_FAILED,              "Expectation Failed"},
+	{UH_STATUS_MISDIRECTED_REQUEST,             "Misdirected Request"},
+	{UH_STATUS_UNPROCESSABLE_ENTITY,            "Unprocessable Entity"},
+	{UH_STATUS_LOCKED,                          "Locked"},
+	{UH_STATUS_FAILED_DEPENDENCY,               "Failed Dependency"},
+	{UH_STATUS_UPGRADE_REQUIRED,                "Upgrade Required"},
+	{UH_STATUS_PRECONDITION_REQUIRED,           "Precondition Required"},
+	{UH_STATUS_TOO_MANY_REQUESTS,               "Too Many Requests"},
+	{UH_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE, "Request Header Fields Too Large"},
+	{UH_STATUS_UNAVAILABLE_FOR_LEGAL_REASONS,   "Unavailable For Legal Reasons"},
+	{UH_STATUS_INTERNAL_SERVER_ERROR,           "Internal Server Error"},
+	{UH_STATUS_NOT_IMPLEMENTED,                 "Not Implemented"},
+	{UH_STATUS_BAD_GATEWAY,                     "Bad Gateway"},
+	{UH_STATUS_SERVICE_UNAVAILABLE,             "Service Unavailable"},
+	{UH_STATUS_GATEWAY_TIMEOUT,                 "Gateway Timeout"},
+	{UH_STATUS_HTTP_VERSION_NOT_SUPPORTED,      "HTTP Version Not Supported"},
+	{UH_STATUS_VARIANT_ALSO_NEGOTIATES,         "Variant Also Negotiates"},
+	{UH_STATUS_INSUFFICIENT_STORAGE,            "Insufficient Storage"},
+	{UH_STATUS_LOOP_DETECTED,                   "Loop Detected"},
+	{UH_STATUS_NOT_EXTENDED,                    "Not Extended"},
+	{UH_STATUS_NETWORK_AUTHENTICATION_REQUIRED, "Network Authentication Required"}
 };
 
 const char *uh_version()
@@ -70,6 +117,7 @@ static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents
 {
 	struct uh_connection *con = container_of(w, struct uh_connection, timer_watcher);
 	uh_log_info("connection(%p) timeout", con);
+	uh_send_error(con, UH_STATUS_REQUEST_TIMEOUT, NULL);
 	uh_connection_destroy(con);
 }
 
@@ -161,7 +209,7 @@ static int on_message_complete(http_parser *parser)
 		}
 	}
 
-	uh_send_error(con, 404, NULL);
+	uh_send_error(con, UH_STATUS_NOT_FOUND, NULL);
 	
 	return 0;
 }
@@ -214,19 +262,23 @@ handshake_done:
 #endif
 
 	if (!(con->flags & UH_CON_PARSERING)) {
-		if (!memmem(buf->base, buf->len, "\r\n\r\n", 4))
+		if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
+			if (buf->len > UH_MAX_HTTP_HEAD_SIZE) {
+				uh_log_err("HTTP head size too big");
+				uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
+			}
 			return;
-
-		con->flags |= UH_CON_PARSERING;
+		}
 		
 		base = buf->base;
 		len = buf->len;
+		con->flags |= UH_CON_PARSERING;
 	}
 
 	parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
 	if (unlikely(parsered != len)){
 		uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
-		uh_send_error(con, 400, NULL);
+		uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
 	} else {
 		ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
 	}
@@ -435,7 +487,7 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
 	if (!reason)
 		reason = get_http_status_message(code);
 
-	if (http_should_keep_alive(parser) && code < 400) {
+	if (http_should_keep_alive(parser) && code < UH_STATUS_BAD_REQUEST) {
 		uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: keep-alive\r\n");
 	} else {
 		uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
