@@ -34,10 +34,7 @@ int uh_buf_grow(struct uh_buf *buf, size_t size)
 
 void uh_buf_free(struct uh_buf *buf)
 {
-	if (buf->base) {
-		free(buf->base);
-		uh_buf_init(buf, 0);
-	}
+	uh_buf_init(buf, 0);
 }
 
 size_t uh_buf_append(struct uh_buf *buf, const void *data, size_t len)
