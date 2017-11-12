@@ -10,7 +10,8 @@
 #define UH_CONNECTION_TIMEOUT 30
 #define UH_MAX_HTTP_HEADERS	20
 
-#define UH_CONNECTION_CLOSE	(1 << 0)
+#define UH_CON_CLOSE				(1 << 0)
+#define UH_CON_SSL_HANDSHAKE_DONE	(1 << 1)	/* SSL hanshake has completed */
 
 #define likely(x)	(__builtin_expect(!!(x), 1))
 #define unlikely(x)	(__builtin_expect(!!(x), 0))

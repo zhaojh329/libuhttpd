@@ -196,6 +196,18 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
 	struct uh_buf *buf = &con->read_buf;
 	char *base;
 	int len, parsered;
+	
+#if (UHTTP_SSL_ENABLED)
+	if (con->flags & UH_CON_SSL_HANDSHAKE_DONE)
+		goto handshake_done;
+
+	uh_ssl_handshake(con);
+	if (con->flags & UH_CON_CLOSE)
+		uh_connection_destroy(con);
+	return;
+	
+handshake_done:
+#endif
 
 	if (uh_buf_available(buf) < UH_BUFFER_SIZE)
 		uh_buf_grow(buf, UH_BUFFER_SIZE);
@@ -203,16 +215,9 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
 	base = buf->base + buf->len;
 	
 	len = uh_ssl_read(con, base, UH_BUFFER_SIZE);
-	if (unlikely(len < 0)) {
-		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-			return;
-		uh_log_err("read");
-		uh_send_error(con, 500, NULL);
-		return;
-	}
-
-	if (len == 0) {
-		uh_connection_destroy(con);
+	if (unlikely(len <= 0)) {
+		if (con->flags & UH_CON_CLOSE)
+			uh_connection_destroy(con);
 		return;
 	}
 
@@ -236,17 +241,18 @@ static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
 	
 	if (buf->len > 0) {
 		int len = uh_ssl_write(con, buf->base, buf->len);
-		uh_buf_remove(buf, len);
+		if (len > 0)
+			uh_buf_remove(buf, len);
 	}
 
 	if (buf->len == 0) {
 		ev_io_stop(loop, w);
 
 		if (!http_should_keep_alive(&con->parser))
-			con->flags |= UH_CONNECTION_CLOSE;
+			con->flags |= UH_CON_CLOSE;
 	}
 
-	if (con->flags & UH_CONNECTION_CLOSE)
+	if (con->flags & UH_CON_CLOSE)
 		uh_connection_destroy(con);
 }
 
@@ -267,12 +273,9 @@ static void uh_accept_cb(struct ev_loop *loop, ev_io *w, int revents)
 	con->srv = srv;
 	list_add(&con->list, &srv->connections);
 		
-	sock = uh_ssl_accept(srv, con);
-	if (unlikely(sock < 0)) {
-		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-			uh_log_err("accept");
+	sock = uh_ssl_accept(con);
+	if (unlikely(sock < 0))
 		goto err;
-	}
 
 	read_watcher = &con->read_watcher;
 	ev_io_init(read_watcher, connection_read_cb, sock, EV_READ);
@@ -443,7 +446,7 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
 	if (parser->method != HTTP_HEAD)
 		uh_send(con, reason, strlen(reason));
 
-	con->flags |= UH_CONNECTION_CLOSE;
+	con->flags |= UH_CON_CLOSE;
 }
 
 void uh_redirect(struct uh_connection *con, int code, const char *location)
