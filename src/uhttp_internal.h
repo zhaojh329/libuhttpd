@@ -16,6 +16,12 @@
 #define likely(x)	(__builtin_expect(!!(x), 1))
 #define unlikely(x)	(__builtin_expect(!!(x), 0))
 
+#define ev_timer_mode(l,w,after,repeat) do { \
+	ev_timer_stop(l, w); \
+	ev_timer_init(w, ev_cb(w), after, repeat); \
+	ev_timer_start(l, w); \
+	} while (0)
+
 struct uh_route {
 	char *path;
 	uh_route_handler_t cb;

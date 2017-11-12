@@ -76,17 +76,11 @@ static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents
 static int on_message_begin(http_parser *parser)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
-	struct ev_loop *loop = con->srv->loop;
-	ev_timer *timer_watcher = &con->timer_watcher;
 	
 	uh_buf_init(&con->read_buf, UH_BUFFER_SIZE);
 	uh_buf_init(&con->write_buf, UH_BUFFER_SIZE);
 
 	memset(&con->req, 0, sizeof(struct uh_request));
-
-	ev_timer_stop(loop, timer_watcher);
-	ev_timer_init(timer_watcher, connection_timeout_cb, UH_CONNECTION_TIMEOUT, 0);
-	ev_timer_start(loop, timer_watcher);
 	
 	return 0;
 }
@@ -232,6 +226,8 @@ handshake_done:
 		uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
 		uh_send_error(con, 400, NULL);
 	}
+
+	ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
 }
 
 static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
