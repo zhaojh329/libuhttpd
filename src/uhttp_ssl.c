@@ -112,8 +112,10 @@ void uh_ssl_free(struct uh_connection *con)
 #endif
 
 #if (UHTTP_USE_OPENSSL)
+	SSL_shutdown(con->ssl);
 	SSL_free(con->ssl);
 #elif (UHTTP_USE_CYASSL)
+	wolfSSL_shutdown(con->ssl);
 	wolfSSL_free(con->ssl);
 #endif
 }
@@ -123,6 +125,7 @@ static int uh_ssl_err(struct uh_connection *con, int ret, const char *fun)
 {
 	int err;
 #if (UHTTP_USE_OPENSSL)
+	
 	err = SSL_get_error(con->ssl, ret);
 	if (err == SSL_ERROR_ZERO_RETURN || ERR_peek_error()) {
 		con->flags |= UH_CON_CLOSE;
@@ -141,9 +144,28 @@ static int uh_ssl_err(struct uh_connection *con, int ret, const char *fun)
 
 	con->flags |= UH_CON_CLOSE;
 	uh_log_err("%s() Error: %s", fun, ERR_reason_error_string(err));
-	return -1;
+	
 #elif (UHTTP_USE_CYASSL)
+	err = wolfSSL_get_error(con->ssl, ret);
+	if (ret == 0 || err == SSL_ERROR_ZERO_RETURN || wolfSSL_ERR_peek_error()) {
+		con->flags |= UH_CON_CLOSE;
+		return 0;
+	}
+
+	if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+		return -1;
+
+	if (err == SSL_ERROR_SYSCALL) {
+		if (errno > 0)
+			uh_log_err("%s", fun);
+		con->flags |= UH_CON_CLOSE;
+		return -1;
+	}
+
+	con->flags |= UH_CON_CLOSE;
+	uh_log_err("%s() Error: %s", fun, wolfSSL_ERR_reason_error_string(err));
 #endif
+	return -1;
 }
 #endif
 
@@ -163,7 +185,12 @@ int uh_ssl_read(struct uh_connection *con, void *buf, int count)
 	return uh_ssl_err(con, ret, "SSL_read");
 	
 #elif (UHTTP_USE_CYASSL)
-	return wolfSSL_read(con->ssl, buf, count);
+	ret = wolfSSL_read(con->ssl, buf, count);
+	if (ret > 0)
+		return ret;
+
+	return uh_ssl_err(con, ret, "wolfSSL_read");
+
 #endif
 
 #if (UHTTP_SSL_ENABLED)
@@ -198,7 +225,10 @@ int uh_ssl_write(struct uh_connection *con, void *buf, int count)
 	return uh_ssl_err(con, ret, "SSL_write");
 	
 #elif (UHTTP_USE_CYASSL)
-	return wolfSSL_write(con->ssl, buf, count);
+	ret = wolfSSL_write(con->ssl, buf, count);
+	if (ret > 0)
+		return ret;
+	return uh_ssl_err(con, ret, "wolfSSL_write");
 #endif
 
 #if (UHTTP_SSL_ENABLED)
@@ -252,7 +282,12 @@ int uh_ssl_accept(struct uh_connection *con)
 	if (!con->ssl)
 		return -1;
 
-	wolfSSL_set_fd(con->ssl, sock);
+	if (wolfSSL_set_fd(con->ssl, sock) != SSL_SUCCESS) {
+		uh_log_err("wolfSSL_set_fd() failed");
+		return -1;
+	}
+
+	wolfSSL_set_accept_state(con->ssl);
 #endif
 
 	return sock;
@@ -272,6 +307,13 @@ void uh_ssl_handshake(struct uh_connection *con)
 	uh_ssl_err(con, ret, "SSL_do_handshake");
 	
 #elif (UHTTP_USE_CYASSL)
+	ret = wolfSSL_accept(con->ssl);
+	if (ret == SSL_SUCCESS) {
+		con->flags |= UH_CON_SSL_HANDSHAKE_DONE;
+		return;
+	}
+
+	uh_ssl_err(con, ret, "wolfSSL_SSL_do_handshake");
 #endif
 #endif
 }
