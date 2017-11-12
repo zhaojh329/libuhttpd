@@ -223,7 +223,6 @@ handshake_done:
 		len = buf->len;
 	}
 
-	printf("len:%d\n", len);
 	parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
 	if (unlikely(parsered != len)){
 		uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
