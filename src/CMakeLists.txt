@@ -15,8 +15,8 @@ set(EXTRA_LIBS ${LIBEV_LIBRARIES} ${HTTPPARSER_LIBRARIES})
 set(SOURCE_FILES uhttp.c uhttp_log.c uhttp_buf.c uhttp_ssl.c)
 
 option(UHTTP_DISABLE_SSL "Disable ssl support" OFF)
-option(UHTTP_USE_OPENSSL "Force use OpenSSL as SSL backend" OFF)
-option(UHTTP_USE_CYASSL "Force use CyaSSL as SSL backend" OFF)
+option(UHTTP_USE_OPENSSL "Explicit use OpenSSL as SSL backend" OFF)
+option(UHTTP_USE_CYASSL "Explicit use CyaSSL as SSL backend" OFF)
 
 set(UHTTP_SSL_ENABLED OFF)
 set(UHTTP_SSL_ENABLED_CONFIG 0)
