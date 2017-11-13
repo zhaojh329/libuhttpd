@@ -16,13 +16,13 @@
 #define uh_log(priority, format...) __uh_log(__FILENAME__, __LINE__, priority, format)
 
 #if (UHTTP_DEBUG)
-#define uh_log_debug(format...)		uh_log(LOG_DEBUG, format)
+#define uh_log_debug(format...)     uh_log(LOG_DEBUG, format)
 #else
 #define uh_log_debug(format...)
 #endif
 
-#define uh_log_info(format...)		uh_log(LOG_INFO, format)
-#define uh_log_err(format...)		uh_log(LOG_ERR, format)
+#define uh_log_info(format...)      uh_log(LOG_INFO, format)
+#define uh_log_err(format...)       uh_log(LOG_ERR, format)
 
 void  __uh_log(const char *filename, int line, int priority, const char *format, ...);
 

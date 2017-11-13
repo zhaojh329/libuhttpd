@@ -8,7 +8,7 @@
 #include <openssl/err.h>
 
 #ifndef SSL_SUCCESS
-#define SSL_SUCCESS	1
+#define SSL_SUCCESS 1
 #endif
 
 #elif (UHTTP_USE_CYASSL)

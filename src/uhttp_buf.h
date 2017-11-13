@@ -8,9 +8,9 @@
 #define UH_BUF_SIZE_MULTIPLIER 1.5
 
 struct uh_buf {
-	char *base;		/* Buffer pointer */
-	size_t len;		/* Data length */
-	size_t size;	/* Buffer size */
+    char *base;     /* Buffer pointer */
+    size_t len;     /* Data length */
+    size_t size;    /* Buffer size */
 };
 
 #define uh_buf_available(b) ((b)->size - (b)->len)
