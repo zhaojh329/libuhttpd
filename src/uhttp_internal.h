@@ -6,11 +6,12 @@
 #include "list.h"
 #include "uhttp.h"
 
-#define UH_BUFFER_SIZE         2048
-#define UH_CONNECTION_TIMEOUT  30
-#define UH_HEAD_SIZE_LIMIT     1024
-#define UH_BODY_SIZE_LIMIT     (2 * 1024 * 1024)
-#define UH_HEADER_NUM_LIMIT    20
+#define UH_BUFFER_SIZE        2048
+#define UH_CONNECTION_TIMEOUT 30
+#define UH_URI_SIZE_LIMIT     1024
+#define UH_HEAD_SIZE_LIMIT    1024
+#define UH_BODY_SIZE_LIMIT    (2 * 1024 * 1024)
+#define UH_HEADER_NUM_LIMIT   20
 
 #define UH_CON_CLOSE                (1 << 0)
 #define UH_CON_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */

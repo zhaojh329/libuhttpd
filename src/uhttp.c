@@ -116,16 +116,22 @@ static void uh_connection_destroy(struct uh_connection *con)
 static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents)
 {
     struct uh_connection *con = container_of(w, struct uh_connection, timer_watcher);
-    uh_log_info("connection(%p) timeout", con);
+    uh_log_debug("connection(%p) timeout", con);
     uh_send_error(con, UH_STATUS_REQUEST_TIMEOUT, NULL);
     uh_connection_destroy(con);
 }
 
-static int on_message_begin(http_parser *parser)
+static int uh_con_reuse(struct uh_connection *con)
 {
-    struct uh_connection *con = container_of(parser, struct uh_connection, parser);
-
+    con->flags = 0;
     memset(&con->req, 0, sizeof(struct uh_request));
+
+    http_parser_init(&con->parser, HTTP_REQUEST);
+    ev_timer_mode(con->srv->loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
+
+    /* Retain pre allocated memory to improve performance */
+    uh_buf_remove(&con->read_buf, con->read_buf.len);
+    uh_buf_remove(&con->write_buf, con->write_buf.len);
     
     return 0;
 }
@@ -136,6 +142,11 @@ static int on_url(http_parser *parser, const char *at, size_t len)
     
     con->req.url.at = at;
     con->req.url.len = len;
+
+    if (len > UH_URI_SIZE_LIMIT) {
+        uh_send_error(con, UH_STATUS_URI_TOO_LONG, NULL);
+        return -1;
+    }
     
     return 0;
 }
@@ -223,6 +234,8 @@ static int on_message_complete(http_parser *parser)
     list_for_each_entry(r, &con->srv->routes, list) {
         if (uh_value_cmp(&con->req.url, r->path)) {
             r->cb(con);
+            if (!(con->flags & UH_CON_CLOSE))
+                uh_con_reuse(con);
             return 0;
         }
     }
@@ -234,7 +247,6 @@ static int on_message_complete(http_parser *parser)
 
 
 static http_parser_settings parser_settings = {
-    .on_message_begin    = on_message_begin,
     .on_url              = on_url,
     .on_header_field     = on_header_field,
     .on_header_value     = on_header_value,
@@ -364,7 +376,7 @@ static void uh_accept_cb(struct ev_loop *loop, ev_io *w, int revents)
         
     http_parser_init(&con->parser, HTTP_REQUEST);
     
-    uh_log_info("new connection:%p", con);
+    uh_log_debug("new connection:%p", con);
     return;
 err:
     uh_connection_destroy(con);
