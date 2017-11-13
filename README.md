@@ -44,6 +44,7 @@ CentOS
 ## Configure
 See which configuration are supported
 
+	~/libuhttp/build$ cmake .. -L
 	~/libuhttp/build$ cmake .. -LH
 
 Default configure: automatically select the SSL library as its SSL backend(If there is a SSL library available).
