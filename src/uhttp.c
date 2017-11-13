@@ -517,6 +517,8 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
         con->flags |= UH_CON_CLOSE;
     }
+
+    uh_send(con, reason, strlen(reason));
 }
 
 void uh_redirect(struct uh_connection *con, int code, const char *location)
