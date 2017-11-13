@@ -139,6 +139,7 @@ static int uh_con_reuse(struct uh_connection *con)
 static int on_url(http_parser *parser, const char *at, size_t len)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
+    struct http_parser_url url;
     
     con->req.url.at = at;
     con->req.url.len = len;
@@ -146,6 +147,20 @@ static int on_url(http_parser *parser, const char *at, size_t len)
     if (len > UH_URI_SIZE_LIMIT) {
         uh_send_error(con, UH_STATUS_URI_TOO_LONG, NULL);
         return -1;
+    }
+
+    if (http_parser_parse_url(at, len, 0, &url)) {
+        uh_log_err("http_parser_parse_url() failed");
+        uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
+        return -1;
+    }
+
+    con->req.path.at = at + url.field_data[UF_PATH].off;
+    con->req.path.len = url.field_data[UF_PATH].len;
+
+    if (url.field_set & (1 << UF_QUERY)) {
+        con->req.query.at = at + url.field_data[UF_QUERY].off;
+        con->req.query.len = url.field_data[UF_QUERY].len;
     }
     
     return 0;
@@ -222,6 +237,8 @@ static int on_message_complete(http_parser *parser)
     struct uh_header *header = con->req.header;
     
     uh_log_debug("Url:[%.*s]\n", (int)con->req.url.len, con->req.url.at);
+    uh_log_debug("Path:[%.*s]\n", (int)con->req.path.len, con->req.path.at);
+    uh_log_debug("Query:[%.*s]\n", (int)con->req.query.len, con->req.query.at);
     
     for (i = 0; i < con->req.header_num; i++) {
         uh_log_debug("[%.*s:%.*s]\n", (int)header[i].field.len, header[i].field.at,
@@ -613,6 +630,51 @@ int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_
 inline struct uh_value *uh_get_url(struct uh_connection *con)
 {
     return &con->req.url;
+}
+
+inline struct uh_value *uh_get_path(struct uh_connection *con)
+{
+    return &con->req.path;
+}
+
+inline struct uh_value *uh_get_query(struct uh_connection *con)
+{
+    return &con->req.query;
+}
+
+static inline char c2hex(char c)
+{
+    return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c - 'a' + 10; /* accept small letters just in case */
+}
+
+static char *uh_unescape(char *str)
+{
+    char *p = str;
+    char *q = str;
+
+    if (!str)
+        return ("");
+        
+    while (*p) {
+        if (*p == '%') {
+            p++;
+            if (*p)
+                *q = c2hex(*p++) * 16;
+            if (*p)
+                *q = (*q + c2hex(*p++));
+            q++;
+        } else {
+            if (*p == '+') {
+                *q++ = ' ';
+                p++;
+            } else {
+                *q++ = *p++;
+            }
+        }
+    }
+
+    *q++ = 0;
+    return str;
 }
 
 struct uh_value *uh_get_header(struct uh_connection *con, const char *name)

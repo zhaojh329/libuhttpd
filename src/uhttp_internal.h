@@ -50,6 +50,8 @@ struct uh_header {
 
 struct uh_request {
     struct uh_value url;
+    struct uh_value path;
+    struct uh_value query;
     struct uh_value body;
     int header_num;
     struct uh_header header[UH_HEADER_NUM_LIMIT];
