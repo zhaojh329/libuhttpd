@@ -163,6 +163,17 @@ static int on_header_value(http_parser *parser, const char *at, size_t len)
     return 0;
 }
 
+static int on_headers_complete(http_parser *parser)
+{
+	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
+	
+	if (parser->method != HTTP_GET && parser->method != HTTP_POST) {
+		uh_send_error(con, UH_STATUS_METHOD_NOT_ALLOWED, NULL);
+		return -1;
+	}
+	return 0;
+}
+
 static int on_body(http_parser *parser, const char *at, size_t len)
 {
 	struct uh_connection *con = container_of(parser, struct uh_connection, parser);
@@ -220,6 +231,7 @@ static http_parser_settings parser_settings = {
 	.on_url              = on_url,
 	.on_header_field     = on_header_field,
 	.on_header_value     = on_header_value,
+	.on_headers_complete = on_headers_complete,
 	.on_body             = on_body,
 	.on_message_complete = on_message_complete
 };
@@ -276,7 +288,7 @@ handshake_done:
 	}
 
 	parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
-	if (unlikely(parsered != len)){
+	if (unlikely(parsered != len && !(con->flags & UH_CON_CLOSE))) {
 		uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
 		uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
 	} else {
@@ -491,12 +503,8 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
 		uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: keep-alive\r\n");
 	} else {
 		uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
+		con->flags |= UH_CON_CLOSE;
 	}
-	
-	if (parser->method != HTTP_HEAD)
-		uh_send(con, reason, strlen(reason));
-
-	con->flags |= UH_CON_CLOSE;
 }
 
 void uh_redirect(struct uh_connection *con, int code, const char *location)
