@@ -4,12 +4,8 @@
 #  HTTPPARSER_INCLUDE_DIRS - The http-parser include directories
 #  HTTPPARSER_LIBRARIES    - The libraries needed to use http-parser
 
-find_path(HTTPPARSER_INCLUDE_DIR
-  NAMES http_parser.h
-)
-find_library(HTTPPARSER_LIBRARY
-  NAMES http_parser
-)
+find_path(HTTPPARSER_INCLUDE_DIR http_parser.h)
+find_library(HTTPPARSER_LIBRARY http_parser PATH_SUFFIXES lib64)
 
 if(HTTPPARSER_INCLUDE_DIR)
   file(STRINGS "${HTTPPARSER_INCLUDE_DIR}/http_parser.h"
