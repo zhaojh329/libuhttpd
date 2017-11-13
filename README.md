@@ -21,10 +21,15 @@ Libevent tries to give you the full solution (event lib, non-blocking I/O librar
 
 [libev] tries to follow the UNIX toolbox philosophy of doing one thing only, as good as possible.
 
-# Build on Ubuntu
+# How to Build
 ## Install dependency Tools and Libraries
+Ubuntu
 
-	~$ sudo apt install cmake libev-dev libhttp-parser-dev libssl-dev libwolfssl-dev
+	~$ sudo apt install gcc cmake libev-dev libhttp-parser-dev libssl-dev libwolfssl-dev
+
+CentOS
+
+	~$ sudo yum install gcc cmake libev-devel http-parser-devel openssl-devel
 
 ## Clone the repository
 
