@@ -645,6 +645,93 @@ inline struct uh_value *uh_get_query(struct uh_connection *con)
     return &con->req.query;
 }
 
+#if 0
+static inline char c2hex(char c)
+{
+    return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c - 'a' + 10; /* accept small letters just in case */
+}
+
+static char *uh_unescape(char *str)
+{
+    char *p = str;
+    char *q = str;
+
+    if (!str)
+        return ("");
+        
+    while (*p) {
+        if (*p == '%') {
+            p++;
+            if (*p)
+                *q = c2hex(*p++) * 16;
+            if (*p)
+                *q = (*q + c2hex(*p++));
+            q++;
+        } else {
+            if (*p == '+') {
+                *q++ = ' ';
+                p++;
+            } else {
+                *q++ = *p++;
+            }
+        }
+    }
+
+    *q++ = 0;
+    return str;
+}
+#endif
+
+struct uh_value uh_get_var(struct uh_connection *con, const char *name)
+{
+    struct uh_value *query = &con->req.query;
+    const char *pos = query->at, *tail = query->at + query->len - 1;
+    const char *p, *q;
+    struct uh_value var = {.at = NULL, .len = 0};
+
+    assert(con && name);
+    
+    if (query->len == 0)
+        return var;
+
+    while (pos < tail) {
+        p = memchr(pos, '&', tail - pos);
+        if (p) {
+            q = memchr(pos, '=', p - pos);
+            if (q) {
+                if (q - pos != strlen(name)) {
+                    pos = p + 1;
+                    continue;
+                }
+
+                if (strncmp(pos, name, strlen(name))) {
+                    pos = p + 1;
+                    continue;
+                }
+
+                var.at = q + 1;
+                var.len = p - q - 1;
+
+                return var;
+            }
+            pos = p + 1;
+        } else {
+            p = tail;
+            q = memchr(pos, '=', tail - pos);
+            if (q) {                
+                if (q - pos == strlen(name) && !strncmp(pos, name, strlen(name))) {
+                    var.at = q + 1;
+                    var.len = p - q;
+                    return var;
+                }
+            }
+            break;
+        }
+    }
+
+    return var;
+}
+
 struct uh_value *uh_get_header(struct uh_connection *con, const char *name)
 {
     int i;

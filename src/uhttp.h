@@ -149,6 +149,7 @@ int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_
 struct uh_value *uh_get_url(struct uh_connection *con);
 struct uh_value *uh_get_path(struct uh_connection *con);
 struct uh_value *uh_get_query(struct uh_connection *con);
+struct uh_value uh_get_var(struct uh_connection *con, const char *name);
 struct uh_value *uh_get_header(struct uh_connection *con, const char *name);
 
 #if (UHTTP_SSL_ENABLED)
