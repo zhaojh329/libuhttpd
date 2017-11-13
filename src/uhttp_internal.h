@@ -6,11 +6,11 @@
 #include "list.h"
 #include "uhttp.h"
 
-#define UH_BUFFER_SIZE 2048
-#define UH_CONNECTION_TIMEOUT 30
-#define UH_MAX_HTTP_HEAD_SIZE 1024
-#define UH_MAX_HTTP_BODY_SIZE (2 * 1024 * 1024)
-#define UH_MAX_HTTP_HEADERS 20
+#define UH_BUFFER_SIZE         2048
+#define UH_CONNECTION_TIMEOUT  30
+#define UH_HEAD_SIZE_LIMIT     1024
+#define UH_BODY_SIZE_LIMIT     (2 * 1024 * 1024)
+#define UH_HEADER_NUM_LIMIT    20
 
 #define UH_CON_CLOSE                (1 << 0)
 #define UH_CON_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */
@@ -51,7 +51,7 @@ struct uh_request {
     struct uh_value url;
     struct uh_value body;
     int header_num;
-    struct uh_header header[UH_MAX_HTTP_HEADERS];
+    struct uh_header header[UH_HEADER_NUM_LIMIT];
 };
 
 struct uh_connection {  

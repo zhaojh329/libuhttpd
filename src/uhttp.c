@@ -275,7 +275,7 @@ handshake_done:
 
     if (!(con->flags & UH_CON_PARSERING)) {
         if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
-            if (buf->len > UH_MAX_HTTP_HEAD_SIZE) {
+            if (buf->len > UH_HEAD_SIZE_LIMIT) {
                 uh_log_err("HTTP head size too big");
                 uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
             }
@@ -288,12 +288,17 @@ handshake_done:
     }
 
     parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
-    if (unlikely(parsered != len && !(con->flags & UH_CON_CLOSE))) {
-        uh_log_err("http parser failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
+
+    if (unlikely(con->flags & UH_CON_CLOSE))
+        return;
+    
+    if (unlikely(parsered != len)) {
+        uh_log_err("http_parser_execute() failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
         uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
-    } else {
-        ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
+        return;
     }
+
+    ev_timer_mode(loop, &con->timer_watcher, UH_CONNECTION_TIMEOUT, 0);
 }
 
 static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
