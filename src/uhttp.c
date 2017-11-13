@@ -168,9 +168,10 @@ static int on_headers_complete(http_parser *parser)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     
     if (parser->method != HTTP_GET && parser->method != HTTP_POST) {
-        uh_send_error(con, UH_STATUS_METHOD_NOT_ALLOWED, NULL);
+        uh_send_error(con, UH_STATUS_NOT_IMPLEMENTED, NULL);
         return -1;
     }
+    
     return 0;
 }
 
@@ -180,8 +181,14 @@ static int on_body(http_parser *parser, const char *at, size_t len)
     
     if (!con->req.body.at)
         con->req.body.at = at;
-
+    
     con->req.body.len += len;
+
+    if (con->req.body.len > UH_BODY_SIZE_LIMIT) {
+        uh_send_error(con, UH_STATUS_PAYLOAD_TOO_LARGE, NULL);
+        return -1;
+    }
+    
     return 0;
 }
 
