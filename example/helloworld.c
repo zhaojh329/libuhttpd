@@ -11,6 +11,7 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 void route_test(struct uh_connection *con)
 {
     struct uh_value *url = uh_get_url(con);
+    struct uh_value *path = uh_get_url(con);
     struct uh_value *header_host = uh_get_header(con, "Host");
     struct uh_value *header_ua = uh_get_header(con, "User-Agent");
 
@@ -18,6 +19,7 @@ void route_test(struct uh_connection *con)
     uh_printf_chunk(con, "<h1>Hello World</h1>");
     uh_printf_chunk(con, "<h1>Libuhttp v%s</h1>", uh_version());
     uh_printf_chunk(con, "<h1>Url: %.*s</h1>", (int)url->len, url->at);
+    uh_printf_chunk(con, "<h1>Path: %.*s</h1>", (int)path->len, path->at);
 
     if (header_host)
         uh_printf_chunk(con, "<h1>Host: %.*s</h1>", (int)header_host->len, header_host->at);

@@ -249,10 +249,10 @@ static int on_message_complete(http_parser *parser)
 #endif
 
     list_for_each_entry(r, &con->srv->routes, list) {
-        if (uh_value_cmp(&con->req.url, r->path)) {
+        if (uh_value_cmp(&con->req.path, r->path)) {
             r->cb(con);
             if (!(con->flags & UH_CON_CLOSE))
-                uh_con_reuse(con);
+                con->flags |= UH_CON_REUSE;
             return 0;
         }
     }
@@ -353,6 +353,9 @@ static void connection_write_cb(struct ev_loop *loop, ev_io *w, int revents)
 
         if (!http_should_keep_alive(&con->parser))
             con->flags |= UH_CON_CLOSE;
+
+        if (con->flags & UH_CON_REUSE)
+            uh_con_reuse(con);
     }
 
     if (con->flags & UH_CON_CLOSE)
@@ -640,41 +643,6 @@ inline struct uh_value *uh_get_path(struct uh_connection *con)
 inline struct uh_value *uh_get_query(struct uh_connection *con)
 {
     return &con->req.query;
-}
-
-static inline char c2hex(char c)
-{
-    return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c - 'a' + 10; /* accept small letters just in case */
-}
-
-static char *uh_unescape(char *str)
-{
-    char *p = str;
-    char *q = str;
-
-    if (!str)
-        return ("");
-        
-    while (*p) {
-        if (*p == '%') {
-            p++;
-            if (*p)
-                *q = c2hex(*p++) * 16;
-            if (*p)
-                *q = (*q + c2hex(*p++));
-            q++;
-        } else {
-            if (*p == '+') {
-                *q++ = ' ';
-                p++;
-            } else {
-                *q++ = *p++;
-            }
-        }
-    }
-
-    *q++ = 0;
-    return str;
 }
 
 struct uh_value *uh_get_header(struct uh_connection *con, const char *name)
