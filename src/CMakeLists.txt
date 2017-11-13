@@ -17,7 +17,7 @@ set(SOURCE_FILES uhttp.c uhttp_log.c uhttp_buf.c uhttp_ssl.c)
 set(UHTTP_DEBUG_CONFIG 0)
 option(UHTTP_DEBUG "Turn on debug" OFF)
 if(UHTTP_DEBUG)
-	set(UHTTP_DEBUG_CONFIG 1)
+    set(UHTTP_DEBUG_CONFIG 1)
 endif()
 
 option(UHTTP_DISABLE_SSL "Disable ssl support" OFF)
@@ -30,47 +30,47 @@ set(UHTTP_USE_OPENSSL_CONFIG 0)
 set(UHTTP_USE_CYASSL_CONFIG 0)
 
 if(NOT UHTTP_DISABLE_SSL)
-	if(UHTTP_USE_OPENSSL)
-		if(NOT OPENSSL_FOUND)
-			message(FATAL_ERROR "Could NOT find OpenSSL")
-		endif()
+    if(UHTTP_USE_OPENSSL)
+        if(NOT OPENSSL_FOUND)
+            message(FATAL_ERROR "Could NOT find OpenSSL")
+        endif()
 
-		set(UHTTP_SSL_ENABLED ON)
-		set(UHTTP_SSL_ENABLED_CONFIG 1)
-		set(UHTTP_USE_OPENSSL_CONFIG 1)
+        set(UHTTP_SSL_ENABLED ON)
+        set(UHTTP_SSL_ENABLED_CONFIG 1)
+        set(UHTTP_USE_OPENSSL_CONFIG 1)
 
-		list(APPEND EXTRA_LIBS ${OPENSSL_LIBRARIES})
-		include_directories(${OPENSSL_INCLUDE_DIR})
-	elseif(UHTTP_USE_CYASSL)
-		if (NOT CYASSL_FOUND)
-			message(FATAL_ERROR "Could NOT find CyaSSL")
-		endif()
+        list(APPEND EXTRA_LIBS ${OPENSSL_LIBRARIES})
+        include_directories(${OPENSSL_INCLUDE_DIR})
+    elseif(UHTTP_USE_CYASSL)
+        if (NOT CYASSL_FOUND)
+            message(FATAL_ERROR "Could NOT find CyaSSL")
+        endif()
 
-		set(UHTTP_SSL_ENABLED ON)
-		set(UHTTP_SSL_ENABLED_CONFIG 1)
-		set(UHTTP_USE_CYASSL_CONFIG 1)
+        set(UHTTP_SSL_ENABLED ON)
+        set(UHTTP_SSL_ENABLED_CONFIG 1)
+        set(UHTTP_USE_CYASSL_CONFIG 1)
 
-		list(APPEND EXTRA_LIBS ${CYASSL_LIBRARIES})
-		include_directories(${CYASSL_INCLUDE_DIR})
-	endif()
+        list(APPEND EXTRA_LIBS ${CYASSL_LIBRARIES})
+        include_directories(${CYASSL_INCLUDE_DIR})
+    endif()
 
-	if(NOT UHTTP_SSL_ENABLED)
-		if(OPENSSL_FOUND)
-			set(UHTTP_SSL_ENABLED ON)
-			set(UHTTP_SSL_ENABLED_CONFIG 1)
-			set(UHTTP_USE_OPENSSL_CONFIG 1)
+    if(NOT UHTTP_SSL_ENABLED)
+        if(OPENSSL_FOUND)
+            set(UHTTP_SSL_ENABLED ON)
+            set(UHTTP_SSL_ENABLED_CONFIG 1)
+            set(UHTTP_USE_OPENSSL_CONFIG 1)
 
-			list(APPEND EXTRA_LIBS ${OPENSSL_LIBRARIES})
-			include_directories(${OPENSSL_INCLUDE_DIR})
-		elseif(CYASSL_FOUND)
-			set(UHTTP_SSL_ENABLED ON)
-			set(UHTTP_SSL_ENABLED_CONFIG 1)
-			set(UHTTP_USE_CYASSL_CONFIG 1)
+            list(APPEND EXTRA_LIBS ${OPENSSL_LIBRARIES})
+            include_directories(${OPENSSL_INCLUDE_DIR})
+        elseif(CYASSL_FOUND)
+            set(UHTTP_SSL_ENABLED ON)
+            set(UHTTP_SSL_ENABLED_CONFIG 1)
+            set(UHTTP_USE_CYASSL_CONFIG 1)
 
-			list(APPEND EXTRA_LIBS ${CYASSL_LIBRARIES})
-			include_directories(${CYASSL_INCLUDE_DIR})
-		endif()
-	endif()
+            list(APPEND EXTRA_LIBS ${CYASSL_LIBRARIES})
+            include_directories(${CYASSL_INCLUDE_DIR})
+        endif()
+    endif()
 endif()
 
 add_library(uhttp SHARED ${SOURCE_FILES})
@@ -81,13 +81,13 @@ target_link_libraries(uhttp ${EXTRA_LIBS})
 configure_file(uhttp_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h)
 
 install(
-	FILES uhttp.h ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h uhttp_log.h uhttp_buf.h
-	DESTINATION include
+    FILES uhttp.h ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h uhttp_log.h uhttp_buf.h
+    DESTINATION include
 )
 
 install(
-	TARGETS uhttp LIBRARY
-	DESTINATION lib
+    TARGETS uhttp LIBRARY
+    DESTINATION lib
 )
 
 message("")
