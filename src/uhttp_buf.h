@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#define UH_BUF_SIZE_MULTIPLIER 1.5
+#define UH_BUF_SIZE_MULTIPLIER 3
 
 struct uh_buf {
     char *base;     /* Buffer pointer */

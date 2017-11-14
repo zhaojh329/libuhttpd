@@ -49,7 +49,7 @@ size_t uh_buf_append(struct uh_buf *buf, const void *data, size_t len)
         return 0;
 
     if (buf->len + len > buf->size) {
-        if (uh_buf_grow(buf, len * UH_BUF_SIZE_MULTIPLIER) == -1)
+        if (uh_buf_grow(buf, len << UH_BUF_SIZE_MULTIPLIER) == -1)
             len = buf->size - buf->len;
     }
 
