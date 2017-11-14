@@ -7,66 +7,71 @@
 #include "uhttp_buf.h"
 
 /* HTTP Status Codes */
+#define UH_STATUS_MAP(XX)                                                   \
+  XX(100, CONTINUE,                        Continue)                        \
+  XX(101, SWITCHING_PROTOCOLS,             Switching Protocols)             \
+  XX(102, PROCESSING,                      Processing)                      \
+  XX(200, OK,                              OK)                              \
+  XX(201, CREATED,                         Created)                         \
+  XX(202, ACCEPTED,                        Accepted)                        \
+  XX(203, NON_AUTHORITATIVE_INFORMATION,   Non-Authoritative Information)   \
+  XX(204, NO_CONTENT,                      No Content)                      \
+  XX(205, RESET_CONTENT,                   Reset Content)                   \
+  XX(206, PARTIAL_CONTENT,                 Partial Content)                 \
+  XX(207, MULTI_STATUS,                    Multi-Status)                    \
+  XX(208, ALREADY_REPORTED,                Already Reported)                \
+  XX(226, IM_USED,                         IM Used)                         \
+  XX(300, MULTIPLE_CHOICES,                Multiple Choices)                \
+  XX(301, MOVED_PERMANENTLY,               Moved Permanently)               \
+  XX(302, FOUND,                           Found)                           \
+  XX(303, SEE_OTHER,                       See Other)                       \
+  XX(304, NOT_MODIFIED,                    Not Modified)                    \
+  XX(305, USE_PROXY,                       Use Proxy)                       \
+  XX(307, TEMPORARY_REDIRECT,              Temporary Redirect)              \
+  XX(308, PERMANENT_REDIRECT,              Permanent Redirect)              \
+  XX(400, BAD_REQUEST,                     Bad Request)                     \
+  XX(401, UNAUTHORIZED,                    Unauthorized)                    \
+  XX(402, PAYMENT_REQUIRED,                Payment Required)                \
+  XX(403, FORBIDDEN,                       Forbidden)                       \
+  XX(404, NOT_FOUND,                       Not Found)                       \
+  XX(405, METHOD_NOT_ALLOWED,              Method Not Allowed)              \
+  XX(406, NOT_ACCEPTABLE,                  Not Acceptable)                  \
+  XX(407, PROXY_AUTHENTICATION_REQUIRED,   Proxy Authentication Required)   \
+  XX(408, REQUEST_TIMEOUT,                 Request Timeout)                 \
+  XX(409, CONFLICT,                        Conflict)                        \
+  XX(410, GONE,                            Gone)                            \
+  XX(411, LENGTH_REQUIRED,                 Length Required)                 \
+  XX(412, PRECONDITION_FAILED,             Precondition Failed)             \
+  XX(413, PAYLOAD_TOO_LARGE,               Payload Too Large)               \
+  XX(414, URI_TOO_LONG,                    URI Too Long)                    \
+  XX(415, UNSUPPORTED_MEDIA_TYPE,          Unsupported Media Type)          \
+  XX(416, RANGE_NOT_SATISFIABLE,           Range Not Satisfiable)           \
+  XX(417, EXPECTATION_FAILED,              Expectation Failed)              \
+  XX(421, MISDIRECTED_REQUEST,             Misdirected Request)             \
+  XX(422, UNPROCESSABLE_ENTITY,            Unprocessable Entity)            \
+  XX(423, LOCKED,                          Locked)                          \
+  XX(424, FAILED_DEPENDENCY,               Failed Dependency)               \
+  XX(426, UPGRADE_REQUIRED,                Upgrade Required)                \
+  XX(428, PRECONDITION_REQUIRED,           Precondition Required)           \
+  XX(429, TOO_MANY_REQUESTS,               Too Many Requests)               \
+  XX(431, REQUEST_HEADER_FIELDS_TOO_LARGE, Request Header Fields Too Large) \
+  XX(451, UNAVAILABLE_FOR_LEGAL_REASONS,   Unavailable For Legal Reasons)   \
+  XX(500, INTERNAL_SERVER_ERROR,           Internal Server Error)           \
+  XX(501, NOT_IMPLEMENTED,                 Not Implemented)                 \
+  XX(502, BAD_GATEWAY,                     Bad Gateway)                     \
+  XX(503, SERVICE_UNAVAILABLE,             Service Unavailable)             \
+  XX(504, GATEWAY_TIMEOUT,                 Gateway Timeout)                 \
+  XX(505, HTTP_VERSION_NOT_SUPPORTED,      HTTP Version Not Supported)      \
+  XX(506, VARIANT_ALSO_NEGOTIATES,         Variant Also Negotiates)         \
+  XX(507, INSUFFICIENT_STORAGE,            Insufficient Storage)            \
+  XX(508, LOOP_DETECTED,                   Loop Detected)                   \
+  XX(510, NOT_EXTENDED,                    Not Extended)                    \
+  XX(511, NETWORK_AUTHENTICATION_REQUIRED, Network Authentication Required) \
+
 enum uh_status {
-    UH_STATUS_CONTINUE                        = 100,
-    UH_STATUS_SWITCHING_PROTOCOLS             = 101,
-    UH_STATUS_PROCESSING                      = 102,
-    UH_STATUS_OK                              = 200,
-    UH_STATUS_CREATED                         = 201,
-    UH_STATUS_ACCEPTED                        = 202,
-    UH_STATUS_NON_AUTHORITATIVE_INFORMATION   = 203,
-    UH_STATUS_NO_CONTENT                      = 204,
-    UH_STATUS_RESET_CONTENT                   = 205,
-    UH_STATUS_PARTIAL_CONTENT                 = 206,
-    UH_STATUS_MULTI_STATUS                    = 207,
-    UH_STATUS_ALREADY_REPORTED                = 208,
-    UH_STATUS_IM_USED                         = 226,
-    UH_STATUS_MULTIPLE_CHOICES                = 300,
-    UH_STATUS_MOVED_PERMANENTLY               = 301,
-    UH_STATUS_FOUND                           = 302,
-    UH_STATUS_SEE_OTHER                       = 303,
-    UH_STATUS_NOT_MODIFIED                    = 304,
-    UH_STATUS_USE_PROXY                       = 305,
-    UH_STATUS_TEMPORARY_REDIRECT              = 307,
-    UH_STATUS_PERMANENT_REDIRECT              = 308,
-    UH_STATUS_BAD_REQUEST                     = 400,
-    UH_STATUS_UNAUTHORIZED                    = 401,
-    UH_STATUS_PAYMENT_REQUIRED                = 402,
-    UH_STATUS_FORBIDDEN                       = 403,
-    UH_STATUS_NOT_FOUND                       = 404,
-    UH_STATUS_METHOD_NOT_ALLOWED              = 405,
-    UH_STATUS_NOT_ACCEPTABLE                  = 406,
-    UH_STATUS_PROXY_AUTHENTICATION_REQUIRED   = 407,
-    UH_STATUS_REQUEST_TIMEOUT                 = 408,
-    UH_STATUS_CONFLICT                        = 409,
-    UH_STATUS_GONE                            = 410,
-    UH_STATUS_LENGTH_REQUIRED                 = 411,
-    UH_STATUS_PRECONDITION_FAILED             = 412,
-    UH_STATUS_PAYLOAD_TOO_LARGE               = 413,
-    UH_STATUS_URI_TOO_LONG                    = 414,
-    UH_STATUS_UNSUPPORTED_MEDIA_TYPE          = 415,
-    UH_STATUS_RANGE_NOT_SATISFIABLE           = 416,
-    UH_STATUS_EXPECTATION_FAILED              = 417,
-    UH_STATUS_MISDIRECTED_REQUEST             = 421,
-    UH_STATUS_UNPROCESSABLE_ENTITY            = 422,
-    UH_STATUS_LOCKED                          = 423,
-    UH_STATUS_FAILED_DEPENDENCY               = 424,
-    UH_STATUS_UPGRADE_REQUIRED                = 426,
-    UH_STATUS_PRECONDITION_REQUIRED           = 428,
-    UH_STATUS_TOO_MANY_REQUESTS               = 429,
-    UH_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
-    UH_STATUS_UNAVAILABLE_FOR_LEGAL_REASONS   = 451,
-    UH_STATUS_INTERNAL_SERVER_ERROR           = 500,
-    UH_STATUS_NOT_IMPLEMENTED                 = 501,
-    UH_STATUS_BAD_GATEWAY                     = 502,
-    UH_STATUS_SERVICE_UNAVAILABLE             = 503,
-    UH_STATUS_GATEWAY_TIMEOUT                 = 504,
-    UH_STATUS_HTTP_VERSION_NOT_SUPPORTED      = 505,
-    UH_STATUS_VARIANT_ALSO_NEGOTIATES         = 506,
-    UH_STATUS_INSUFFICIENT_STORAGE            = 507,
-    UH_STATUS_LOOP_DETECTED                   = 508,
-    UH_STATUS_NOT_EXTENDED                    = 510,
-    UH_STATUS_NETWORK_AUTHENTICATION_REQUIRED = 511
+#define XX(num, name, string) UH_STATUS_##name = num,
+  UH_STATUS_MAP(XX)
+#undef XX
 };
 
 struct uh_server;

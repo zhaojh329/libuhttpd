@@ -9,86 +9,19 @@
 #include "uhttp_internal.h"
 #include "uhttp_ssl.h"
 
-static struct {
-    int code;
-    const char *reason;
-} http_status_message[] = {
-    {UH_STATUS_CONTINUE,                        "Continue"},
-    {UH_STATUS_SWITCHING_PROTOCOLS,             "Switching Protocols"},
-    {UH_STATUS_PROCESSING,                      "Processing"},
-    {UH_STATUS_OK,                              "OK"},
-    {UH_STATUS_CREATED,                         "Created"},
-    {UH_STATUS_ACCEPTED,                        "Accepted"},
-    {UH_STATUS_NON_AUTHORITATIVE_INFORMATION,   "Non-Authoritative Information"},
-    {UH_STATUS_NO_CONTENT,                      "No Content"},
-    {UH_STATUS_RESET_CONTENT,                   "Reset Content"},
-    {UH_STATUS_PARTIAL_CONTENT,                 "Partial Content"},
-    {UH_STATUS_MULTI_STATUS,                    "Multi-Status"},
-    {UH_STATUS_ALREADY_REPORTED,                "Already Reported"},
-    {UH_STATUS_IM_USED,                         "IM Used"},
-    {UH_STATUS_MULTIPLE_CHOICES,                "Multiple Choices"},
-    {UH_STATUS_MOVED_PERMANENTLY,               "Moved Permanently"},
-    {UH_STATUS_FOUND,                           "Found"},
-    {UH_STATUS_SEE_OTHER,                       "See Other"},
-    {UH_STATUS_NOT_MODIFIED,                    "Not Modified"},
-    {UH_STATUS_USE_PROXY,                       "Use Proxy"},
-    {UH_STATUS_TEMPORARY_REDIRECT,              "Temporary Redirect"},
-    {UH_STATUS_PERMANENT_REDIRECT,              "Permanent Redirect"},
-    {UH_STATUS_BAD_REQUEST,                     "Bad Request"},
-    {UH_STATUS_UNAUTHORIZED,                    "Unauthorized"},
-    {UH_STATUS_PAYMENT_REQUIRED,                "Payment Required"},
-    {UH_STATUS_FORBIDDEN,                       "Forbidden"},
-    {UH_STATUS_NOT_FOUND,                       "Not Found"},
-    {UH_STATUS_METHOD_NOT_ALLOWED,              "Method Not Allowed"},
-    {UH_STATUS_NOT_ACCEPTABLE,                  "Not Acceptable"},
-    {UH_STATUS_PROXY_AUTHENTICATION_REQUIRED,   "Proxy Authentication Required"},
-    {UH_STATUS_REQUEST_TIMEOUT,                 "Request Timeout"},
-    {UH_STATUS_CONFLICT,                        "Conflict"},
-    {UH_STATUS_GONE,                            "Gone"},
-    {UH_STATUS_LENGTH_REQUIRED,                 "Length Required"},
-    {UH_STATUS_PRECONDITION_FAILED,             "Precondition Failed"},
-    {UH_STATUS_PAYLOAD_TOO_LARGE,               "Payload Too Large"},
-    {UH_STATUS_URI_TOO_LONG,                    "URI Too Long"},
-    {UH_STATUS_UNSUPPORTED_MEDIA_TYPE,          "Unsupported Media Type"},
-    {UH_STATUS_RANGE_NOT_SATISFIABLE,           "Range Not Satisfiable"},
-    {UH_STATUS_EXPECTATION_FAILED,              "Expectation Failed"},
-    {UH_STATUS_MISDIRECTED_REQUEST,             "Misdirected Request"},
-    {UH_STATUS_UNPROCESSABLE_ENTITY,            "Unprocessable Entity"},
-    {UH_STATUS_LOCKED,                          "Locked"},
-    {UH_STATUS_FAILED_DEPENDENCY,               "Failed Dependency"},
-    {UH_STATUS_UPGRADE_REQUIRED,                "Upgrade Required"},
-    {UH_STATUS_PRECONDITION_REQUIRED,           "Precondition Required"},
-    {UH_STATUS_TOO_MANY_REQUESTS,               "Too Many Requests"},
-    {UH_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE, "Request Header Fields Too Large"},
-    {UH_STATUS_UNAVAILABLE_FOR_LEGAL_REASONS,   "Unavailable For Legal Reasons"},
-    {UH_STATUS_INTERNAL_SERVER_ERROR,           "Internal Server Error"},
-    {UH_STATUS_NOT_IMPLEMENTED,                 "Not Implemented"},
-    {UH_STATUS_BAD_GATEWAY,                     "Bad Gateway"},
-    {UH_STATUS_SERVICE_UNAVAILABLE,             "Service Unavailable"},
-    {UH_STATUS_GATEWAY_TIMEOUT,                 "Gateway Timeout"},
-    {UH_STATUS_HTTP_VERSION_NOT_SUPPORTED,      "HTTP Version Not Supported"},
-    {UH_STATUS_VARIANT_ALSO_NEGOTIATES,         "Variant Also Negotiates"},
-    {UH_STATUS_INSUFFICIENT_STORAGE,            "Insufficient Storage"},
-    {UH_STATUS_LOOP_DETECTED,                   "Loop Detected"},
-    {UH_STATUS_NOT_EXTENDED,                    "Not Extended"},
-    {UH_STATUS_NETWORK_AUTHENTICATION_REQUIRED, "Network Authentication Required"}
-};
-
 const char *uh_version()
 {
     return UHTTP_VERSION_STRING;
 }
 
-static const char *get_http_status_message(int code)
+static const char *uh_status_str(enum uh_status s)
 {
-    int i;
-    const char *reason = "OK";
-
-    for (i = 0; http_status_message[i].reason; i++) {
-        if (code == http_status_message[i].code)
-            reason = http_status_message[i].reason;
-    }
-    return reason;
+	switch (s) {
+#define XX(num, name, string) case num : return #string;
+	UH_STATUS_MAP(XX)
+#undef XX
+	}
+	return "<unknown>";
 }
 
 static void uh_connection_destroy(struct uh_connection *con)
@@ -516,7 +449,7 @@ int uh_printf(struct uh_connection *con, const char *fmt, ...)
 
 static void send_status_line(struct uh_connection *con, int code)
 {
-    const char *reason = get_http_status_message(code);
+    const char *reason = uh_status_str(code);
     uh_printf(con, "HTTP/1.1 %d %s\r\nServer: Libuhttp %s\r\n",
         code, reason, UHTTP_VERSION_STRING);
 }
@@ -541,7 +474,7 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
     http_parser *parser = &con->parser;
     
     if (!reason)
-        reason = get_http_status_message(code);
+        reason = uh_status_str(code);
 
     if (http_should_keep_alive(parser) && code < UH_STATUS_BAD_REQUEST) {
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: keep-alive\r\n");
