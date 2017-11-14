@@ -6,13 +6,15 @@
 [http-parser]: https://github.com/nodejs/http-parser
 
 A very tiny and fast HTTP library based on [libev] and [http-parser] for Embedded Linux.
+Support HTTPS(alternative OpenSSL and CyaSSl(wolfssl)) and if you're sensitive to size,
+you can choose CyaSSl(wolfssl).
 
 `Keep Watching for More Actions on This Space`
 
 # Features
 * use [libev] as its event backend
 * tiny and fast
-* SSL support: Optional OpenSSL and CyaSSl(wolfssl)
+* support HTTPS: Alternative OpenSSL and CyaSSl(wolfssl)
 * flexible and you can easily extend your application to have HTTP/HTTPS services
 
 # Why use [libev] as its backend?
