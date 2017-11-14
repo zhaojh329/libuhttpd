@@ -577,42 +577,42 @@ inline struct uh_value *uh_get_query(struct uh_connection *con)
     return &con->req.query;
 }
 
-#if 0
 static inline char c2hex(char c)
 {
     return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c - 'a' + 10; /* accept small letters just in case */
 }
 
-static char *uh_unescape(char *str)
+int uh_unescape(const char *str, int len, char *out, int olen)
 {
-    char *p = str;
-    char *q = str;
+    const char *p = str;
+    char *o = out;
 
-    if (!str)
-        return ("");
-        
-    while (*p) {
+    assert(str && out);
+
+    olen -= 1;
+    
+    while ((p - str < len) && (o - out < olen)) {
         if (*p == '%') {
             p++;
-            if (*p)
-                *q = c2hex(*p++) * 16;
-            if (*p)
-                *q = (*q + c2hex(*p++));
-            q++;
-        } else {
-            if (*p == '+') {
-                *q++ = ' ';
-                p++;
-            } else {
-                *q++ = *p++;
+
+            if (p + 1 - str < len) {
+                *o = c2hex(*p++) << 4;
+                *o += c2hex(*p++);
+                o++;
             }
+            
+        } else if (*p == '+') {
+            *o++ = ' ';
+            p++;
+        } else {
+            *o++ = *p++;
         }
     }
 
-    *q++ = 0;
-    return str;
+    *o = 0;
+    
+    return 0;
 }
-#endif
 
 struct uh_value uh_get_var(struct uh_connection *con, const char *name)
 {

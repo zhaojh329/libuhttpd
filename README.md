@@ -83,9 +83,20 @@ Run
 
 	~/libuhttp$ ./build/example/helloworld
 	
-Then use the command curl or browser to access https://127.0.0.1:8000/test
+Then use the command curl or browser to test
 
-	$ curl -k https://127.0.0.1:8000/test -v
+	$ curl -k 'https://127.0.0.1:8000/test?name=context%3d%7b"nid"%3a"test"%7d' -v
+
+If use browser to test, it will be show
+
+	Hello World
+	Libuhttp v0.1
+	Url: /test?name=context%3d%7b%22nid%22%3a%22test%22%7d
+	Path: /test
+	Name: context%3d%7b%22nid%22%3a%22test%22%7d
+	Unescaped Name: context={"nid":"test"}
+	Host: 192.168.0.100:8000
+	User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36
 	
 # [Example](https://github.com/zhaojh329/libuhttp/blob/master/example/helloworld.c)
 
