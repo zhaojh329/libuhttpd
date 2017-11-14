@@ -51,7 +51,6 @@ static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents
     struct uh_connection *con = container_of(w, struct uh_connection, timer_watcher);
     uh_log_debug("connection(%p) timeout", con);
     uh_send_error(con, UH_STATUS_REQUEST_TIMEOUT, NULL);
-    uh_connection_destroy(con);
 }
 
 static int uh_con_reuse(struct uh_connection *con)
