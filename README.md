@@ -16,6 +16,7 @@ you can choose CyaSSl(wolfssl).
 * tiny and fast
 * support HTTPS: Alternative OpenSSL and CyaSSl(wolfssl)
 * flexible and you can easily extend your application to have HTTP/HTTPS services
+* code structure is concise and understandable, also suitable for learning
 
 # Why use [libev] as its backend?
 [libev] tries to do one thing only (POSIX event library), and this in the most efficient way possible.
