@@ -1,7 +1,7 @@
 #ifndef _UHTTP_SSL_H
 #define _UHTTP_SSL_H
 
-#include "uhttp_internal.h"
+#include "internal.h"
 
 #if (UHTTP_USE_OPENSSL)
 #include <openssl/ssl.h>

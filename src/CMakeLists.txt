@@ -3,16 +3,14 @@ set(UHTTP_VERSION_MAJOR 0)
 set(UHTTP_VERSION_MINOR 1)
 set(UHTTP_VERSION_PATCH 0)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 # Check the third party Libraries
 find_package(Libev REQUIRED)
 find_package(OpenSSL)
 find_package(CyaSSL)
 
-include_directories(${LIBEV_INCLUDE_DIRS} ${HTTPPARSER_INCLUDE_DIRS})
-set(EXTRA_LIBS ${LIBEV_LIBRARIES} ${HTTPPARSER_LIBRARIES})
-set(SOURCE_FILES uhttp.c uhttp_log.c uhttp_buf.c uhttp_ssl.c http_parser.c)
+include_directories(${LIBEV_INCLUDE_DIRS})
+set(EXTRA_LIBS ${LIBEV_LIBRARIES})
+set(SOURCE_FILES uhttp.c log.c buf.c ssl.c http_parser.c)
 
 set(UHTTP_DEBUG_CONFIG 0)
 option(UHTTP_DEBUG "Turn on debug" OFF)
@@ -78,11 +76,24 @@ set_target_properties(uhttp PROPERTIES VERSION ${UHTTP_VERSION_MAJOR}.${UHTTP_VE
 target_link_libraries(uhttp ${EXTRA_LIBS})
 
 # configure a header file to pass some of the CMake settings to the source code
-configure_file(uhttp_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/uhttp/config.h)
 
 install(
-    FILES uhttp.h ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h uhttp_log.h uhttp_buf.h
-    DESTINATION include/uhttp
+    FILES
+	    ${CMAKE_CURRENT_BINARY_DIR}/include/uhttp/config.h
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/uhttp.h
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/log.h
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/buf.h
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/http_parser.h
+    DESTINATION
+    	include/uhttp
+)
+
+install(
+    FILES
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp.h
+    DESTINATION
+    	include
 )
 
 install(

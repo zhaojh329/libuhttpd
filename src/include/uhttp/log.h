@@ -6,7 +6,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include "uhttp_config.h"
+#include "uhttp/config.h"
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 

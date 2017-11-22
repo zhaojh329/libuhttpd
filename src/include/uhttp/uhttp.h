@@ -2,9 +2,9 @@
 #define _UHTTP_H
 
 #include <ev.h>
-#include "uhttp_config.h"
-#include "uhttp_log.h"
-#include "uhttp_buf.h"
+#include "uhttp/config.h"
+#include "uhttp/log.h"
+#include "uhttp/buf.h"
 
 /* HTTP Status Codes */
 #define UH_STATUS_MAP(XX)                                                   \

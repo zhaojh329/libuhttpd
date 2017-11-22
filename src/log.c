@@ -1,4 +1,4 @@
-#include "uhttp_log.h"
+#include "uhttp/log.h"
 
 void __uh_log(const char *filename, int line, int priority, const char *format, ...)
 {

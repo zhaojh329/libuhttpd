@@ -1,6 +1,6 @@
 #include <ev.h>
 #include <stdio.h>
-#include "uhttp.h"
+#include <uhttp.h>
 
 static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
@@ -17,15 +17,17 @@ void route_test(struct uh_connection *con)
     struct uh_value *header_ua = uh_get_header(con, "User-Agent");
     char unescaped_name[128];
 
-    uh_unescape(name.at, name.len, unescaped_name, sizeof(unescaped_name));
-
     uh_send_head(con, UH_STATUS_OK, -1, NULL);
     uh_printf_chunk(con, "<h1>Hello World</h1>");
     uh_printf_chunk(con, "<h1>Libuhttp v%s</h1>", uh_version());
     uh_printf_chunk(con, "<h1>Url: %.*s</h1>", (int)url->len, url->at);
     uh_printf_chunk(con, "<h1>Path: %.*s</h1>", (int)path->len, path->at);
     uh_printf_chunk(con, "<h1>Name: %.*s</h1>", (int)name.len, name.at);
-    uh_printf_chunk(con, "<h1>Unescaped Name: %s</h1>", unescaped_name);
+
+	if (name.at) {
+    	uh_unescape(name.at, name.len, unescaped_name, sizeof(unescaped_name));
+    	uh_printf_chunk(con, "<h1>Unescaped Name: %s</h1>", unescaped_name);
+	}
 
     if (header_host)
         uh_printf_chunk(con, "<h1>Host: %.*s</h1>", (int)header_host->len, header_host->at);

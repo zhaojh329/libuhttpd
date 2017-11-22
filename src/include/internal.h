@@ -1,9 +1,9 @@
 #ifndef _UHTTP_INTERNAL_H
 #define _UHTTP_INTERNAL_H
 
-#include "http_parser.h"
+#include "uhttp/http_parser.h"
 #include "list.h"
-#include "uhttp.h"
+#include "uhttp/uhttp.h"
 
 #define UH_BUFFER_SIZE        2048
 #define UH_CONNECTION_TIMEOUT 30
