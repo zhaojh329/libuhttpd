@@ -17,7 +17,7 @@ void route_test(struct uh_connection *con)
     struct uh_value *header_ua = uh_get_header(con, "User-Agent");
     char unescaped_name[128];
 
-    uh_send_head(con, UH_STATUS_OK, -1, NULL);
+    uh_send_head(con, HTTP_STATUS_OK, -1, NULL);
     uh_printf_chunk(con, "<h1>Hello World</h1>");
     uh_printf_chunk(con, "<h1>Libuhttp v%s</h1>", uh_version());
     uh_printf_chunk(con, "<h1>Url: %.*s</h1>", (int)url->len, url->at);

@@ -14,11 +14,11 @@ const char *uh_version()
     return UHTTP_VERSION_STRING;
 }
 
-static const char *uh_status_str(enum uh_status s)
+static const char *http_status_str(enum http_status s)
 {
 	switch (s) {
 #define XX(num, name, string) case num : return #string;
-	UH_STATUS_MAP(XX)
+	HTTP_STATUS_MAP(XX)
 #undef XX
 	}
 	return "<unknown>";
@@ -50,7 +50,7 @@ static void connection_timeout_cb(struct ev_loop *loop, ev_timer *w, int revents
 {
     struct uh_connection *con = container_of(w, struct uh_connection, timer_watcher);
     uh_log_debug("connection(%p) timeout", con);
-    uh_send_error(con, UH_STATUS_REQUEST_TIMEOUT, NULL);
+    uh_send_error(con, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
 static int uh_con_reuse(struct uh_connection *con)
@@ -77,13 +77,13 @@ static int on_url(http_parser *parser, const char *at, size_t len)
     con->req.url.len = len;
 
     if (len > UH_URI_SIZE_LIMIT) {
-        uh_send_error(con, UH_STATUS_URI_TOO_LONG, NULL);
+        uh_send_error(con, HTTP_STATUS_URI_TOO_LONG, NULL);
         return -1;
     }
 
     if (http_parser_parse_url(at, len, 0, &url)) {
         uh_log_err("http_parser_parse_url() failed");
-        uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
+        uh_send_error(con, HTTP_STATUS_BAD_REQUEST, NULL);
         return -1;
     }
 
@@ -126,7 +126,7 @@ static int on_headers_complete(http_parser *parser)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     
     if (parser->method != HTTP_GET && parser->method != HTTP_POST) {
-        uh_send_error(con, UH_STATUS_NOT_IMPLEMENTED, NULL);
+        uh_send_error(con, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
         return -1;
     }
     
@@ -143,7 +143,7 @@ static int on_body(http_parser *parser, const char *at, size_t len)
     con->req.body.len += len;
 
     if (con->req.body.len > UH_BODY_SIZE_LIMIT) {
-        uh_send_error(con, UH_STATUS_PAYLOAD_TOO_LARGE, NULL);
+        uh_send_error(con, HTTP_STATUS_PAYLOAD_TOO_LARGE, NULL);
         return -1;
     }
     
@@ -189,7 +189,7 @@ static int on_message_complete(http_parser *parser)
         }
     }
 
-    uh_send_error(con, UH_STATUS_NOT_FOUND, NULL);
+    uh_send_error(con, HTTP_STATUS_NOT_FOUND, NULL);
     
     return 0;
 }
@@ -245,7 +245,7 @@ handshake_done:
         if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
             if (buf->len > UH_HEAD_SIZE_LIMIT) {
                 uh_log_err("HTTP head size too big");
-                uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
+                uh_send_error(con, HTTP_STATUS_BAD_REQUEST, NULL);
             }
             return;
         }
@@ -262,7 +262,7 @@ handshake_done:
     
     if (unlikely(parsered != len)) {
         uh_log_err("http_parser_execute() failed:%s", http_errno_description(HTTP_PARSER_ERRNO(&con->parser)));
-        uh_send_error(con, UH_STATUS_BAD_REQUEST, NULL);
+        uh_send_error(con, HTTP_STATUS_BAD_REQUEST, NULL);
         return;
     }
 
@@ -448,7 +448,7 @@ int uh_printf(struct uh_connection *con, const char *fmt, ...)
 
 static void send_status_line(struct uh_connection *con, int code)
 {
-    const char *reason = uh_status_str(code);
+    const char *reason = http_status_str(code);
     uh_printf(con, "HTTP/1.1 %d %s\r\nServer: Libuhttp %s\r\n",
         code, reason, UHTTP_VERSION_STRING);
 }
@@ -473,9 +473,9 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
     http_parser *parser = &con->parser;
     
     if (!reason)
-        reason = uh_status_str(code);
+        reason = http_status_str(code);
 
-    if (http_should_keep_alive(parser) && code < UH_STATUS_BAD_REQUEST) {
+    if (http_should_keep_alive(parser) && code < HTTP_STATUS_BAD_REQUEST) {
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: keep-alive\r\n");
     } else {
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
