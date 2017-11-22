@@ -1,6 +1,7 @@
 # The version number.
 set(UHTTP_VERSION_MAJOR 0)
 set(UHTTP_VERSION_MINOR 1)
+set(UHTTP_VERSION_PATCH 0)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -81,7 +82,7 @@ configure_file(uhttp_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h)
 
 install(
     FILES uhttp.h ${CMAKE_CURRENT_BINARY_DIR}/uhttp_config.h uhttp_log.h uhttp_buf.h
-    DESTINATION include
+    DESTINATION include/uhttp
 )
 
 install(
@@ -90,7 +91,7 @@ install(
 )
 
 message("")
-message(STATUS "UHTTP_VERSION: ${UHTTP_VERSION_MAJOR}.${UHTTP_VERSION_MINOR}")
+message(STATUS "UHTTP_VERSION: ${UHTTP_VERSION_MAJOR}.${UHTTP_VERSION_MINOR}.${UHTTP_VERSION_PATCH}")
 if(UHTTP_USE_OPENSSL_CONFIG)
 message(STATUS "UHTTP_SSL_ENABLED: OpenSSL")
 elseif(UHTTP_USE_CYASSL_CONFIG)
