@@ -74,7 +74,7 @@ if(NOT UHTTP_DISABLE_SSL)
 endif()
 
 add_library(uhttp SHARED ${SOURCE_FILES})
-set_target_properties(uhttp PROPERTIES VERSION ${UHTTP_VERSION_MAJOR}.${UHTTP_VERSION_MINOR})
+set_target_properties(uhttp PROPERTIES VERSION ${UHTTP_VERSION_MAJOR}.${UHTTP_VERSION_MINOR}.${UHTTP_VERSION_PATCH})
 target_link_libraries(uhttp ${EXTRA_LIBS})
 
 # configure a header file to pass some of the CMake settings to the source code
