@@ -28,11 +28,11 @@ Libevent tries to give you the full solution (event lib, non-blocking I/O librar
 ## Install dependency Tools and Libraries
 Ubuntu
 
-	~$ sudo apt install gcc cmake libev-dev libhttp-parser-dev libssl-dev libwolfssl-dev
+	~$ sudo apt install gcc cmake libev-dev libssl-dev libwolfssl-dev
 
 CentOS
 
-	~$ sudo yum install gcc cmake libev-devel http-parser-devel openssl-devel
+	~$ sudo yum install gcc cmake libev-devel openssl-devel
 
 ## Clone the repository
 

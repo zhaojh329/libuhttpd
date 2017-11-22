@@ -6,13 +6,12 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Check the third party Libraries
 find_package(Libev REQUIRED)
-find_package(HttpParser REQUIRED)
 find_package(OpenSSL)
 find_package(CyaSSL)
 
 include_directories(${LIBEV_INCLUDE_DIRS} ${HTTPPARSER_INCLUDE_DIRS})
 set(EXTRA_LIBS ${LIBEV_LIBRARIES} ${HTTPPARSER_LIBRARIES})
-set(SOURCE_FILES uhttp.c uhttp_log.c uhttp_buf.c uhttp_ssl.c)
+set(SOURCE_FILES uhttp.c uhttp_log.c uhttp_buf.c uhttp_ssl.c http_parser.c)
 
 set(UHTTP_DEBUG_CONFIG 0)
 option(UHTTP_DEBUG "Turn on debug" OFF)
