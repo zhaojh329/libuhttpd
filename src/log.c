@@ -19,10 +19,10 @@ void __uh_log(const char *filename, int line, int priority, const char *format, 
     syslog(priority, "%s", buf);
 
 #if (UHTTP_DEBUG)
-    fprintf(stderr, "%s", buf);
+    fprintf(stderr, "%s\n", buf);
 #else
     if (priority == LOG_ERR)
-        fprintf(stderr, "%s", buf);
+        fprintf(stderr, "%s\n", buf);
 #endif
 }
 

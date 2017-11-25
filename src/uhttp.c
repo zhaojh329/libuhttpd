@@ -73,7 +73,7 @@ static int on_url(http_parser *parser, const char *at, size_t len)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct http_parser_url url;
 
-    uh_log_debug("Url:[%.*s]\n", (int)len, at);
+    uh_log_debug("Url:[%.*s]", (int)len, at);
 
     con->req.url.at = at;
     con->req.url.len = len;
@@ -105,7 +105,7 @@ static int on_header_field(http_parser *parser, const char *at, size_t len)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct uh_header *header = con->req.header;
 
-	uh_log_debug("header field:[%.*s]\n", (int)len, at);
+	uh_log_debug("header field:[%.*s]", (int)len, at);
 
     header[con->req.header_num].field.at = at;
     header[con->req.header_num].field.len = len;
@@ -118,7 +118,7 @@ static int on_header_value(http_parser *parser, const char *at, size_t len)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct uh_header *header = con->req.header;
 
-	uh_log_debug("header value:[%.*s]\n", (int)len, at);
+	uh_log_debug("header value:[%.*s]", (int)len, at);
 	
     header[con->req.header_num].value.at = at;
     header[con->req.header_num].value.len = len;
@@ -143,7 +143,7 @@ static int on_body(http_parser *parser, const char *at, size_t len)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
 
-	uh_log_debug("body:[%.*s]\n", (int)len, at);
+	uh_log_debug("body:[%.*s]", (int)len, at);
 	
     if (!con->req.body.at)
         con->req.body.at = at;
@@ -230,7 +230,7 @@ handshake_done:
 
     buf->len += len;
 
-    uh_log_debug("read:[%.*s]\n", len, base);
+    uh_log_debug("read:[%.*s]", len, base);
 
     if (!(con->flags & UH_CON_PARSERING)) {
         if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
