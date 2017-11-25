@@ -72,7 +72,9 @@ static int on_url(http_parser *parser, const char *at, size_t len)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct http_parser_url url;
-    
+
+    uh_log_debug("Url:[%.*s]\n", (int)len, at);
+
     con->req.url.at = at;
     con->req.url.len = len;
 
@@ -103,6 +105,8 @@ static int on_header_field(http_parser *parser, const char *at, size_t len)
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct uh_header *header = con->req.header;
 
+	uh_log_debug("header field:[%.*s]\n", (int)len, at);
+
     header[con->req.header_num].field.at = at;
     header[con->req.header_num].field.len = len;
     
@@ -113,7 +117,9 @@ static int on_header_value(http_parser *parser, const char *at, size_t len)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct uh_header *header = con->req.header;
-    
+
+	uh_log_debug("header value:[%.*s]\n", (int)len, at);
+	
     header[con->req.header_num].value.at = at;
     header[con->req.header_num].value.len = len;
     con->req.header_num += 1;
@@ -136,7 +142,9 @@ static int on_headers_complete(http_parser *parser)
 static int on_body(http_parser *parser, const char *at, size_t len)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
-    
+
+	uh_log_debug("body:[%.*s]\n", (int)len, at);
+	
     if (!con->req.body.at)
         con->req.body.at = at;
     
@@ -164,21 +172,6 @@ static int on_message_complete(http_parser *parser)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
     struct uh_route *r;
-#if (UHTTP_DEBUG)
-    int i;
-    struct uh_header *header = con->req.header;
-    
-    uh_log_debug("Url:[%.*s]\n", (int)con->req.url.len, con->req.url.at);
-    uh_log_debug("Path:[%.*s]\n", (int)con->req.path.len, con->req.path.at);
-    uh_log_debug("Query:[%.*s]\n", (int)con->req.query.len, con->req.query.at);
-    
-    for (i = 0; i < con->req.header_num; i++) {
-        uh_log_debug("[%.*s:%.*s]\n", (int)header[i].field.len, header[i].field.at,
-            (int)header[i].value.len, header[i].value.at);  
-    }
-
-    uh_log_debug("Body:[%.*s]\n", (int)con->req.body.len, con->req.body.at);
-#endif
 
     list_for_each_entry(r, &con->srv->routes, list) {
         if (uh_value_cmp(&con->req.path, r->path)) {
@@ -237,9 +230,7 @@ handshake_done:
 
     buf->len += len;
 
-#if (UHTTP_DEBUG)
     uh_log_debug("read:[%.*s]\n", len, base);
-#endif
 
     if (!(con->flags & UH_CON_PARSERING)) {
         if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
