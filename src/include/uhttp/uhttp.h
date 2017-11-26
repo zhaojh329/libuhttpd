@@ -1,19 +1,15 @@
-#ifndef _UHTTP_H
-#define _UHTTP_H
+#ifndef _UHTTP_UHTTP_H
+#define _UHTTP_UHTTP_H
 
 #include <ev.h>
 #include "uhttp/config.h"
 #include "uhttp/log.h"
 #include "uhttp/buf.h"
+#include "uhttp/str.h"
 #include "uhttp/http_parser.h"
 
 struct uh_server;
 struct uh_connection;
-
-struct uh_value {
-    const char *at;
-    size_t len;
-};
 
 typedef void (*uh_route_handler_t)(struct uh_connection *con);
 
@@ -84,11 +80,11 @@ int uh_printf_chunk(struct uh_connection *con, const char *fmt, ...);
 /* sets a callback to be executed on a specific path */
 int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_t cb);
 
-struct uh_value *uh_get_url(struct uh_connection *con);
-struct uh_value *uh_get_path(struct uh_connection *con);
-struct uh_value *uh_get_query(struct uh_connection *con);
-struct uh_value uh_get_var(struct uh_connection *con, const char *name);
-struct uh_value *uh_get_header(struct uh_connection *con, const char *name);
+struct uh_str *uh_get_url(struct uh_connection *con);
+struct uh_str *uh_get_path(struct uh_connection *con);
+struct uh_str *uh_get_query(struct uh_connection *con);
+struct uh_str uh_get_var(struct uh_connection *con, const char *name);
+struct uh_str *uh_get_header(struct uh_connection *con, const char *name);
 
 /* Unescapes strings like '%7B1,%202,%203%7D' would become '{1, 2, 3}' */
 int uh_unescape(const char *str, int len, char *out, int olen);

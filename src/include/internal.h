@@ -44,15 +44,15 @@ struct uh_server {
 };
 
 struct uh_header {
-    struct uh_value field;
-    struct uh_value value;
+    struct uh_str field;
+    struct uh_str value;
 };
 
 struct uh_request {
-    struct uh_value url;
-    struct uh_value path;
-    struct uh_value query;
-    struct uh_value body;
+    struct uh_str url;
+    struct uh_str path;
+    struct uh_str query;
+    struct uh_str body;
     int header_num;
     struct uh_header header[UH_HEADER_NUM_LIMIT];
 };

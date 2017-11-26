@@ -10,11 +10,11 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 
 void route_test(struct uh_connection *con)
 {
-    struct uh_value *url = uh_get_url(con);
-    struct uh_value *path = uh_get_path(con);
-    struct uh_value name = uh_get_var(con, "name");
-    struct uh_value *header_host = uh_get_header(con, "Host");
-    struct uh_value *header_ua = uh_get_header(con, "User-Agent");
+    struct uh_str *url = uh_get_url(con);
+    struct uh_str *path = uh_get_path(con);
+    struct uh_str name = uh_get_var(con, "name");
+    struct uh_str *header_host = uh_get_header(con, "Host");
+    struct uh_str *header_ua = uh_get_header(con, "User-Agent");
     char unescaped_name[128];
 
     uh_send_head(con, HTTP_STATUS_OK, -1, NULL);

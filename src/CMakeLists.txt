@@ -84,6 +84,7 @@ install(
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/uhttp.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/log.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/buf.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/str.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/http_parser.h
     DESTINATION
     	include/uhttp

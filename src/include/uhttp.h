@@ -1,5 +1,5 @@
-#ifndef _UHTTP_BASE_H
-#define _UHTTP_BASE_H
+#ifndef _UHTTP_H
+#define _UHTTP_H
 
 #include "uhttp/uhttp.h"
 

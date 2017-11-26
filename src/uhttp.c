@@ -160,7 +160,7 @@ static int on_body(http_parser *parser, const char *at, size_t len)
 
 
 /* Return 1 for equal */
-static int uh_value_cmp(struct uh_value *uv, const char *str)
+static int uh_str_cmp(struct uh_str *uv, const char *str)
 {
     if (uv->len != strlen(str))
         return 0;
@@ -174,7 +174,7 @@ static int on_message_complete(http_parser *parser)
     struct uh_route *r;
 
     list_for_each_entry(r, &con->srv->routes, list) {
-        if (uh_value_cmp(&con->req.path, r->path)) {
+        if (uh_str_cmp(&con->req.path, r->path)) {
             r->cb(con);
             if (!(con->flags & UH_CON_CLOSE))
                 con->flags |= UH_CON_REUSE;
@@ -547,17 +547,17 @@ int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_
     return 0;   
 }
 
-inline struct uh_value *uh_get_url(struct uh_connection *con)
+inline struct uh_str *uh_get_url(struct uh_connection *con)
 {
     return &con->req.url;
 }
 
-inline struct uh_value *uh_get_path(struct uh_connection *con)
+inline struct uh_str *uh_get_path(struct uh_connection *con)
 {
     return &con->req.path;
 }
 
-inline struct uh_value *uh_get_query(struct uh_connection *con)
+inline struct uh_str *uh_get_query(struct uh_connection *con)
 {
     return &con->req.query;
 }
@@ -599,12 +599,12 @@ int uh_unescape(const char *str, int len, char *out, int olen)
     return 0;
 }
 
-struct uh_value uh_get_var(struct uh_connection *con, const char *name)
+struct uh_str uh_get_var(struct uh_connection *con, const char *name)
 {
-    struct uh_value *query = &con->req.query;
+    struct uh_str *query = &con->req.query;
     const char *pos = query->at, *tail = query->at + query->len - 1;
     const char *p, *q;
-    struct uh_value var = {.at = NULL, .len = 0};
+    struct uh_str var = {.at = NULL, .len = 0};
 
     assert(con && name);
     
@@ -649,13 +649,13 @@ struct uh_value uh_get_var(struct uh_connection *con, const char *name)
     return var;
 }
 
-struct uh_value *uh_get_header(struct uh_connection *con, const char *name)
+struct uh_str *uh_get_header(struct uh_connection *con, const char *name)
 {
     int i;
     struct uh_header *header = con->req.header;
     
     for (i = 0; i < con->req.header_num; i++) {
-        if (uh_value_cmp(&header[i].field, name))
+        if (uh_str_cmp(&header[i].field, name))
             return &header[i].value;
     }
     return NULL;
