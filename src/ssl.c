@@ -118,10 +118,12 @@ no_ssl:
         if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
             return ret;
         
-        if (ret != 0) {
-            con->flags |= UH_CON_CLOSE;
+        if (ret != 0)
             uh_log_err("read");
-        }
+        else
+            uh_log_debug("peer closed");
+
+        con->flags |= UH_CON_CLOSE;
     }
     return ret;
 }
