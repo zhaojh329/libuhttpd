@@ -42,6 +42,9 @@ static void uh_connection_destroy(struct uh_connection *con)
         list_del(&con->list);
 
         uh_ssl_free(con);
+
+        uh_log_debug("destroy connection(%p)", con);
+        
         free(con);
     }
 }
