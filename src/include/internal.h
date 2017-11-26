@@ -1,7 +1,6 @@
 #ifndef _UHTTP_INTERNAL_H
 #define _UHTTP_INTERNAL_H
 
-#include "uhttp/http_parser.h"
 #include "list.h"
 #include "uhttp/uhttp.h"
 

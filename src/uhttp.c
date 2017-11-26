@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <arpa/inet.h>
 
-#include "uhttp/uhttp.h"
 #include "internal.h"
+#include "uhttp/uhttp.h"
 #include "uhttp/ssl.h"
 
 const char *uh_version()
