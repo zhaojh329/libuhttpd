@@ -13,8 +13,7 @@
 
 #define UH_CON_CLOSE                (1 << 0)
 #define UH_CON_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */
-#define UH_CON_PARSERING            (1 << 2)    /* Whether executed http_parser_execute() */
-#define UH_CON_REUSE                (1 << 3)
+#define UH_CON_REUSE                (1 << 2)
 
 #define likely(x)   (__builtin_expect(!!(x), 1))
 #define unlikely(x) (__builtin_expect(!!(x), 0))

@@ -232,20 +232,6 @@ handshake_done:
 
     uh_log_debug("read:[%.*s]", len, base);
 
-    if (!(con->flags & UH_CON_PARSERING)) {
-        if (!memmem(buf->base, buf->len, "\r\n\r\n", 4)) {
-            if (buf->len > UH_HEAD_SIZE_LIMIT) {
-                uh_log_err("HTTP head size too big");
-                uh_send_error(con, HTTP_STATUS_BAD_REQUEST, NULL);
-            }
-            return;
-        }
-        
-        base = buf->base;
-        len = buf->len;
-        con->flags |= UH_CON_PARSERING;
-    }
-
     parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
 
     if (unlikely(con->flags & UH_CON_CLOSE))

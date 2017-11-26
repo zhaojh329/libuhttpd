@@ -296,7 +296,8 @@ struct http_parser {
   unsigned int header_state : 7; /* enum header_state from http_parser.c */
   unsigned int index : 7;        /* index into current matcher */
   unsigned int lenient_http_headers : 1;
-
+  
+  const char *mark;				/* Marks the start position of the current matcher */
   uint32_t nread;          /* # bytes read in various scenarios */
   uint64_t content_length; /* # bytes in body (0 if no Content-Length header) */
 

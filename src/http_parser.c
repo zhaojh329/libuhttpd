@@ -103,11 +103,11 @@ do {                                                                 \
 do {                                                                 \
   assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
-  if (FOR##_mark) {                                                  \
+  if (parser->mark) {                                                  \
     if (LIKELY(settings->on_##FOR)) {                                \
       parser->state = CURRENT_STATE();                               \
       if (UNLIKELY(0 !=                                              \
-                   settings->on_##FOR(parser, FOR##_mark, (LEN)))) { \
+                   settings->on_##FOR(parser, parser->mark, (LEN)))) { \
         SET_ERRNO(HPE_CB_##FOR);                                     \
       }                                                              \
       UPDATE_STATE(parser->state);                                   \
@@ -117,25 +117,17 @@ do {                                                                 \
         return (ER);                                                 \
       }                                                              \
     }                                                                \
-    FOR##_mark = NULL;                                               \
+    parser->mark = NULL;                                               \
   }                                                                  \
 } while (0)
 
 /* Run the data callback FOR and consume the current byte */
 #define CALLBACK_DATA(FOR)                                           \
-    CALLBACK_DATA_(FOR, p - FOR##_mark, p - data + 1)
+    CALLBACK_DATA_(FOR, p - parser->mark, p - data + 1)
 
 /* Run the data callback FOR and don't consume the current byte */
 #define CALLBACK_DATA_NOADVANCE(FOR)                                 \
-    CALLBACK_DATA_(FOR, p - FOR##_mark, p - data)
-
-/* Set the mark FOR; non-destructive if mark is already set */
-#define MARK(FOR)                                                    \
-do {                                                                 \
-  if (!FOR##_mark) {                                                 \
-    FOR##_mark = p;                                                  \
-  }                                                                  \
-} while (0)
+    CALLBACK_DATA_(FOR, p - parser->mark, p - data)
 
 /* Don't allow the total size of the HTTP headers (including the status
  * line) to exceed HTTP_MAX_HEADER_SIZE.  This check is here to protect
@@ -636,11 +628,6 @@ size_t http_parser_execute (http_parser *parser,
   char c, ch;
   int8_t unhex_val;
   const char *p = data;
-  const char *header_field_mark = 0;
-  const char *header_value_mark = 0;
-  const char *url_mark = 0;
-  const char *body_mark = 0;
-  const char *status_mark = 0;
   enum state p_state = (enum state) parser->state;
   const unsigned int lenient = parser->lenient_http_headers;
 
@@ -670,7 +657,7 @@ size_t http_parser_execute (http_parser *parser,
     }
   }
 
-
+#if 0
   if (CURRENT_STATE() == s_header_field)
     header_field_mark = data;
   if (CURRENT_STATE() == s_header_value)
@@ -695,6 +682,7 @@ size_t http_parser_execute (http_parser *parser,
   default:
     break;
   }
+#endif
 
   for (p=data; p != data + len; p++) {
     ch = *p;
@@ -884,7 +872,7 @@ reexecute:
 
       case s_res_status_start:
       {
-        MARK(status);
+        parser->mark = p;
         UPDATE_STATE(s_res_status);
         parser->index = 0;
 
@@ -1013,7 +1001,7 @@ reexecute:
       {
         if (ch == ' ') break;
 
-        MARK(url);
+        parser->mark = p;
         if (parser->method == HTTP_CONNECT) {
           UPDATE_STATE(s_req_server_start);
         }
@@ -1196,8 +1184,7 @@ reexecute:
           goto error;
         }
 
-        MARK(header_field);
-
+        parser->mark = p;
         parser->index = 0;
         UPDATE_STATE(s_header_field);
 
@@ -1371,8 +1358,7 @@ reexecute:
 
       case s_header_value_start:
       {
-        MARK(header_value);
-
+        parser->mark = p;
         UPDATE_STATE(s_header_value);
         parser->index = 0;
 
@@ -1695,7 +1681,7 @@ reexecute:
           }
 
           /* header value was empty */
-          MARK(header_value);
+          parser->mark = p;
           UPDATE_STATE(s_header_field_start);
           CALLBACK_DATA_NOADVANCE(header_value);
           REEXECUTE();
@@ -1830,10 +1816,10 @@ reexecute:
          * Further, if content_length ends up at 0, we want to see the last
          * byte again for our message complete callback.
          */
-        MARK(body);
+        parser->mark = p;
         parser->content_length -= to_read;
         p += to_read - 1;
-
+		
         if (parser->content_length == 0) {
           UPDATE_STATE(s_message_done);
 
@@ -1846,18 +1832,19 @@ reexecute:
            * complete-on-length. It's not clear that this distinction is
            * important for applications, but let's keep it for now.
            */
-          CALLBACK_DATA_(body, p - body_mark + 1, p - data);
+          CALLBACK_DATA_(body, p - parser->mark + 1, p - data);
           REEXECUTE();
         }
 
+		CALLBACK_DATA_(body, p - parser->mark + 1, p - data);
         break;
       }
 
       /* read until EOF */
       case s_body_identity_eof:
-        MARK(body);
+        parser->mark = p;
         p = data + len - 1;
-
+		CALLBACK_DATA_(body, p - parser->mark + 1, p - data);
         break;
 
       case s_message_done:
@@ -1962,14 +1949,15 @@ reexecute:
         /* See the explanation in s_body_identity for why the content
          * length and data pointers are managed this way.
          */
-        MARK(body);
+        parser->mark = p;
         parser->content_length -= to_read;
         p += to_read - 1;
 
         if (parser->content_length == 0) {
           UPDATE_STATE(s_chunk_data_almost_done);
         }
-
+		
+		CALLBACK_DATA_(body, p - parser->mark + 1, p - data);
         break;
       }
 
@@ -1995,28 +1983,6 @@ reexecute:
         goto error;
     }
   }
-
-  /* Run callbacks for any marks that we have leftover after we ran our of
-   * bytes. There should be at most one of these set, so it's OK to invoke
-   * them in series (unset marks will not result in callbacks).
-   *
-   * We use the NOADVANCE() variety of callbacks here because 'p' has already
-   * overflowed 'data' and this allows us to correct for the off-by-one that
-   * we'd otherwise have (since CALLBACK_DATA() is meant to be run with a 'p'
-   * value that's in-bounds).
-   */
-
-  assert(((header_field_mark ? 1 : 0) +
-          (header_value_mark ? 1 : 0) +
-          (url_mark ? 1 : 0)  +
-          (body_mark ? 1 : 0) +
-          (status_mark ? 1 : 0)) <= 1);
-
-  CALLBACK_DATA_NOADVANCE(header_field);
-  CALLBACK_DATA_NOADVANCE(header_value);
-  CALLBACK_DATA_NOADVANCE(url);
-  CALLBACK_DATA_NOADVANCE(body);
-  CALLBACK_DATA_NOADVANCE(status);
 
   RETURN(len);
 
