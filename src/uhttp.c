@@ -92,9 +92,12 @@ static int on_url(http_parser *parser, const char *at, size_t len)
     con->req.path.at = at + url.field_data[UF_PATH].off;
     con->req.path.len = url.field_data[UF_PATH].len;
 
+    uh_log_debug("Path:[%.*s]", (int)con->req.path.len, con->req.path.at);
+    
     if (url.field_set & (1 << UF_QUERY)) {
         con->req.query.at = at + url.field_data[UF_QUERY].off;
         con->req.query.len = url.field_data[UF_QUERY].len;
+        uh_log_debug("Query:[%.*s]", (int)con->req.query.len, con->req.query.at);
     }
     
     return 0;
