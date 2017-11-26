@@ -10,6 +10,7 @@ add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/include
+	${CMAKE_CURRENT_SOURCE_DIR}/src/include/uhttp
 	${CMAKE_CURRENT_BINARY_DIR}/src/include
 )
 
