@@ -108,5 +108,3 @@ see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttp/blob/master/CONT
 # Thanks for the following project
 * [libev]
 * [http-parser]
-
-# If the project is helpful to you, please do not hesitate to star. Thank you!
