@@ -460,13 +460,11 @@ void uh_send_head(struct uh_connection *con, int status, int length, const char 
 }
 
 void uh_send_error(struct uh_connection *con, int code, const char *reason)
-{
-    http_parser *parser = &con->parser;
-    
+{    
     if (!reason)
         reason = http_status_str(code);
 
-    if (http_should_keep_alive(parser) && code < HTTP_STATUS_BAD_REQUEST) {
+    if (http_should_keep_alive(&con->parser) && code < HTTP_STATUS_BAD_REQUEST) {
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: keep-alive\r\n");
     } else {
         uh_send_head(con, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
@@ -479,7 +477,6 @@ void uh_send_error(struct uh_connection *con, int code, const char *reason)
 void uh_redirect(struct uh_connection *con, int code, const char *location)
 {
     char body[128] = "";
-    http_parser *parser = &con->parser;
     
     snprintf(body, sizeof(body), "<p>Moved <a href=\"%s\">here</a></p>", location);  
 
@@ -492,9 +489,6 @@ void uh_redirect(struct uh_connection *con, int code, const char *location)
         "Cache-Control: no-cache\r\n", location, strlen(body));
     
     uh_send(con, "\r\n", 2);
-
-    if (parser->method != HTTP_HEAD)
-        uh_send(con, body, strlen(body));
 }
 
 int uh_send_chunk(struct uh_connection *con, const char *buf, int len)
