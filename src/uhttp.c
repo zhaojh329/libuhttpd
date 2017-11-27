@@ -227,8 +227,11 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
 handshake_done:
 #endif
 
-    if (uh_buf_available(buf) < UH_BUFFER_SIZE)
+    if (uh_buf_available(buf) < UH_BUFFER_SIZE) {
+        int off = con->parser.mark - buf->base;
         uh_buf_grow(buf, UH_BUFFER_SIZE);
+        con->parser.mark = buf->base + off;
+    }
 
     base = buf->base + buf->len;
     
