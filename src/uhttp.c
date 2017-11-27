@@ -177,11 +177,11 @@ static int uh_str_cmp(struct uh_str *uv, const char *str)
 static int on_message_complete(http_parser *parser)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);
-    struct uh_route *r;
+    struct uh_hook *h;
 
-    list_for_each_entry(r, &con->srv->routes, list) {
-        if (uh_str_cmp(&con->req.path, r->path)) {
-            r->cb(con);
+    list_for_each_entry(h, &con->srv->hooks, list) {
+        if (uh_str_cmp(&con->req.path, h->path)) {
+            h->cb(con);
             if (!(con->flags & UH_CON_CLOSE))
                 con->flags |= UH_CON_REUSE;
             return 0;
@@ -338,7 +338,7 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *ipaddr, int po
         return NULL;
     }
 
-    INIT_LIST_HEAD(&srv->routes);
+    INIT_LIST_HEAD(&srv->hooks);
     INIT_LIST_HEAD(&srv->connections);
     
     sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
@@ -377,7 +377,7 @@ void uh_server_free(struct uh_server *srv)
 {
     if (srv) {
         struct uh_connection *con, *tmp_c;
-        struct uh_route *r, *tmp_r;
+        struct uh_hook *h, *tmp_h;
     
         if (srv->sock > 0)
             close(srv->sock);
@@ -388,10 +388,10 @@ void uh_server_free(struct uh_server *srv)
             uh_connection_destroy(con);
         }
 
-        list_for_each_entry_safe(r, tmp_r, &srv->routes, list) {
-            list_del(&r->list);
-            free(r->path);
-            free(r);
+        list_for_each_entry_safe(h, tmp_h, &srv->hooks, list) {
+            list_del(&h->list);
+            free(h->path);
+            free(h);
         }
 
         uh_ssl_ctx_free(srv);
@@ -514,27 +514,27 @@ int uh_printf_chunk(struct uh_connection *con, const char *fmt, ...)
     return len;
 }
 
-int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_t cb)
+int uh_register_hook(struct uh_server *srv, const char *path, uh_hookfn_t cb)
 {
-    struct uh_route *r;
+    struct uh_hook *h;
 
     assert(path);
 
-    r = calloc(1, sizeof(struct uh_route));
-    if (!r) {
+    h = calloc(1, sizeof(struct uh_hook));
+    if (!h) {
         uh_log_err("calloc");
         return -1;
     }
 
-    r->path = strdup(path);
-    if (!r->path) {
+    h->path = strdup(path);
+    if (!h->path) {
         uh_log_err("strdup");
-        free(r);
+        free(h);
         return -1;
     }
     
-    r->cb = cb;
-    list_add(&r->list, &srv->routes);
+    h->cb = cb;
+    list_add(&h->list, &srv->hooks);
     
     return 0;   
 }

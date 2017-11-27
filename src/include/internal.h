@@ -24,9 +24,9 @@
     ev_timer_start(l, w); \
     } while (0)
 
-struct uh_route {
+struct uh_hook {
     char *path;
-    uh_route_handler_t cb;
+    uh_hookfn_t cb;
     struct list_head list;
 };
 
@@ -37,7 +37,7 @@ struct uh_server {
 #endif
     ev_io read_watcher;
     struct ev_loop *loop;
-    struct list_head routes;
+    struct list_head hooks;
     struct list_head connections;
 };
 

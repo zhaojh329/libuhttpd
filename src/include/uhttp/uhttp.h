@@ -11,7 +11,7 @@
 struct uh_server;
 struct uh_connection;
 
-typedef void (*uh_route_handler_t)(struct uh_connection *con);
+typedef void (*uh_hookfn_t)(struct uh_connection *con);
 
 const char *uh_version();
 
@@ -77,8 +77,8 @@ int uh_send_chunk(struct uh_connection *con, const char *buf, int len);
  */
 int uh_printf_chunk(struct uh_connection *con, const char *fmt, ...);
 
-/* sets a callback to be executed on a specific path */
-int uh_register_route(struct uh_server *srv, const char *path, uh_route_handler_t cb);
+/* Registers a callback to be executed on a specific path */
+int uh_register_hook(struct uh_server *srv, const char *path, uh_hookfn_t cb);
 
 struct uh_str *uh_get_url(struct uh_connection *con);
 struct uh_str *uh_get_path(struct uh_connection *con);

@@ -8,7 +8,7 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
     ev_break(loop, EVBREAK_ALL);
 }
 
-void route_test(struct uh_connection *con)
+void hook_test(struct uh_connection *con)
 {
     struct uh_str *url = uh_get_url(con);
     struct uh_str *path = uh_get_path(con);
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
         goto err;
 #endif
 
-    uh_register_route(srv, "/test", route_test);
+    uh_register_hook(srv, "/test", hook_test);
     
     uh_log_info("Listen on 8000...\n");
     
