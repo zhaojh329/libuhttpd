@@ -80,6 +80,12 @@ int uh_printf_chunk(struct uh_connection *con, const char *fmt, ...);
 /* Registers a callback to be executed on a specific path */
 int uh_register_hook(struct uh_server *srv, const char *path, uh_hookfn_t cb);
 
+/*
+ * Registers a callback to be executed when don't find a callback function
+ * that is specific to a path.
+ */
+void uh_register_default_hook(struct uh_server *srv, uh_hookfn_t cb);
+
 struct uh_str *uh_get_url(struct uh_connection *con);
 struct uh_str *uh_get_path(struct uh_connection *con);
 struct uh_str *uh_get_query(struct uh_connection *con);

@@ -188,6 +188,11 @@ static int on_message_complete(http_parser *parser)
         }
     }
 
+    if (con->srv->default_cb) {
+        con->srv->default_cb(con);
+        return 0;
+    }
+    
     uh_send_error(con, HTTP_STATUS_NOT_FOUND, NULL);
     
     return 0;
@@ -537,6 +542,11 @@ int uh_register_hook(struct uh_server *srv, const char *path, uh_hookfn_t cb)
     list_add(&h->list, &srv->hooks);
     
     return 0;   
+}
+
+void uh_register_default_hook(struct uh_server *srv, uh_hookfn_t cb)
+{
+    srv->default_cb = cb;
 }
 
 inline struct uh_str *uh_get_url(struct uh_connection *con)

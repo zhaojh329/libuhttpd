@@ -37,6 +37,7 @@ struct uh_server {
 #endif
     ev_io read_watcher;
     struct ev_loop *loop;
+    uh_hookfn_t default_cb;
     struct list_head hooks;
     struct list_head connections;
 };
