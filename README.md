@@ -108,3 +108,4 @@ see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttp/blob/master/CONT
 # Thanks for the following project
 * [libev]
 * [http-parser]
+* [mongoose](https://github.com/cesanta/mongoose)
