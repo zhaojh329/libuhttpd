@@ -244,8 +244,6 @@ handshake_done:
 
     buf->len += len;
 
-    uh_log_debug("read:[%.*s]", len, base);
-
     parsered = http_parser_execute(&con->parser, &parser_settings, base, len);
 
     if (unlikely(con->flags & UH_CON_CLOSE))
