@@ -1,6 +1,6 @@
 # The version number.
 set(UHTTP_VERSION_MAJOR 0)
-set(UHTTP_VERSION_MINOR 1)
+set(UHTTP_VERSION_MINOR 2)
 set(UHTTP_VERSION_PATCH 0)
 
 # Check the third party Libraries
