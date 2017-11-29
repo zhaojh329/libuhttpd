@@ -605,14 +605,21 @@ int uh_unescape(const char *str, int len, char *out, int olen)
 struct uh_str uh_get_var(struct uh_connection *con, const char *name)
 {
     struct uh_str *query = &con->req.query;
-    const char *pos = query->at, *tail = query->at + query->len - 1;
-    const char *p, *q;
+    struct uh_str *body = &con->req.body;
+    const char *pos, *tail, *p, *q;
     struct uh_str var = {.at = NULL, .len = 0};
 
-    assert(con && name);
-    
-    if (query->len == 0)
+    if (query->len > 0) {
+        pos = query->at;
+        tail = query->at + query->len - 1;
+    } else if (body->len > 0) {
+        pos = body->at;
+        tail = body->at + body->len - 1;
+    } else {
         return var;
+    }
+
+    assert(con && name);
 
     while (pos < tail) {
         p = memchr(pos, '&', tail - pos);
