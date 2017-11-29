@@ -10,7 +10,7 @@ If you want to contribute to [libuhttp](https://github.com/zhaojh329/libuhttp), 
 2. Clone the repository from your account with:
 
     ```
-    git clone git@github.com:your_github_username/libuhttp.git
+    git clone https://github.com/your_github_username/libuhttp.git
     ```
 
 3. Create a new branch with:
