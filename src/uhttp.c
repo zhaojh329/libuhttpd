@@ -575,7 +575,7 @@ int uh_unescape(const char *str, int len, char *out, int olen)
     const char *p = str;
     char *o = out;
 
-    assert(str && out);
+    assert(str && out && olen > 1);
 
     olen -= 1;
     
