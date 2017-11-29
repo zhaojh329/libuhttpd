@@ -18,8 +18,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef http_parser_h
-#define http_parser_h
+#ifndef _UHTTP_PARSER_H
+#define _UHTTP_PARSER_H
 #ifdef __cplusplus
 extern "C" {
 #endif

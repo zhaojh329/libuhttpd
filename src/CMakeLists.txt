@@ -10,7 +10,7 @@ find_package(CyaSSL)
 
 include_directories(${LIBEV_INCLUDE_DIRS})
 set(EXTRA_LIBS ${LIBEV_LIBRARIES})
-set(SOURCE_FILES uhttp.c log.c buf.c ssl.c http_parser.c)
+set(SOURCE_FILES uhttp.c log.c buf.c ssl.c parser.c)
 
 set(UHTTP_DEBUG_CONFIG 0)
 option(UHTTP_DEBUG "Turn on debug" OFF)
@@ -85,7 +85,7 @@ install(
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/log.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/buf.h
         ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/str.h
-	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/http_parser.h
+	    ${CMAKE_CURRENT_SOURCE_DIR}/include/uhttp/parser.h
     DESTINATION
     	include/uhttp
 )

@@ -6,7 +6,7 @@
 #include "uhttp/log.h"
 #include "uhttp/buf.h"
 #include "uhttp/str.h"
-#include "uhttp/http_parser.h"
+#include "uhttp/parser.h"
 
 struct uh_server;
 struct uh_connection;
