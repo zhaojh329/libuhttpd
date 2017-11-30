@@ -56,7 +56,7 @@ int uh_printf(struct uh_connection *con, const char *fmt, ...);
  * Otherwise, `uh_send()` or `uh_printf()` must be used.
  * Extra headers could be set through `extra_headers`.
  *
- * NOTE: `extra_headers` must NOT be terminated by a new line.
+ * NOTE: `extra_headers` must be terminated by a new line("\r\n").
  */
 void uh_send_head(struct uh_connection *con, int status, int length, const char *extra_headers);
 
