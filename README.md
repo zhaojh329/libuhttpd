@@ -1,4 +1,4 @@
-# libuhttp
+# libuhttp([中文](https://github.com/zhaojh329/libuhttp/blob/master/README_ZH.md))
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
@@ -51,7 +51,7 @@ See which configuration are supported
 	~/libuhttp/build$ cmake .. -L
 	~/libuhttp/build$ cmake .. -LH
 
-Default configure: automatically select the SSL library as its SSL backend(If there is a SSL library available).
+Default configure: automatically select the SSL library as its SSL backend(If there is a SSL library available)
 
 	~/libuhttp/build$ cmake ..
 
