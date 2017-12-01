@@ -244,7 +244,7 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
 handshake_done:
 #endif
 
-    if (uh_buf_available(buf) < UH_BUFFER_SIZE) {
+    if (unlikely(uh_buf_available(buf) < 1)) {
         int off = con->parser.mark - buf->base;
         uh_buf_grow(buf, UH_BUFFER_SIZE);
         con->parser.mark = buf->base + off;
@@ -252,7 +252,7 @@ handshake_done:
 
     base = buf->base + buf->len;
     
-    len = uh_ssl_read(con, base, UH_BUFFER_SIZE);
+    len = uh_ssl_read(con, base, uh_buf_available(buf));
     if (unlikely(len <= 0)) {
         if (con->flags & UH_CON_CLOSE)
             uh_connection_destroy(con);
