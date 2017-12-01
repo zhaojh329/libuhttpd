@@ -16,7 +16,7 @@ you can choose CyaSSl(wolfssl).
 * use [libev] as its event backend
 * support HTTPS: alternative OpenSSL and CyaSSl(wolfssl)
 * flexible and you can easily extend your application to have HTTP/HTTPS services
-* support embedding LUA code into HTML code, like embedding PHP to HTML(soon be supported)
+* Lua template: embedding LUA code into HTML code, like embedding PHP to HTML(soon be supported)
 * code structure is concise and understandable, also suitable for learning
 
 # Why use [libev] as its backend?
