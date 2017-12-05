@@ -109,6 +109,8 @@ struct uh_str *uh_get_query(struct uh_connection *con);
 struct uh_str uh_get_var(struct uh_connection *con, const char *name);
 struct uh_str *uh_get_header(struct uh_connection *con, const char *name);
 
+int uh_get_con_sock(struct uh_connection *con);
+
 /* Unescapes strings like '%7B1,%202,%203%7D' would become '{1, 2, 3}' */
 int uh_unescape(const char *str, int len, char *out, int olen);
 

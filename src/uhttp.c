@@ -582,6 +582,11 @@ inline struct uh_str *uh_get_query(struct uh_connection *con)
     return &con->req.query;
 }
 
+int uh_get_con_sock(struct uh_connection *con)
+{
+    return con->sock;
+}
+
 static inline char c2hex(char c)
 {
     return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c - 'a' + 10; /* accept small letters just in case */
