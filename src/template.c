@@ -626,11 +626,10 @@ void uh_template(struct uh_connection *con)
 
     for (i = 0; i < con->req.header_num; i ++) {
         struct uh_header *h = &con->req.header[i];
-        char buf[128] = "";
 
-        snprintf(buf, sizeof(buf), "%.*s", (int)h->field.len, h->field.at);
+        lua_pushlstring(L, h->field.at, h->field.len);
         lua_pushlstring(L, h->value.at, h->value.len);
-        lua_setfield(L, -2, buf);
+        lua_settable(L, -3);
     }
 
     lua_setfield(L, -2, "HEADERS");
