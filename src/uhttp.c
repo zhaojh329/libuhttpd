@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #include "internal.h"
 #include "uhttp/uhttp.h"
@@ -346,9 +347,12 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *ipaddr, int po
     struct sockaddr_in addr;
     int sock = -1, on = 1;
     ev_io *read_watcher;
+    char buf[PATH_MAX] = "";
     
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
+
+    signal(SIGPIPE, SIG_IGN);
     
     if (inet_pton(AF_INET, ipaddr, &addr.sin_addr) <= 0) {
         uh_log_err("invalid ipaddr");
@@ -360,6 +364,14 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *ipaddr, int po
         uh_log_err("calloc");
         return NULL;
     }
+    
+    if (!realpath(".", buf)) {
+        uh_log_err("Unable to determine work dir");
+        goto err;
+    }
+    
+    srv->docroot = strdup(buf);
+    uh_log_debug("docroot:%s", srv->docroot);
 
     INIT_LIST_HEAD(&srv->hooks);
     INIT_LIST_HEAD(&srv->connections);
@@ -401,7 +413,10 @@ void uh_server_free(struct uh_server *srv)
     if (srv) {
         struct uh_connection *con, *tmp_c;
         struct uh_hook *h, *tmp_h;
-    
+
+        if (srv->docroot)
+            free(srv->docroot);
+        
         if (srv->sock > 0)
             close(srv->sock);
         
@@ -421,6 +436,12 @@ void uh_server_free(struct uh_server *srv)
         
         free(srv);
     }
+}
+
+void uh_set_docroot(struct uh_server *srv, const char *path)
+{
+    srv->docroot = strdup(path);
+    uh_log_debug("docroot:%s", srv->docroot);
 }
 
 int uh_send(struct uh_connection *con, const void *buf, int len)

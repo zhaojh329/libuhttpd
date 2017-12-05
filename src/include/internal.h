@@ -18,6 +18,8 @@
 #ifndef _UHTTP_INTERNAL_H
 #define _UHTTP_INTERNAL_H
 
+#include <lua.h>
+
 #include "list.h"
 #include "uhttp/uhttp.h"
 
@@ -52,6 +54,8 @@ struct uh_server {
 #if (UHTTP_SSL_ENABLED) 
     void *ssl_ctx;
 #endif
+    char *docroot;
+    lua_State *L;
     ev_io read_watcher;
     struct ev_loop *loop;
     uh_hookfn_t default_cb;
@@ -81,6 +85,8 @@ struct uh_connection {
     unsigned char flags;
     struct uh_buf read_buf;
     struct uh_buf write_buf;
+    ev_child child_watcher;
+    ev_io read_watcher_lua;
     ev_io read_watcher;
     ev_io write_watcher;
     ev_timer timer_watcher;

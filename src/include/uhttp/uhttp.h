@@ -38,6 +38,12 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *ipaddr, int po
 /* frees a uhttp server instance. */
 void uh_server_free(struct uh_server *srv);
 
+/* Sets document root. */
+void uh_set_docroot(struct uh_server *srv, const char *path);
+
+/* Processing Lua templates */
+void uh_template(struct uh_connection *con);
+
 /* Sends data to the connection. */
 int uh_send(struct uh_connection *con, const void *buf, int len);
 
@@ -111,10 +117,10 @@ struct uh_str *uh_get_query(struct uh_connection *con);
 struct uh_str uh_get_var(struct uh_connection *con, const char *name);
 struct uh_str *uh_get_header(struct uh_connection *con, const char *name);
 
-int uh_get_con_sock(struct uh_connection *con);
-
 /* Unescapes strings like '%7B1,%202,%203%7D' would become '{1, 2, 3}' */
 int uh_unescape(const char *str, int len, char *out, int olen);
+
+int uh_get_con_sock(struct uh_connection *con);
 
 #if (UHTTP_SSL_ENABLED)
 /* Init ssl for the server */

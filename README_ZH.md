@@ -15,7 +15,7 @@ SSL后端可以选择OpenSSL和CyaSSl(wolfssl)，如果你对大小敏感，那�
 * 使用[libev]作为其事件后端
 * 支持HTTPS: 可以选择OpenSSL和CyaSSl(wolfssl)
 * 可伸缩：你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
-* Lua模板：嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样（即将支持）
+* Lua模板：嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
 * 代码结构简洁通俗易懂，亦适合学习
 
 # 为什么使用[libev]作为其事件后端?
