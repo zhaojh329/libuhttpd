@@ -576,6 +576,7 @@ void uh_template(struct uh_connection *con)
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     struct uh_str *ustr;
+    int i;
 
     strcpy(path, con->srv->docroot);
     strncat(path, con->req.path.at, con->req.path.len);
@@ -620,6 +621,19 @@ void uh_template(struct uh_connection *con)
     ustr = uh_get_path(con);
     lua_pushlstring(L, ustr->at, ustr->len);
     lua_setfield(L, -2, "HTTP_PATH");
+
+    lua_newtable(L);
+
+    for (i = 0; i < con->req.header_num; i ++) {
+        struct uh_header *h = &con->req.header[i];
+        char buf[128] = "";
+
+        snprintf(buf, sizeof(buf), "%.*s", (int)h->field.len, h->field.at);
+        lua_pushlstring(L, h->value.at, h->value.len);
+        lua_setfield(L, -2, buf);
+    }
+
+    lua_setfield(L, -2, "HEADERS");
 
     lua_setglobal(L, "_UHTTP");
     

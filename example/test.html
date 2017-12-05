@@ -4,3 +4,6 @@
 <h1>Remote Host: <%=_UHTTP["REMOTE_HOST"]%></h1>
 <h1>Url: <%=_UHTTP["HTTP_URL"]%></h1>
 <h1>Path: <%=_UHTTP["HTTP_PATH"]%></h1>
+<%for k, v in pairs(_UHTTP["HEADERS"]) do%>
+<h1><%=k%>: <%=v%></h1>
+<%end%>
