@@ -104,6 +104,9 @@ CentOS
 如果你想帮助[libuhttp](https://github.com/zhaojh329/libuhttp)变得更好，请参考
 [CONTRIBUTING_ZH.md](https://github.com/zhaojh329/libuhttp/blob/master/CONTRIBUTING_ZH.md)。
 
+# 技术交流
+QQ群：153530783
+
 # 感谢以下开源项目提供帮助
 * [libev]
 * [http-parser]
