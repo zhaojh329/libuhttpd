@@ -567,6 +567,16 @@ void uh_register_default_hook(struct uh_server *srv, uh_hookfn_t cb)
     srv->default_cb = cb;
 }
 
+enum http_method uh_get_method(struct uh_connection *con)
+{
+    return con->parser.method;
+}
+
+const char *uh_get_method_str(struct uh_connection *con)
+{
+    return http_method_str(con->parser.method);
+}
+
 inline struct uh_str *uh_get_url(struct uh_connection *con)
 {
     return &con->req.url;

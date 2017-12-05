@@ -103,6 +103,8 @@ int uh_register_hook(struct uh_server *srv, const char *path, uh_hookfn_t cb);
  */
 void uh_register_default_hook(struct uh_server *srv, uh_hookfn_t cb);
 
+enum http_method uh_get_method(struct uh_connection *con);
+const char *uh_get_method_str(struct uh_connection *con);
 struct uh_str *uh_get_url(struct uh_connection *con);
 struct uh_str *uh_get_path(struct uh_connection *con);
 struct uh_str *uh_get_query(struct uh_connection *con);
