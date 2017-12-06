@@ -77,9 +77,9 @@ struct uh_request {
     struct uh_header header[UH_HEADER_NUM_LIMIT];
 };
 
-struct uh_connection {  
+struct uh_connection {
     int sock;
-#if (UHTTP_SSL_ENABLED) 
+#if (UHTTP_SSL_ENABLED)
     void *ssl;
 #endif
     unsigned char flags;
