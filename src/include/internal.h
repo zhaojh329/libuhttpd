@@ -43,6 +43,11 @@
     ev_timer_start(l, w); \
     } while (0)
 
+enum uh_query_state {
+    s_query_key,
+    s_query_value
+};
+
 struct uh_hook {
     char *path;
     uh_hookfn_t cb;

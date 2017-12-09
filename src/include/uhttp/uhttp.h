@@ -19,6 +19,8 @@
 #define _UHTTP_UHTTP_H
 
 #include <ev.h>
+#include <stdbool.h>
+
 #include "uhttp/config.h"
 #include "uhttp/log.h"
 #include "uhttp/buf.h"
@@ -117,6 +119,13 @@ struct uh_str *uh_get_query(struct uh_connection *con);
 struct uh_str uh_get_var(struct uh_connection *con, const char *name);
 struct uh_str *uh_get_header(struct uh_connection *con, const char *name);
 int uh_get_con_sock(struct uh_connection *con);
+
+/*
+ * Traversing all variables, when a variable is found, the callback function is called,
+ * If the callback function returns to true, the traversal is terminated.
+ */
+bool uh_foreach_var(struct uh_connection *con,
+    bool (*found)(struct uh_str *key, struct uh_str *val, void *udata), void *udata);
 
 /* Unescapes strings like '%7B1,%202,%203%7D' would become '{1, 2, 3}' */
 int uh_unescape(const char *str, int len, char *out, int olen);

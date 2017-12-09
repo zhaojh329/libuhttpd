@@ -645,64 +645,97 @@ int uh_unescape(const char *str, int len, char *out, int olen)
     return 0;
 }
 
-struct uh_str uh_get_var(struct uh_connection *con, const char *name)
+static bool __uh_foreach_var(struct uh_str *data,
+    bool (*found)(struct uh_str *key, struct uh_str *val, void *udata), void *udata)
 {
-    struct uh_str *query = &con->req.query;
-    struct uh_str *body = &con->req.body;
-    const char *pos, *tail, *p, *q;
-    struct uh_str var = {.at = NULL, .len = 0};
-    struct uh_str *content_type = uh_get_header(con, "Content-Type");
+    struct uh_str key, val;
+    int state = s_query_key;
+    int i;
+    char ch;
 
-    if (query->len > 0) {
-        pos = query->at;
-        tail = query->at + query->len - 1;
-    } else if (body->len > 0) {
-        if (!content_type || !uh_str_cmp(content_type, "application/x-www-form-urlencoded"))
-            return var;
-        pos = body->at;
-        tail = body->at + body->len - 1;
-    } else {
-        return var;
-    }
+    key.len = 0;
+    val.len = 0;
 
-    assert(con && name);
+    for (i = 0; i < data->len; i++) {
+        ch = data->at[i];
 
-    while (pos < tail) {
-        p = memchr(pos, '&', tail - pos);
-        if (p) {
-            q = memchr(pos, '=', p - pos);
-            if (q) {
-                if (q - pos != strlen(name)) {
-                    pos = p + 1;
-                    continue;
-                }
-
-                if (strncmp(pos, name, strlen(name))) {
-                    pos = p + 1;
-                    continue;
-                }
-
-                var.at = q + 1;
-                var.len = p - q - 1;
-
-                return var;
+        switch(state) {
+        case s_query_key:
+            if (ch == '=') {
+                state = s_query_value;
+                break;
             }
-            pos = p + 1;
-        } else {
-            p = tail;
-            q = memchr(pos, '=', tail - pos);
-            if (q) {                
-                if (q - pos == strlen(name) && !strncmp(pos, name, strlen(name))) {
-                    var.at = q + 1;
-                    var.len = p - q;
-                    return var;
-                }
+
+            if (!key.len)
+                key.at = data->at + i;
+            key.len++;
+            break;
+
+        case s_query_value:
+            if (ch == '&') {
+                state = s_query_key;
+
+                if (found(&key, &val, udata))
+                    return true;
+
+                key.len = 0;
+                val.len = 0;
+                break;
             }
+
+            if (!val.len)
+                val.at = data->at + i;
+            val.len++;
+
+        default:
             break;
         }
     }
 
-    return var;
+    if (state == s_query_value && key.len > 0 && val.len > 0)
+        if (found(&key, &val, udata))
+            return true;
+
+    return false;
+}
+
+bool uh_foreach_var(struct uh_connection *con,
+    bool (*found)(struct uh_str *key, struct uh_str *val, void *udata), void *udata)
+{
+    struct uh_str *content_type = uh_get_header(con, "Content-Type");
+
+    if (__uh_foreach_var(&con->req.query, found, udata))
+        return true;
+
+    if (content_type && uh_str_cmp(content_type, "application/x-www-form-urlencoded"))
+        return __uh_foreach_var(&con->req.body, found, udata);
+
+    return false;
+}
+
+static bool found_var(struct uh_str *key, struct uh_str *val, void *udata)
+{
+    struct uh_str *name = (struct uh_str *)udata;
+
+    if (key->len == name->len && !strncmp(key->at, name->at, key->len)) {
+        name->at = val->at;
+        name->len = val->len;
+        return true;
+    }
+
+    return false;
+}
+
+struct uh_str uh_get_var(struct uh_connection *con, const char *name)
+{
+    struct uh_str val = {.at = name, .len = strlen(name)};
+
+    if (!uh_foreach_var(con, found_var, &val)) {
+        val.at = NULL;
+        val.len = 0;
+    }
+
+    return val;
 }
 
 struct uh_str *uh_get_header(struct uh_connection *con, const char *name)
