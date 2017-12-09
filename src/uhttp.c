@@ -661,11 +661,14 @@ struct uh_str uh_get_var(struct uh_connection *con, const char *name)
     struct uh_str *body = &con->req.body;
     const char *pos, *tail, *p, *q;
     struct uh_str var = {.at = NULL, .len = 0};
+    struct uh_str *content_type = uh_get_header(con, "Content-Type");
 
     if (query->len > 0) {
         pos = query->at;
         tail = query->at + query->len - 1;
     } else if (body->len > 0) {
+        if (!content_type || !uh_str_cmp(content_type, "application/x-www-form-urlencoded"))
+            return var;
         pos = body->at;
         tail = body->at + body->len - 1;
     } else {
