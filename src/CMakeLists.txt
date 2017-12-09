@@ -1,7 +1,7 @@
 # The version number.
 set(UHTTP_VERSION_MAJOR 0)
-set(UHTTP_VERSION_MINOR 2)
-set(UHTTP_VERSION_PATCH 1)
+set(UHTTP_VERSION_MINOR 3)
+set(UHTTP_VERSION_PATCH 0)
 
 # Check the third party Libraries
 find_package(Libev REQUIRED)
