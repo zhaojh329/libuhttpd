@@ -182,16 +182,6 @@ static int on_body(http_parser *parser, const char *at, size_t len)
     return 0;
 }
 
-
-/* Return 1 for equal */
-static int uh_str_cmp(struct uh_str *uv, const char *str)
-{
-    if (uv->len != strlen(str))
-        return 0;
-
-    return (!strncasecmp(uv->at, str, uv->len));
-}
-
 static int on_message_complete(http_parser *parser)
 {
     struct uh_connection *con = container_of(parser, struct uh_connection, parser);

@@ -23,4 +23,12 @@ struct uh_str {
     size_t len;
 };
 
+ /* Return 1 for equal */
+static inline int uh_str_cmp(struct uh_str *uv, const char *str)
+{
+    if (uv->len != strlen(str))
+        return 0;
+    return (!strncasecmp(uv->at, str, uv->len));
+}
+
 #endif
