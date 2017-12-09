@@ -579,9 +579,13 @@ void uh_template(struct uh_connection *con)
     int i;
 
     strcpy(path, con->srv->docroot);
-    strncat(path, con->req.path.at, con->req.path.len);
 
-    if (stat(path, &st) < 0) {
+    if (con->req.path.len == 1 && con->req.path.at[0] == '/')
+        strncat(path, "/index.html", 11);
+    else
+        strncat(path, con->req.path.at, con->req.path.len);
+
+    if (stat(path, &st) < 0 || !S_ISREG(st.st_mode)) {
         uh_send_error(con, HTTP_STATUS_NOT_FOUND, NULL);
         return;
     }
