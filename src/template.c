@@ -565,6 +565,17 @@ static void child_cb(struct ev_loop *loop, ev_child *w, int revents)
     ev_child_stop(con->srv->loop, w);
 }
 
+static bool found_var(struct uh_str *key, struct uh_str *val, void *udata)
+{
+    lua_State *L = (lua_State *)udata;
+
+    lua_pushlstring(L, key->at, key->len);
+    lua_pushlstring(L, val->at, val->len);
+    lua_settable(L, -3);
+
+    return false;
+}
+
 void uh_template(struct uh_connection *con)
 {
     struct template_parser *parser;
@@ -637,6 +648,10 @@ void uh_template(struct uh_connection *con)
     }
 
     lua_setfield(L, -2, "HEADERS");
+
+    lua_newtable(L);
+    uh_foreach_var(con, found_var, L);
+    lua_setfield(L, -2, "VARIABLES");
 
     lua_setglobal(L, "_UHTTP");
     
