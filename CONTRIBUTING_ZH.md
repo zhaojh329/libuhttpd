@@ -22,14 +22,12 @@
 
 4. 修改代码
 
-5. 别忘了将你自己的账户添加到`CONTRIBUTORS.md`.
+5. 提交代码并推送到服务器，然后从Github提交pull request。
 
-6. 提交代码并推送到服务器，然后从Github提交pull request。
-
-    git commit --signoff  
+    git commit --signoff
     git push
-    
-7. 等待审查，如果被接受，你的修改将会被合并到主分支。
+
+6. 等待审查，如果被接受，你的修改将会被合并到主分支。
 
 **注意**
 
