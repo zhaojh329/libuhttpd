@@ -22,10 +22,10 @@
 
 # 依赖
 * [libubox]
-* [ustream-ssl]: 如果你需要支持SSL
-* [mbedtls]: 如果你选择mbedtls作为你的SSL后端
-* [CyaSSl(wolfssl)]: 如果你选择wolfssl作为你的SSL后端
-* [openssl]: 如果你选择openssl作为你的SSL后端
+* [ustream-ssl]: If you need to support SSL
+* [mbedtls]: If you choose mbedtls as your SSL backend
+* [CyaSSl(wolfssl)]: If you choose wolfssl as your SSL backend
+* [openssl]: If you choose openssl as your SSL backend
 
 ## 配置
 查看支持哪些配置选项
