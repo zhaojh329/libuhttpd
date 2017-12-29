@@ -1,4 +1,4 @@
-# libuhttp
+# libuhttpd
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
@@ -35,53 +35,53 @@ CentOS
 
 ## 克隆仓库代码
 
-	~$ git clone https://github.com/zhaojh329/libuhttp.git
-	~$ cd libuhttp
+	~$ git clone https://github.com/zhaojh329/libuhttpd.git
+	~$ cd libuhttpd
 
 ## 创建编译目录
 
-	~/libuhttp$ mkdir build
-	~/libuhttp$ cd build
+	~/libuhttpd$ mkdir build
+	~/libuhttpd$ cd build
 
 ## 配置
 查看支持哪些配置选项
 
-	~/libuhttp/build$ cmake .. -L
-	~/libuhttp/build$ cmake .. -LH
+	~/libuhttpd/build$ cmake .. -L
+	~/libuhttpd/build$ cmake .. -LH
 
 默认配置: 自动选择SSL库(如果有可用的SSL库)
 
-	~/libuhttp/build$ cmake ..
+	~/libuhttpd/build$ cmake ..
 
 禁用SSL
 
-	~/libuhttp/build$ cmake .. -DUHTTP_DISABLE_SSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_DISABLE_SSL=1
 
 强制选择OpenSSL
 
-	~/libuhttp/build$ cmake .. -DUHTTP_USE_OPENSSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_USE_OPENSSL=1
 
 强制选择CyaSSl(wolfssl)
 
-	~/libuhttp/build$ cmake .. -DUHTTP_USE_CYASSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_USE_CYASSL=1
 
 打开调试
 
-	~/libuhttp/build$ cmake .. -DUHTTP_DEBUG=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_DEBUG=1
 	
-## 编译和安装libuhttp
+## 编译和安装libuhttpd
 
-    ~/libuhttp/build$ make && sudo make install
+    ~/libuhttpd/build$ make && sudo make install
 	
 ## 运行例子
 首先生成SSL证书文件
 
-	~/libuhttp/build$ cd ..
-	~/libuhttp$ ./gen_cert.sh
+	~/libuhttpd/build$ cd ..
+	~/libuhttpd$ ./gen_cert.sh
 	
 运行
 
-	~/libuhttp$ ./build/example/helloworld
+	~/libuhttpd$ ./build/example/helloworld
 	
 然后使用命令curl或者浏览器进行测试
 
@@ -98,11 +98,11 @@ CentOS
 	Host: 192.168.0.100:8000
 	User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36
 	
-# [示例程序](https://github.com/zhaojh329/libuhttp/blob/master/example/helloworld.c)
+# [示例程序](https://github.com/zhaojh329/libuhttpd/blob/master/example/helloworld.c)
 
 # 贡献代码
-如果你想帮助[libuhttp](https://github.com/zhaojh329/libuhttp)变得更好，请参考
-[CONTRIBUTING_ZH.md](https://github.com/zhaojh329/libuhttp/blob/master/CONTRIBUTING_ZH.md)。
+如果你想帮助[libuhttpd](https://github.com/zhaojh329/libuhttpd)变得更好，请参考
+[CONTRIBUTING_ZH.md](https://github.com/zhaojh329/libuhttpd/blob/master/CONTRIBUTING_ZH.md)。
 
 # 技术交流
 QQ群：153530783

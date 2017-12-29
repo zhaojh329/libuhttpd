@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_H
-#define _UHTTP_H
+#ifndef _UHTTPD_H
+#define _UHTTPD_H
 
-#include "uhttp/uhttp.h"
+#include "uhttpd/uhttpd.h"
 
 #endif

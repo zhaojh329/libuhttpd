@@ -30,7 +30,7 @@
 #include <arpa/inet.h>
 
 #include "internal.h"
-#include "uhttp/uhttp.h"
+#include "uhttpd/uhttpd.h"
 
 /* code types */
 #define T_TYPE_INIT         0

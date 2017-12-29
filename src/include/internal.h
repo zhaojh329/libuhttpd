@@ -21,7 +21,7 @@
 #include <lua.h>
 
 #include "list.h"
-#include "uhttp/uhttp.h"
+#include "uhttpd/uhttpd.h"
 
 #define UH_BUFFER_SIZE        2048
 #define UH_CONNECTION_TIMEOUT 30

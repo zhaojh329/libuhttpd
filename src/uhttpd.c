@@ -24,12 +24,12 @@
 #include <signal.h>
 
 #include "internal.h"
-#include "uhttp/uhttp.h"
-#include "uhttp/ssl.h"
+#include "uhttpd/uhttpd.h"
+#include "uhttpd/ssl.h"
 
 const char *uh_version()
 {
-    return UHTTP_VERSION_STRING;
+    return UHTTPD_VERSION_STRING;
 }
 
 static const char *http_status_str(enum http_status s)
@@ -223,7 +223,7 @@ static void connection_read_cb(struct ev_loop *loop, ev_io *w, int revents)
     char *base;
     int len, parsered;
     
-#if (UHTTP_SSL_ENABLED)
+#if (UHTTPD_SSL_ENABLED)
     if (con->flags & UH_CON_SSL_HANDSHAKE_DONE)
         goto handshake_done;
 
@@ -467,7 +467,7 @@ static void send_status_line(struct uh_connection *con, int code)
 {
     const char *reason = http_status_str(code);
     uh_printf(con, "HTTP/1.1 %d %s\r\nServer: Libuhttp %s\r\n",
-        code, reason, UHTTP_VERSION_STRING);
+        code, reason, UHTTPD_VERSION_STRING);
 }
 
 void uh_send_head(struct uh_connection *con, int status, int length, const char *extra_headers)

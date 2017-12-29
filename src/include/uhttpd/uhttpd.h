@@ -15,17 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_UHTTP_H
-#define _UHTTP_UHTTP_H
+#ifndef _UHTTPD_UHTTP_H
+#define _UHTTPD_UHTTP_H
 
 #include <ev.h>
 #include <stdbool.h>
 
-#include "uhttp/config.h"
-#include "uhttp/log.h"
-#include "uhttp/buf.h"
-#include "uhttp/str.h"
-#include "uhttp/parser.h"
+#include "uhttpd/config.h"
+#include "uhttpd/log.h"
+#include "uhttpd/buf.h"
+#include "uhttpd/str.h"
+#include "uhttpd/parser.h"
 
 struct uh_server;
 struct uh_connection;

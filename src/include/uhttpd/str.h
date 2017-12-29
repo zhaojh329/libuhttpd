@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_STR_H
-#define _UHTTP_STR_H
+#ifndef _UHTTPD_STR_H
+#define _UHTTPD_STR_H
 
 struct uh_str {
     const char *at;

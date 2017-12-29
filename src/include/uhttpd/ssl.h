@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_SSL_H
-#define _UHTTP_SSL_H
+#ifndef _UHTTPD_SSL_H
+#define _UHTTPD_SSL_H
 
 #include "internal.h"
 

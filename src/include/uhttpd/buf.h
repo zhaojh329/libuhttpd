@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_BUF_H
-#define _UHTTP_BUF_H
+#ifndef _UHTTPD_BUF_H
+#define _UHTTPD_BUF_H
 
 #include <stdio.h>
 #include <stdlib.h>

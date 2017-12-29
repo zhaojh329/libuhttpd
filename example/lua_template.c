@@ -1,6 +1,6 @@
 #include <ev.h>
 #include <stdio.h>
-#include <uhttp.h>
+#include <uhttpd.h>
 
 static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {

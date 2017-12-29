@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(libuhttp C)
+project(libuhttpd C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -10,7 +10,7 @@ add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/src/include
-	${CMAKE_CURRENT_SOURCE_DIR}/src/include/uhttp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/include/uhttpd
 	${CMAKE_CURRENT_BINARY_DIR}/src/include
 )
 

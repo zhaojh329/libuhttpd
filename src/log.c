@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#include "uhttp/log.h"
+#include "uhttpd/log.h"
 
 void __uh_log(const char *filename, int line, int priority, const char *format, ...)
 {
@@ -35,7 +35,7 @@ void __uh_log(const char *filename, int line, int priority, const char *format, 
     
     syslog(priority, "%s", buf);
 
-#if (UHTTP_DEBUG)
+#if (UHTTPD_DEBUG)
     fprintf(stderr, "%s\n", buf);
 #else
     if (priority == LOG_ERR)

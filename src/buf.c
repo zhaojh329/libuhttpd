@@ -17,8 +17,8 @@
 
 #include <assert.h>
 #include <string.h>
-#include "uhttp/buf.h"
-#include "uhttp/log.h"
+#include "uhttpd/buf.h"
+#include "uhttpd/log.h"
 
 int uh_buf_init(struct uh_buf *buf, size_t initial_size)
 {

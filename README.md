@@ -1,11 +1,11 @@
-# libuhttp([中文](https://github.com/zhaojh329/libuhttp/blob/master/README_ZH.md))
+# libuhttpd([中文](https://github.com/zhaojh329/libuhttpd/blob/master/README_ZH.md))
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
 [libev]: http://software.schmorp.de/pkg/libev.html
 [http-parser]: https://github.com/nodejs/http-parser
 
-A very tiny and fast HTTP library based on [libev] and [http-parser] for Embedded Linux.
+A very tiny and fast HTTP server library based on [libev] and [http-parser] for Embedded Linux.
 Support HTTPS(alternative OpenSSL and CyaSSl(wolfssl)) and if you're sensitive to size,
 you can choose CyaSSl(wolfssl).
 
@@ -37,53 +37,53 @@ CentOS
 
 ## Clone the repository
 
-	~$ git clone https://github.com/zhaojh329/libuhttp.git
-	~$ cd libuhttp
+	~$ git clone https://github.com/zhaojh329/libuhttpd.git
+	~$ cd libuhttpd
 
 ## Create the build directory
 
-	~/libuhttp$ mkdir build
-	~/libuhttp$ cd build
+	~/libuhttpd$ mkdir build
+	~/libuhttpd$ cd build
 
 ## Configure
 See which configuration are supported
 
-	~/libuhttp/build$ cmake .. -L
-	~/libuhttp/build$ cmake .. -LH
+	~/libuhttpd/build$ cmake .. -L
+	~/libuhttpd/build$ cmake .. -LH
 
 Default configure: automatically select the SSL library as its SSL backend(If there is a SSL library available)
 
-	~/libuhttp/build$ cmake ..
+	~/libuhttpd/build$ cmake ..
 
 Disable SSl support
 
-	~/libuhttp/build$ cmake .. -DUHTTP_DISABLE_SSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_DISABLE_SSL=1
 
 Explicit use OpenSSL as its SSL backend
 
-	~/libuhttp/build$ cmake .. -DUHTTP_USE_OPENSSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_USE_OPENSSL=1
 
 Explicit use CyaSSl(wolfssl) as its SSL backend
 
-	~/libuhttp/build$ cmake .. -DUHTTP_USE_CYASSL=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_USE_CYASSL=1
 
 Turn on debug
 
-	~/libuhttp/build$ cmake .. -DUHTTP_DEBUG=1
+	~/libuhttpd/build$ cmake .. -DUHTTP_DEBUG=1
 	
-## Build and install libuhttp
+## Build and install libuhttpd
 
-    ~/libuhttp/build$ make && sudo make install
+    ~/libuhttpd/build$ make && sudo make install
 	
 ## Run the Example
 First generate the SSL certificate file
 
-	~/libuhttp/build$ cd ..
-	~/libuhttp$ ./gen_cert.sh
+	~/libuhttpd/build$ cd ..
+	~/libuhttpd$ ./gen_cert.sh
 	
 Run
 
-	~/libuhttp$ ./build/example/helloworld
+	~/libuhttpd$ ./build/example/helloworld
 	
 Then use the command curl or browser to test
 
@@ -100,11 +100,11 @@ If use browser to test, it will be show
 	Host: 192.168.0.100:8000
 	User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36
 	
-# [Example](https://github.com/zhaojh329/libuhttp/blob/master/example/helloworld.c)
+# [Example](https://github.com/zhaojh329/libuhttpd/blob/master/example/helloworld.c)
 
 # Contributing
-If you would like to help making [libuhttp](https://github.com/zhaojh329/libuhttp) better,
-see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttp/blob/master/CONTRIBUTING.md) file.
+If you would like to help making [libuhttpd](https://github.com/zhaojh329/libuhttpd) better,
+see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttpd/blob/master/CONTRIBUTING.md) file.
 
 # Thanks for the following project
 * [libev]

@@ -15,15 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTP_LOG_H
-#define _UHTTP_LOG_H
+#ifndef _UHTTPD_LOG_H
+#define _UHTTPD_LOG_H
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
-#include "uhttp/config.h"
+#include "uhttpd/config.h"
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
@@ -32,7 +32,7 @@
  */
 #define uh_log(priority, format...) __uh_log(__FILENAME__, __LINE__, priority, format)
 
-#if (UHTTP_DEBUG)
+#if (UHTTPD_DEBUG)
 #define uh_log_debug(format...)     uh_log(LOG_DEBUG, format)
 #else
 #define uh_log_debug(format...)

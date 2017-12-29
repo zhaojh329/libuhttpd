@@ -1,7 +1,7 @@
 贡献代码
 ================================================================================
 
-如果你想为[libuhttp](https://github.com/zhaojh329/libuhttp)贡献代码, 请按照如下步骤:
+如果你想为[libuhttpd](https://github.com/zhaojh329/libuhttpd)贡献代码, 请按照如下步骤:
 
 1. 点击fork按钮:
 
@@ -10,13 +10,13 @@
 2. 从你的github账户克隆仓库代码:
 
     ```
-    git clone https://github.com/你的github账户/libuhttp.git
+    git clone https://github.com/你的github账户/libuhttpd.git
     ```
 
 3. 创建一个新的分支:
 
     ```
-    git checkout -b "libuhttp-1-fix"
+    git checkout -b "libuhttpd-1-fix"
     ```
     你可以使用一个你想要的分支名称。
 

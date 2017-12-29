@@ -1,7 +1,7 @@
 Contributing
 ================================================================================
 
-If you want to contribute to [libuhttp](https://github.com/zhaojh329/libuhttp), please follow these simple rules:
+If you want to contribute to [libuhttpd](https://github.com/zhaojh329/libuhttpd), please follow these simple rules:
 
 1. Press the fork button:
 
@@ -10,13 +10,13 @@ If you want to contribute to [libuhttp](https://github.com/zhaojh329/libuhttp), 
 2. Clone the repository from your account with:
 
     ```
-    git clone https://github.com/your_github_username/libuhttp.git
+    git clone https://github.com/your_github_username/libuhttpd.git
     ```
 
 3. Create a new branch with:
 
     ```
-    git checkout -b "libuhttp-1-fix"
+    git checkout -b "libuhttpd-1-fix"
     ```
     You can name it however you want.
 
