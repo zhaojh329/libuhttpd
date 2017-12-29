@@ -22,10 +22,10 @@
 
 # 依赖
 * [libubox]
-* [ustream-ssl]: 如果你需要支持SSL
-* [mbedtls]: If you choose mbedtls as your SSL backend
-* [CyaSSl(wolfssl)]: If you choose wolfssl as your SSL backend
-* [openssl]: If you choose openssl as your SSL backend
+* [ustream-ssl](https://git.lede-project.org/?p=project/ustream-ssl.git): 如果你需要支持SSL
+* [mbedtls](https://github.com/ARMmbed/mbedtls): 如果你选择mbedtls作为你的SSL后端
+* [CyaSSl(wolfssl)](https://github.com/wolfSSL/wolfssl): 如果你选择wolfssl作为你的SSL后端
+* [openssl](https://github.com/openssl/openssl): 如果你选择openssl作为你的SSL后端
 
 ## 配置
 查看支持哪些配置选项
