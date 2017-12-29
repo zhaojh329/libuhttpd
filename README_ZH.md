@@ -48,7 +48,7 @@
 	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -v
 
 # 示例程序]
-``
+```
 #include <uhttpd.h>
 
 #define port "8000"
@@ -94,7 +94,7 @@ done:
     
     return 0;
 }
-``
+```
 
 # 贡献代码
 如果你想帮助[libuhttpd](https://github.com/zhaojh329/libuhttpd)变得更好，请参考

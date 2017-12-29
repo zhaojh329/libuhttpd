@@ -48,7 +48,7 @@ Then use the command curl or browser to test
 	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -v
 	
 # Example
-``
+```
 #include <uhttpd.h>
 
 #define port "8000"
@@ -94,7 +94,7 @@ done:
     
     return 0;
 }
-``
+```
 
 # Contributing
 If you would like to help making [libuhttpd](https://github.com/zhaojh329/libuhttpd) better,
