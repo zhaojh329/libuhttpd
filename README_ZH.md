@@ -30,18 +30,18 @@
 ## 配置
 查看支持哪些配置选项
 
-	~/libuhttp/build$ cmake .. -L
-	~/libuhttp/build$ cmake .. -LH
+	~/libuhttpd/build$ cmake .. -L
+	~/libuhttpd/build$ cmake .. -LH
 	
 ## 运行例子
 首先生成SSL证书文件
 
-	~/libuhttp/build$ cd ..
-	~/libuhttp$ ./gen_cert.sh
+	~/libuhttpd/build$ cd ..
+	~/libuhttpd$ ./gen_cert.sh
 	
 运行
 
-	~/libuhttp$ ./build/example/helloworld
+	~/libuhttpd$ ./build/example/helloworld
 	
 然后使用命令curl或者浏览器进行测试
 

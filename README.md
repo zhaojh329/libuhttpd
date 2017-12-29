@@ -30,18 +30,18 @@ A very tiny and fast HTTP server library based on [libubox] and referenced from 
 ## Configure
 See which configuration are supported
 
-	~/libuhttp/build$ cmake .. -L
-	~/libuhttp/build$ cmake .. -LH
+	~/libuhttpd/build$ cmake .. -L
+	~/libuhttpd/build$ cmake .. -LH
 	
 ## Run the Example
 First generate the SSL certificate file
 
-	~/libuhttp/build$ cd ..
-	~/libuhttp$ ./gen_cert.sh
+	~/libuhttpd/build$ cd ..
+	~/libuhttpd$ ./gen_cert.sh
 	
 Run
 
-	~/libuhttp$ ./build/example/helloworld
+	~/libuhttpd$ ./build/example/helloworld
 	
 Then use the command curl or browser to test
 
