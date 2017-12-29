@@ -33,6 +33,10 @@ static inline int uh_ssl_init(const char *key, const char *crt)
 	return -1;
 }
 
+static inline void uh_ssl_free()
+{
+}
+
 static inline void uh_ssl_client_attach(struct uh_client *cl)
 {
 }
