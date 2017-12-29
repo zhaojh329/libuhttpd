@@ -14,21 +14,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#ifndef _UHTTPD_STR_H
-#define _UHTTPD_STR_H
 
-struct uh_str {
-    const char *at;
-    size_t len;
+#ifndef _FILE_H
+#define _FILE_H
+
+#include "client.h"
+
+struct path_info {
+	const char *root;
+	const char *phys;
+	const char *name;
+	const char *info;
+	bool redirected;
+	struct stat stat;
 };
 
- /* Return 1 for equal */
-static inline int uh_str_cmp(struct uh_str *uv, const char *str)
-{
-    if (uv->len != strlen(str))
-        return 0;
-    return (!strncasecmp(uv->at, str, uv->len));
-}
+struct mimetype {
+	const char *extn;
+	const char *mime;
+};
+
+bool handle_file_request(struct uh_client *cl, char *url);
 
 #endif

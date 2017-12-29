@@ -1,7 +1,7 @@
 Contributing
 ================================================================================
 
-If you want to contribute to [libuhttpd](https://github.com/zhaojh329/libuhttpd), please follow these simple rules:
+If you want to contribute to [libuhttp](https://github.com/zhaojh329/libuhttpd), please follow these simple rules:
 
 1. Press the fork button:
 

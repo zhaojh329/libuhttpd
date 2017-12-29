@@ -15,15 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef _UHTTPD_LOG_H
-#define _UHTTPD_LOG_H
+#ifndef _LOG_H
+#define _LOG_H
 
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-#include <errno.h>
 #include <syslog.h>
-#include "uhttpd/config.h"
+#include "common.h"
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 

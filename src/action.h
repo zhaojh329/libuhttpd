@@ -1,4 +1,8 @@
 /*
+ * The Action handler is a simple libuhttpd handler that processes requests
+ * by invoking registered C functions. The action handler is ideal for
+ * situations when you want to generate a simple response using C code. 
+ *
  * Copyright (C) 2017  Jianhui Zhao <jianhuizhao329@gmail.com>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -14,32 +18,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#include "log.h"
 
-void __uh_log(const char *filename, int line, int priority, const char *format, ...)
-{
-    va_list ap;
-    static char buf[128];
+#ifndef _ACTION_H
+#define _ACTION_H
 
-    snprintf(buf, sizeof(buf), "(%s:%d) ", filename, line);
-    
-    va_start(ap, format);
-    vsnprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), format, ap);
-    va_end(ap);
+#include "client.h"
 
-    if (priority == LOG_ERR && errno > 0) {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ":%s", strerror(errno));
-        errno = 0;
-    }
-    
-    syslog(priority, "%s", buf);
+typedef void (*action_cb_t)(struct uh_client *cl);
 
-#if (UHTTPD_DEBUG)
-    fprintf(stderr, "%s\n", buf);
-#else
-    if (priority == LOG_ERR)
-        fprintf(stderr, "%s\n", buf);
+struct uh_action {
+	struct avl_node avl;
+	char path[PATH_MAX];
+    action_cb_t cb;
+};
+
+int uh_add_action(struct uh_server *srv, const char *path, action_cb_t cb);
+
+bool handle_action_request(struct uh_client *cl, char *url);
+
+void uh_action_free(struct uh_server *srv);
+
 #endif
-}
-

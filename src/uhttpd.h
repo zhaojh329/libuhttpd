@@ -18,6 +18,27 @@
 #ifndef _UHTTPD_H
 #define _UHTTPD_H
 
-#include "uhttpd/uhttpd.h"
+#include "client.h"
+#include "action.h"
+
+struct uh_server {
+    bool ssl;
+	struct uloop_fd fd;
+    char *docroot;
+    char *index_file;
+    int nclients;
+    struct avl_tree actions;
+    struct list_head clients;
+
+
+	void (*free)(struct uh_server *srv);
+    void (*set_docroot)(struct uh_server *srv, const char *docroot);
+    void (*set_index_file)(struct uh_server *srv, const char *index_file);
+#if (UHTTPD_SSL_SUPPORT)
+    int (*ssl_init)(struct uh_server *srv, const char *key, const char *crt);
+#endif    
+};
+
+struct uh_server *uh_server_new(const char *host, const char *port);
 
 #endif

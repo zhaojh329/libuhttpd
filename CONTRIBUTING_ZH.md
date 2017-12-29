@@ -1,7 +1,7 @@
 贡献代码
 ================================================================================
 
-如果你想为[libuhttpd](https://github.com/zhaojh329/libuhttpd)贡献代码, 请按照如下步骤:
+如果你想为[libuhttp](https://github.com/zhaojh329/libuhttpd)贡献代码, 请按照如下步骤:
 
 1. 点击fork按钮:
 
