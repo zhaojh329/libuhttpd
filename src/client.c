@@ -101,6 +101,12 @@ static inline const char *client_get_header(struct uh_client *cl, const char *na
     return kvlist_get(&cl->request.hdr, name);
 }
 
+static inline const char *client_get_body(struct uh_client *cl, int *len)
+{
+    *len = cl->dispatch.action.post_len;
+    return cl->dispatch.action.body;
+}
+
 static void uh_handle_request(struct uh_client *cl)
 {
     char *path = kvlist_get(&cl->request.hdr, "path");
@@ -138,8 +144,6 @@ static void dispatch_done(struct uh_client *cl)
 {
 	if (cl->dispatch.free)
 		cl->dispatch.free(cl);
-	if (cl->dispatch.req_free)
-		cl->dispatch.req_free(cl);
 }
 
 static inline int hdr_get_len(struct kvlist *kv, const void *data)
@@ -256,13 +260,67 @@ static bool client_init_cb(struct uh_client *cl, char *buf, int len)
 
 static void client_poll_post_data(struct uh_client *cl)
 {
+    struct dispatch *d = &cl->dispatch;
     struct http_request *r = &cl->request;
+    char *buf;
+    int len;
 
     if (cl->state == CLIENT_STATE_DONE)
         return;
 
-    if (!r->content_length && !r->transfer_chunked &&
-        cl->state != CLIENT_STATE_DONE) {
+    while (1) {
+        char *sep;
+        int offset = 0;
+        int cur_len;
+
+        buf = ustream_get_read_buf(cl->us, &len);
+        if (!buf || !len)
+            break;
+
+        if (!d->data_send)
+            return;
+
+        cur_len = min(r->content_length, len);
+        if (cur_len) {
+            if (d->data_send)
+                cur_len = d->data_send(cl, buf, cur_len);
+
+            r->content_length -= cur_len;
+            ustream_consume(cl->us, cur_len);
+            continue;
+        }
+
+        if (!r->transfer_chunked)
+            break;
+
+        if (r->transfer_chunked > 1)
+            offset = 2;
+
+        sep = strstr(buf + offset, "\r\n");
+        if (!sep)
+            break;
+
+        *sep = 0;
+
+        r->content_length = strtoul(buf + offset, &sep, 16);
+        r->transfer_chunked++;
+        ustream_consume(cl->us, sep + 2 - buf);
+
+        /* invalid chunk length */
+        if (sep && *sep) {
+            r->content_length = 0;
+            r->transfer_chunked = 0;
+            break;
+        }
+
+        /* empty chunk == eof */
+        if (!r->content_length) {
+            r->transfer_chunked = false;
+            break;
+        }
+    }
+
+    if (!r->content_length && !r->transfer_chunked && cl->state != CLIENT_STATE_DONE) {
         if (cl->dispatch.data_done)
             cl->dispatch.data_done(cl);
 
@@ -462,6 +520,7 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->get_path = client_get_path;
     cl->get_query = client_get_query;
     cl->get_header = client_get_header;
+    cl->get_body = client_get_body;
 
     uh_log_debug("new connection: %s:%d", cl->get_peer_addr(cl), addr.sin_port);
 

@@ -22,6 +22,9 @@
 #include "action.h"
 #include "uhttpd.h"
 
+#define UH_ACTION_DATA_BUF_SIZE   1024
+#define UH_ACTION_MAX_POST_SIZE   4096
+
 int uh_add_action(struct uh_server *srv, const char *path, action_cb_t cb)
 {
     struct uh_action *a;
@@ -48,16 +51,70 @@ err:
     return -1;
 }
 
+static int action_data_send(struct uh_client *cl, const char *data, int len)
+{
+    struct dispatch *d = &cl->dispatch;
+    d->action.post_len += len;
+
+    if (d->action.post_len > UH_ACTION_MAX_POST_SIZE)
+        goto err;
+
+    if (d->action.post_len > UH_ACTION_DATA_BUF_SIZE) {
+        d->action.body = realloc(d->action.body, UH_ACTION_MAX_POST_SIZE);
+        if (!d->action.body) {
+            cl->send_error(cl, 500, "Internal Server Error", "No memory");
+            return 0;
+        }
+    }
+
+    memcpy(d->action.body, data, len);
+    return len;
+err:
+    cl->send_error(cl, 413, "Request Entity Too Large", NULL);
+    return 0;
+}
+
+static void action_data_done(struct uh_client *cl)
+{
+    struct uh_action *a = cl->dispatch.action.a;
+    a->cb(cl);
+}
+
+static void action_data_free(struct uh_client *cl)
+{
+    struct dispatch *d = &cl->dispatch;
+    free(d->action.body);
+}
+
 bool handle_action_request(struct uh_client *cl, const char *path)
 {
+    struct dispatch *d = &cl->dispatch;
     struct uh_action *a;
 
     a = avl_find_element(&cl->srv->actions, path, a, avl);
     if (a) {
-        a->cb(cl);
-        return true;
+        switch (cl->request.method) {
+        case UH_HTTP_MSG_POST:
+            d->action.a = a;
+            d->data_send = action_data_send;
+            d->data_done = action_data_done;
+            d->free = action_data_free;
+            d->action.body = calloc(1, UH_ACTION_DATA_BUF_SIZE);
+            if (!d->action.body)
+                cl->send_error(cl, 500, "Internal Server Error", "No memory");
+            break;
+
+        case UH_HTTP_MSG_GET:
+            a->cb(cl);
+            break;
+
+        default:
+            cl->send_error(cl, 400, "Bad Request", "Invalid Request");
+            break;
+        }
     }
-    return false;
+
+    return a ? true : false;
 }
 
 

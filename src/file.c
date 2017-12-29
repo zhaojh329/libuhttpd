@@ -370,7 +370,6 @@ static void uh_file_data(struct uh_client *cl, struct path_info *pi, int fd)
 	cl->dispatch.file.fd = fd;
 	cl->dispatch.write_cb = file_write_cb;
 	cl->dispatch.free = uh_file_free;
-	cl->dispatch.close_fds = uh_file_free;
 	file_write_cb(cl);
 }
 

@@ -61,19 +61,17 @@ struct dispatch {
     int (*data_send)(struct uh_client *cl, const char *data, int len);
     void (*data_done)(struct uh_client *cl);
     void (*write_cb)(struct uh_client *cl);
-    void (*close_fds)(struct uh_client *cl);
     void (*free)(struct uh_client *cl);
-
-    void *req_data;
-    void (*req_free)(struct uh_client *cl);
-
-    bool data_blocked;
-    bool no_cache;
 
     union {
         struct {
             int fd;
         } file;
+        struct {
+            int post_len;
+            char *body;
+            struct uh_action *a;
+        } action;
     };
 };
 
@@ -111,6 +109,7 @@ struct uh_client {
     const char *(*get_path)(struct uh_client *cl);
     const char *(*get_query)(struct uh_client *cl);
     const char *(*get_header)(struct uh_client *cl, const char *name);
+    const char *(*get_body)(struct uh_client *cl, int *len);
 };
 
 void uh_client_read_cb(struct uh_client *cl);

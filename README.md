@@ -55,6 +55,7 @@ Then use the command curl or browser to test
 
 static void hello_action(struct uh_client *cl)
 {
+    int body_len = 0;
     cl->send_header(cl, 200, "OK", -1);
     cl->append_header(cl, "Myheader", "Hello");
     cl->header_end(cl);
@@ -63,6 +64,7 @@ static void hello_action(struct uh_client *cl)
     cl->chunk_printf(cl, "<h1>REMOTE_ADDR: %s</h1>", cl->get_peer_addr(cl));
     cl->chunk_printf(cl, "<h1>PATH: %s</h1>", cl->get_path(cl));
     cl->chunk_printf(cl, "<h1>QUERY: %s</h1>", cl->get_query(cl));
+    cl->chunk_printf(cl, "<h1>BODY:%s</h1>", cl->get_body(cl, &body_len));
     cl->request_done(cl);
 }
 
