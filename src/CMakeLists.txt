@@ -1,7 +1,7 @@
 # The version number.
 set(UHTTPD_VERSION_MAJOR 1)
 set(UHTTPD_VERSION_MINOR 0)
-set(UHTTPD_VERSION_PATCH 0)
+set(UHTTPD_VERSION_PATCH 1)
 
 # Check the third party Libraries
 find_package(Libubox REQUIRED)
