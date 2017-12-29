@@ -45,7 +45,7 @@ Run
 	
 Then use the command curl or browser to test
 
-	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -v
+	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
 	
 # Example
 ```

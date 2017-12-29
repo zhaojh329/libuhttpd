@@ -45,7 +45,7 @@
 	
 然后使用命令curl或者浏览器进行测试
 
-	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -v
+	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
 
 # 示例程序]
 ```
