@@ -5,9 +5,6 @@ set(UHTTPD_VERSION_PATCH 1)
 
 # Check the third party Libraries
 find_package(Libubox REQUIRED)
-find_package(Lua REQUIRED)
-find_package(OpenSSL)
-find_package(CyaSSL)
 
 include_directories(${LIBUBOX_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
 set(EXTRA_LIBS ${LIBUBOX_LIBRARIES} ${LUA_LIBRARIES} dl)
