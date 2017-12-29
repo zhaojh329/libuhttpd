@@ -34,7 +34,7 @@ struct uh_action {
 
 int uh_add_action(struct uh_server *srv, const char *path, action_cb_t cb);
 
-bool handle_action_request(struct uh_client *cl, char *url);
+bool handle_action_request(struct uh_client *cl, const char *path);
 
 void uh_action_free(struct uh_server *srv);
 

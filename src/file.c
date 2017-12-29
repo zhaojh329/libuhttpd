@@ -394,7 +394,7 @@ error:
 	cl->send_error(cl, 403, "Forbidden", "You don't have permission to access %s on this server.", path);
 }
 
-bool handle_file_request(struct uh_client *cl, char *path)
+bool handle_file_request(struct uh_client *cl, const char *path)
 {
 	struct path_info *pi;
 

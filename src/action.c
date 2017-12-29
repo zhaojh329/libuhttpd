@@ -48,7 +48,7 @@ err:
     return -1;
 }
 
-bool handle_action_request(struct uh_client *cl, char *path)
+bool handle_action_request(struct uh_client *cl, const char *path)
 {
     struct uh_action *a;
 
