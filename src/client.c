@@ -169,7 +169,7 @@ static void dispatch_done(struct uh_client *cl)
 
 static inline int hdr_get_len(struct kvlist *kv, const void *data)
 {
-    return strlen(data);
+    return strlen(data) + 1;
 }
 
 static void client_request_done(struct uh_client *cl)
