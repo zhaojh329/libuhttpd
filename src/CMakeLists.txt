@@ -1,3 +1,6 @@
+
+add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation)
+
 # The version number.
 set(UHTTPD_VERSION_MAJOR 1)
 set(UHTTPD_VERSION_MINOR 0)
@@ -6,8 +9,9 @@ set(UHTTPD_VERSION_PATCH 1)
 # Check the third party Libraries
 find_package(Libubox REQUIRED)
 
-include_directories(${LIBUBOX_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
-set(EXTRA_LIBS ${LIBUBOX_LIBRARIES} ${LUA_LIBRARIES} dl)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR})
+
+set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl)
 set(SOURCE_FILES uhttpd.c client.c log.c utils.c file.c action.c)
 
 set(UHTTPD_DEBUG_CONFIG 0)
