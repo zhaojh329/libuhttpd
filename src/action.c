@@ -29,7 +29,7 @@ int uh_add_action(struct uh_server *srv, const char *path, action_cb_t cb)
 {
     struct uh_action *a;
 
-    a = calloc(1, sizeof(struct uh_action));
+    a = calloc(1, sizeof(struct uh_action) + strlen(path) + 1);
     if (!a) {
         uh_log_err("calloc");
         return -1;
