@@ -14,9 +14,10 @@
 `请保持关注以获取最新的项目动态`
 
 # 特性
+* action: 通过调用映射到特定路径的已注册C函数来处理请求。
 * 小巧且快速
 * 使用[libubox]作为其事件后端
-* 支持HTTPS: OpenSSL, mbedtls and CyaSSl(wolfssl)
+* 支持HTTPS: OpenSSL, mbedtls 和 CyaSSl(wolfssl)
 * 可伸缩：你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
 * 代码结构简洁通俗易懂，亦适合学习
 
@@ -27,27 +28,38 @@
 * [CyaSSl(wolfssl)](https://github.com/wolfSSL/wolfssl): 如果你选择wolfssl作为你的SSL后端
 * [openssl](https://github.com/openssl/openssl): 如果你选择openssl作为你的SSL后端
 
-## 配置
+# 配置
 查看支持哪些配置选项
 
+	~/libuhttpd/$ mkdir build && cd build
 	~/libuhttpd/build$ cmake .. -L
 	~/libuhttpd/build$ cmake .. -LH
-	
-## 运行例子
+
+# 编译
+
+	~/libuhttpd/build$ make && sudo make install
+
+# 编译示例程序
+
+	~/libuhttpd/build$ cd ../example
+	~/libuhttpd/example$ mkdir build && cd build
+	~/libuhttpd/example/build$ cmake .. && make
+
+# 运行示例程序
 首先生成SSL证书文件
 
-	~/libuhttpd/build$ cd ..
-	~/libuhttpd$ ./gen_cert.sh
+	~/libuhttpd/example/build$ cd ..
+	~/libuhttpd/example$ ./gen_cert.sh
 	
 运行
 
-	~/libuhttpd$ ./build/example/helloworld
+	~/libuhttpd/example$ ./build/helloworld
 	
 然后使用命令curl或者浏览器进行测试
 
 	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
 
-# 示例程序]
+# 示例程序
 ```
 #include <uhttpd.h>
 

@@ -14,6 +14,7 @@ A very tiny and fast HTTP server library based on [libubox] and referenced from 
 `Keep Watching for More Actions on This Space`
 
 # Features
+* action: processes requests by invoking registered C functions which mapped to a specific path.
 * tiny and fast
 * use [libubox] as its event backend
 * support HTTPS: OpenSSL, mbedtls and CyaSSl(wolfssl)
@@ -27,21 +28,31 @@ A very tiny and fast HTTP server library based on [libubox] and referenced from 
 * [CyaSSl(wolfssl)]: If you choose wolfssl as your SSL backend
 * [openssl]: If you choose openssl as your SSL backend
 
-## Configure
+# Configure
 See which configuration are supported
-
+	~/libuhttpd/$ mkdir build && cd build
 	~/libuhttpd/build$ cmake .. -L
 	~/libuhttpd/build$ cmake .. -LH
+
+# Build
+
+	~/libuhttpd/build$ make && sudo make install
 	
-## Run the Example
+# Build Example
+
+	~/libuhttpd/build$ cd ../example
+	~/libuhttpd/example$ mkdir build && cd build
+	~/libuhttpd/example/build$ cmake .. && make
+
+# Run Example
 First generate the SSL certificate file
 
-	~/libuhttpd/build$ cd ..
-	~/libuhttpd$ ./gen_cert.sh
+	~/libuhttpd/example/build$ cd ..
+	~/libuhttpd/example$ ./gen_cert.sh
 	
 Run
 
-	~/libuhttpd$ ./build/example/helloworld
+	~/libuhttpd/example$ ./build/helloworld
 	
 Then use the command curl or browser to test
 
