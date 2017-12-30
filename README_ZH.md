@@ -1,4 +1,4 @@
-# libuhttp
+# libuhttpd
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
