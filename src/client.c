@@ -269,8 +269,6 @@ static void client_poll_post_data(struct uh_client *cl)
         return;
 
     while (1) {
-        char *sep;
-        int offset = 0;
         int cur_len;
 
         buf = ustream_get_read_buf(cl->us, &len);
@@ -289,38 +287,9 @@ static void client_poll_post_data(struct uh_client *cl)
             ustream_consume(cl->us, cur_len);
             continue;
         }
-
-        if (!r->transfer_chunked)
-            break;
-
-        if (r->transfer_chunked > 1)
-            offset = 2;
-
-        sep = strstr(buf + offset, "\r\n");
-        if (!sep)
-            break;
-
-        *sep = 0;
-
-        r->content_length = strtoul(buf + offset, &sep, 16);
-        r->transfer_chunked++;
-        ustream_consume(cl->us, sep + 2 - buf);
-
-        /* invalid chunk length */
-        if (sep && *sep) {
-            r->content_length = 0;
-            r->transfer_chunked = 0;
-            break;
-        }
-
-        /* empty chunk == eof */
-        if (!r->content_length) {
-            r->transfer_chunked = false;
-            break;
-        }
     }
 
-    if (!r->content_length && !r->transfer_chunked && cl->state != CLIENT_STATE_DONE) {
+    if (!r->content_length && cl->state != CLIENT_STATE_DONE) {
         if (cl->dispatch.data_done)
             cl->dispatch.data_done(cl);
 
@@ -365,7 +334,8 @@ static void client_parse_header(struct uh_client *cl, char *data)
             return;
         }
     } else if (!strcmp(data, "transfer-encoding") && !strcmp(val, "chunked")) {
-        r->transfer_chunked = true;
+        cl->send_error(cl, 501, "Not Implemented", "Chunked body is not implemented");
+        return;
     } else if (!strcmp(data, "connection") && !strcasecmp(val, "close")) {
         cl->connection_close = true;
     }
