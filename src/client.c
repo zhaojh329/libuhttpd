@@ -122,6 +122,11 @@ static void uh_handle_request(struct uh_client *cl)
     if (handle_file_request(cl, path))
 		return;
 
+    if (cl->srv->error404_cb) {
+        cl->srv->error404_cb(cl);
+        return;
+    }
+
 	cl->send_error(cl, 404, "Not Found", "The requested PATH %s was not found on this server.", path);
 }
 

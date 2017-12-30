@@ -30,10 +30,11 @@ struct uh_server {
     struct avl_tree actions;
     struct list_head clients;
 
-
 	void (*free)(struct uh_server *srv);
     void (*set_docroot)(struct uh_server *srv, const char *docroot);
     void (*set_index_file)(struct uh_server *srv, const char *index_file);
+    void (*error404_cb)(struct uh_client *cl);
+
 #if (UHTTPD_SSL_SUPPORT)
     int (*ssl_init)(struct uh_server *srv, const char *key, const char *crt);
 #endif    
