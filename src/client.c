@@ -40,17 +40,16 @@ static inline void client_send(struct uh_client *cl, const void *data, int len)
 
 static void client_send_header(struct uh_client *cl, int code, const char *summary, int length)
 {
-    struct http_request *r = &cl->request;
-
     cl->printf(cl, "%s %03i %s\r\n", http_versions[cl->request.version], code, summary);
     cl->printf(cl, "Server: Libuhttpd %s\r\n", UHTTPD_VERSION_STRING);
 
      if (length < 0) {
-        r->chunked = true;
         cl->printf(cl, "Transfer-Encoding: chunked\r\n");
     } else {
         cl->printf(cl, "Content-Length: %d\r\n", length);
     }
+
+    cl->response_length = length;
 }
 
 static inline void client_append_header(struct uh_client *cl, const char *name, const char *value)
@@ -153,9 +152,7 @@ static inline int hdr_get_len(struct kvlist *kv, const void *data)
 
 static void client_request_done(struct uh_client *cl)
 {
-    struct http_request *r = &cl->request;
-
-	if (r->chunked)
+	if (cl->response_length < 0)
         cl->printf(cl, "0\r\n\r\n");
 
     dispatch_done(cl);

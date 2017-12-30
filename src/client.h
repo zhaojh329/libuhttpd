@@ -50,7 +50,6 @@ struct http_request {
     enum http_method method;
     enum http_version version;
     int content_length;
-    bool chunked;
     struct kvlist hdr;
 };
 
@@ -88,6 +87,7 @@ struct uh_client {
     struct sockaddr_in peer_addr;
     struct dispatch dispatch;
     bool connection_close;
+    int response_length;
 
     void (*free)(struct uh_client *cl);
     void (*send_error)(struct uh_client *cl, int code, const char *summary, const char *fmt, ...);
