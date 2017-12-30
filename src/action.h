@@ -3,7 +3,7 @@
  * by invoking registered C functions. The action handler is ideal for
  * situations when you want to generate a simple response using C code. 
  *
- * Copyright (C) 2017  Jianhui Zhao <jianhuizhao329@gmail.com>
+ * Copyright (C) 2017 Jianhui Zhao <jianhuizhao329@gmail.com>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

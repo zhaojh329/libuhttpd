@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2017  Jianhui Zhao <jianhuizhao329@gmail.com>
+ *   Copyright (C) 2017 Jianhui Zhao <jianhuizhao329@gmail.com>
  *   Copyright (C) 2010-2013 Jo-Philipp Wich <xm@subsignal.org>
  *   Copyright (C) 2013 Felix Fietkau <nbd@openwrt.org>
  *
