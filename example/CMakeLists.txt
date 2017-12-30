@@ -4,7 +4,7 @@ project(libuhttpd-example C)
 
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
-list(APPEND CMAKE_MODULE_PATH "../cmake/Modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules/")
 
 add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation)
 
