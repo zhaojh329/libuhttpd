@@ -94,6 +94,7 @@ struct uh_client {
     void (*send_header)(struct uh_client *cl, int code, const char *summary, int length);
     void (*append_header)(struct uh_client *cl, const char *name, const char *value);
     void (*header_end)(struct uh_client *cl);
+    void (*redirect)(struct uh_client *cl, int code, const char *fmt, ...);
     void (*request_done)(struct uh_client *cl);
     
     void (*send)(struct uh_client *cl, const void *data, int len);

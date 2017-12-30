@@ -62,6 +62,23 @@ static inline void client_header_end(struct uh_client *cl)
     cl->printf(cl, "\r\n");
 }
 
+static inline void client_redirect(struct uh_client *cl, int code, const char *fmt, ...)
+{
+    va_list arg;
+    const char *summary = ((code == 301) ? "Moved Permanently" : "Found");
+
+    assert((code == 301 || code == 302) && fmt);
+
+    cl->send_header(cl, code, summary, 0);
+    cl->printf(cl, "Location: ");
+    va_start(arg, fmt);
+    cl->vprintf(cl, fmt, arg);
+    va_end(arg);
+
+    cl->printf(cl, "\r\n\r\n");
+    cl->request_done(cl);
+}
+
 static void client_send_error(struct uh_client *cl, int code, const char *summary, const char *fmt, ...)
 {
     va_list arg;
@@ -479,6 +496,7 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->send_header = client_send_header;
     cl->append_header = client_append_header;
     cl->header_end = client_header_end;
+    cl->redirect = client_redirect;
     cl->request_done = client_request_done;
 
     cl->send = client_send;

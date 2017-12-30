@@ -227,10 +227,7 @@ struct path_info *uh_path_lookup(struct uh_client *cl, const char *url)
        is missing in the request url, redirect the client to the same
        url with trailing slash appended */
     if (!slash) {
-        cl->send_header(cl, 302, "Found", 0);
-        cl->printf(cl, "Location: %s%s%s\r\n\r\n", &path_phys[docroot_len],
-                query ? "?" : "", query ? query : "");
-        cl->request_done(cl);
+        cl->redirect(cl, 302, "%s%s%s", &path_phys[docroot_len], query ? "?" : "", query ? query : "");
         p.redirected = 1;
         return &p;
     }

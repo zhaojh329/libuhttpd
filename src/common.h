@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <inttypes.h>
