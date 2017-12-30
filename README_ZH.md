@@ -35,7 +35,7 @@
 	~/libuhttpd/build$ cmake .. -L
 	~/libuhttpd/build$ cmake .. -LH
 
-# 编译
+# 编译和安装
 
 	~/libuhttpd/build$ make && sudo make install
 

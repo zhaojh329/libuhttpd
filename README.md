@@ -34,7 +34,7 @@ See which configuration are supported
 	~/libuhttpd/build$ cmake .. -L
 	~/libuhttpd/build$ cmake .. -LH
 
-# Build
+# Build and install
 
 	~/libuhttpd/build$ make && sudo make install
 	
