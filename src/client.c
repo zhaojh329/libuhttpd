@@ -330,7 +330,7 @@ static void client_parse_header(struct uh_client *cl, char *data)
     if (!strcmp(data, "content-length")) {
         r->content_length = strtoul(val, &err, 0);
         if (err && *err) {
-            cl->send_error(cl, 400, "Bad Request", NULL);
+            cl->send_error(cl, 400, "Bad Request", "Invalid Content-Length");
             return;
         }
     } else if (!strcmp(data, "transfer-encoding") && !strcmp(val, "chunked")) {
