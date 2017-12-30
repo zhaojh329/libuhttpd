@@ -27,22 +27,22 @@
 #define UHTTPD_CONNECTION_TIMEOUT 30
 
 enum http_method {
-	UH_HTTP_MSG_GET,
-	UH_HTTP_MSG_POST,
-	UH_HTTP_MSG_HEAD
+    UH_HTTP_MSG_GET,
+    UH_HTTP_MSG_POST,
+    UH_HTTP_MSG_HEAD
 };
 
 enum http_version {
-	UH_HTTP_VER_0_9,
-	UH_HTTP_VER_1_0,
-	UH_HTTP_VER_1_1
+    UH_HTTP_VER_0_9,
+    UH_HTTP_VER_1_0,
+    UH_HTTP_VER_1_1
 };
 
 enum client_state {
-	CLIENT_STATE_INIT,
-	CLIENT_STATE_HEADER,
-	CLIENT_STATE_DATA,
-	CLIENT_STATE_DONE,
+    CLIENT_STATE_INIT,
+    CLIENT_STATE_HEADER,
+    CLIENT_STATE_DATA,
+    CLIENT_STATE_DONE,
     CLIENT_STATE_CLOSE
 };
 
@@ -74,16 +74,16 @@ struct dispatch {
 };
 
 struct uh_client {
-	struct list_head list;
+    struct list_head list;
     struct uh_server *srv;
-	struct ustream *us;
-	struct ustream_fd sfd;
+    struct ustream *us;
+    struct ustream_fd sfd;
 #if (UHTTPD_SSL_SUPPORT)
     struct ustream_ssl ssl;
 #endif
-	struct uloop_timeout timeout;
-	enum client_state state;
-	struct http_request request;
+    struct uloop_timeout timeout;
+    enum client_state state;
+    struct http_request request;
     struct sockaddr_in peer_addr;
     struct dispatch dispatch;
     bool connection_close;

@@ -22,15 +22,15 @@
 #include "uh_ssl.h"
 
 const char *const http_versions[] = {
-	[UH_HTTP_VER_0_9] = "HTTP/0.9",
-	[UH_HTTP_VER_1_0] = "HTTP/1.0",
-	[UH_HTTP_VER_1_1] = "HTTP/1.1"
+    [UH_HTTP_VER_0_9] = "HTTP/0.9",
+    [UH_HTTP_VER_1_0] = "HTTP/1.0",
+    [UH_HTTP_VER_1_1] = "HTTP/1.1"
 };
 
 const char *const http_methods[] = {
-	[UH_HTTP_MSG_GET] = "GET",
-	[UH_HTTP_MSG_POST] = "POST",
-	[UH_HTTP_MSG_HEAD] = "HEAD"
+    [UH_HTTP_MSG_GET] = "GET",
+    [UH_HTTP_MSG_POST] = "POST",
+    [UH_HTTP_MSG_HEAD] = "HEAD"
 };
 
 static inline void client_send(struct uh_client *cl, const void *data, int len)
@@ -120,34 +120,34 @@ static void uh_handle_request(struct uh_client *cl)
         return;
 
     if (handle_file_request(cl, path))
-		return;
+        return;
 
     if (cl->srv->error404_cb) {
         cl->srv->error404_cb(cl);
         return;
     }
 
-	cl->send_error(cl, 404, "Not Found", "The requested PATH %s was not found on this server.", path);
+    cl->send_error(cl, 404, "Not Found", "The requested PATH %s was not found on this server.", path);
 }
 
 static inline void connection_close(struct uh_client *cl)
 {
-	cl->us->eof = true;
+    cl->us->eof = true;
     cl->state = CLIENT_STATE_CLOSE;
-	ustream_state_change(cl->us);
+    ustream_state_change(cl->us);
 }
 
 static inline void keepalive_cb(struct uloop_timeout *timeout)
 {
-	struct uh_client *cl = container_of(timeout, struct uh_client, timeout);
+    struct uh_client *cl = container_of(timeout, struct uh_client, timeout);
 
     connection_close(cl);
 }
 
 static void dispatch_done(struct uh_client *cl)
 {
-	if (cl->dispatch.free)
-		cl->dispatch.free(cl);
+    if (cl->dispatch.free)
+        cl->dispatch.free(cl);
 }
 
 static inline int hdr_get_len(struct kvlist *kv, const void *data)
@@ -157,13 +157,13 @@ static inline int hdr_get_len(struct kvlist *kv, const void *data)
 
 static void client_request_done(struct uh_client *cl)
 {
-	if (cl->response_length < 0)
+    if (cl->response_length < 0)
         cl->printf(cl, "0\r\n\r\n");
 
     dispatch_done(cl);
 
-	if (cl->connection_close) {
-		connection_close(cl);
+    if (cl->connection_close) {
+        connection_close(cl);
         return;
     }
 
@@ -250,7 +250,7 @@ static bool client_init_cb(struct uh_client *cl, char *buf, int len)
         return true;
     }
 
-	*newline = 0;
+    *newline = 0;
     
     cl->state = client_parse_request(cl, buf);
     ustream_consume(cl->us, newline + 2 - buf);
@@ -349,7 +349,7 @@ static void client_parse_header(struct uh_client *cl, char *data)
 
 static bool client_header_cb(struct uh_client *cl, char *buf, int len)
 {
-	char *newline;
+    char *newline;
     int line_len;
 
     newline = strstr(buf, "\r\n");
@@ -368,9 +368,9 @@ static bool client_header_cb(struct uh_client *cl, char *buf, int len)
 
 typedef bool (*read_cb_t)(struct uh_client *cl, char *buf, int len);
 static read_cb_t read_cbs[] = {
-	[CLIENT_STATE_INIT] = client_init_cb,
-	[CLIENT_STATE_HEADER] = client_header_cb,
-	[CLIENT_STATE_DATA] = client_data_cb,
+    [CLIENT_STATE_INIT] = client_init_cb,
+    [CLIENT_STATE_HEADER] = client_header_cb,
+    [CLIENT_STATE_DATA] = client_data_cb,
 };
 
 void uh_client_read_cb(struct uh_client *cl)
@@ -426,7 +426,7 @@ void uh_client_notify_state(struct uh_client *cl)
 
 static void client_notify_state(struct ustream *s)
 {
-	struct uh_client *cl = container_of(s, struct uh_client, sfd.stream);
+    struct uh_client *cl = container_of(s, struct uh_client, sfd.stream);
 
     uh_client_notify_state(cl);
 }
@@ -434,15 +434,15 @@ static void client_notify_state(struct ustream *s)
 void uh_accept_client(struct uh_server *srv, bool ssl)
 {
     struct uh_client *cl;
-	unsigned int sl;
-	int sfd;
+    unsigned int sl;
+    int sfd;
     struct sockaddr_in addr;
 
     sl = sizeof(addr);
-	sfd = accept(srv->fd.fd, (struct sockaddr *)&addr, &sl);
-	if (sfd < 0) {
+    sfd = accept(srv->fd.fd, (struct sockaddr *)&addr, &sl);
+    if (sfd < 0) {
         uh_log_err("accept");
-		return;
+        return;
     }
 
     cl = calloc(1, sizeof(struct uh_client));

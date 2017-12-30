@@ -27,8 +27,8 @@
 typedef void (*action_cb_t)(struct uh_client *cl);
 
 struct uh_action {
-	struct avl_node avl;
-	char path[PATH_MAX];
+    struct avl_node avl;
+    char path[PATH_MAX];
     action_cb_t cb;
 };
 

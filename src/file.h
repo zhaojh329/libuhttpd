@@ -21,17 +21,17 @@
 #include "client.h"
 
 struct path_info {
-	const char *root;
-	const char *phys;
-	const char *name;
-	const char *info;
-	bool redirected;
-	struct stat stat;
+    const char *root;
+    const char *phys;
+    const char *name;
+    const char *info;
+    bool redirected;
+    struct stat stat;
 };
 
 struct mimetype {
-	const char *extn;
-	const char *mime;
+    const char *extn;
+    const char *mime;
 };
 
 bool handle_file_request(struct uh_client *cl, const char *path);

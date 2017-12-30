@@ -23,14 +23,14 @@
 
 struct uh_server {
     bool ssl;
-	struct uloop_fd fd;
+    struct uloop_fd fd;
     char *docroot;
     char *index_file;
     int nclients;
     struct avl_tree actions;
     struct list_head clients;
 
-	void (*free)(struct uh_server *srv);
+    void (*free)(struct uh_server *srv);
     void (*set_docroot)(struct uh_server *srv, const char *docroot);
     void (*set_index_file)(struct uh_server *srv, const char *index_file);
     void (*error404_cb)(struct uh_client *cl);
