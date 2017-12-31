@@ -32,7 +32,6 @@ int uh_ssl_init(struct uh_server *srv, const char *key, const char *crt)
     if (_init)
         return 0;
 
-    _init = true;
     dlh = dlopen("libustream-ssl.so", RTLD_LAZY | RTLD_LOCAL);
     if (!dlh) {
         uh_log_err("Failed to load ustream-ssl library: %s", dlerror());
@@ -56,6 +55,8 @@ int uh_ssl_init(struct uh_server *srv, const char *key, const char *crt)
         uh_log_err("Failed to load certificate/key files");
         return -EINVAL;
     }
+
+    _init = true;
 
     return 0;
 }
