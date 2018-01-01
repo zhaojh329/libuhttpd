@@ -74,8 +74,10 @@ static void hello_action(struct uh_client *cl)
 
     cl->chunk_printf(cl, "<h1>Hello Libuhttpd %s</h1>", UHTTPD_VERSION_STRING);
     cl->chunk_printf(cl, "<h1>REMOTE_ADDR: %s</h1>", cl->get_peer_addr(cl));
+    cl->chunk_printf(cl, "<h1>URL: %s</h1>", cl->get_url(cl));
     cl->chunk_printf(cl, "<h1>PATH: %s</h1>", cl->get_path(cl));
     cl->chunk_printf(cl, "<h1>QUERY: %s</h1>", cl->get_query(cl));
+    cl->chunk_printf(cl, "<h1>VAR name: %s</h1>", cl->get_var(cl, "name"));
     cl->chunk_printf(cl, "<h1>BODY:%s</h1>", cl->get_body(cl, &body_len));
     cl->request_done(cl);
 }

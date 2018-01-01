@@ -50,7 +50,9 @@ struct http_request {
     enum http_method method;
     enum http_version version;
     int content_length;
-    struct kvlist hdr;
+    struct kvlist url;
+    struct kvlist var;
+    struct kvlist header;
 };
 
 struct uh_client;
@@ -106,8 +108,10 @@ struct uh_client {
     void (*chunk_vprintf)(struct uh_client *cl, const char *format, va_list arg);
 
     const char *(*get_peer_addr)(struct uh_client *cl);
+    const char *(*get_url)(struct uh_client *cl);
     const char *(*get_path)(struct uh_client *cl);
     const char *(*get_query)(struct uh_client *cl);
+    const char *(*get_var)(struct uh_client *cl, const char *name);
     const char *(*get_header)(struct uh_client *cl, const char *name);
     const char *(*get_body)(struct uh_client *cl, int *len);
 };

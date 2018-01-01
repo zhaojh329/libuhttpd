@@ -296,7 +296,7 @@ static void uh_file_response_200(struct uh_client *cl, struct stat *s)
 
 static int uh_file_if_modified_since(struct uh_client *cl, struct stat *s)
 {
-    const char *date = kvlist_get(&cl->request.hdr, "if-modified-since");
+    const char *date = kvlist_get(&cl->request.header, "if-modified-since");
     struct tm t;
     
     if (!date)

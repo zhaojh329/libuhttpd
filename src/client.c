@@ -102,19 +102,29 @@ static inline const char *client_get_peer_addr(struct uh_client *cl)
     return inet_ntoa(cl->peer_addr.sin_addr);
 }
 
+static inline const char *client_get_url(struct uh_client *cl)
+{
+    return kvlist_get(&cl->request.url, "url");
+}
+
 static inline const char *client_get_path(struct uh_client *cl)
 {
-    return kvlist_get(&cl->request.hdr, "path");
+    return kvlist_get(&cl->request.url, "path");
 }
 
 static inline const char *client_get_query(struct uh_client *cl)
 {
-    return kvlist_get(&cl->request.hdr, "query");   
+    return kvlist_get(&cl->request.url, "query");
+}
+
+const char *client_get_var(struct uh_client *cl, const char *name)
+{
+    return kvlist_get(&cl->request.var, name);
 }
 
 static inline const char *client_get_header(struct uh_client *cl, const char *name)
 {
-    return kvlist_get(&cl->request.hdr, name);
+    return kvlist_get(&cl->request.header, name);
 }
 
 static inline const char *client_get_body(struct uh_client *cl, int *len)
@@ -125,13 +135,7 @@ static inline const char *client_get_body(struct uh_client *cl, int *len)
 
 static void uh_handle_request(struct uh_client *cl)
 {
-    char *path = kvlist_get(&cl->request.hdr, "path");
-#if (UHTTPD_DEBUG)
-    const char *name, *value;
-    kvlist_for_each(&cl->request.hdr, name, value) {
-        uh_log_debug("%s: %s", name, value);
-    }
-#endif
+    char *path = kvlist_get(&cl->request.url, "path");
 
     if (handle_action_request(cl, path))
         return;
@@ -188,7 +192,9 @@ static void client_request_done(struct uh_client *cl)
 
     memset(&cl->request, 0, sizeof(cl->request));
     memset(&cl->dispatch, 0, sizeof(cl->dispatch));
-    kvlist_init(&cl->request.hdr, hdr_get_len);
+    kvlist_init(&cl->request.url, hdr_get_len);
+    kvlist_init(&cl->request.var, hdr_get_len);
+    kvlist_init(&cl->request.header, hdr_get_len);
     uloop_timeout_set(&cl->timeout, UHTTPD_CONNECTION_TIMEOUT * 1000);
 }
 
@@ -203,11 +209,33 @@ static void client_free(struct uh_client *cl)
         shutdown(cl->sfd.fd.fd, SHUT_RDWR);
         close(cl->sfd.fd.fd);
         list_del(&cl->list);
-        kvlist_free(&cl->request.hdr);
+        kvlist_free(&cl->request.url);
+        kvlist_free(&cl->request.var);
+        kvlist_free(&cl->request.header);
         cl->srv->nclients--;
 
         uh_log_debug("client_free: %s:%d", inet_ntoa(cl->peer_addr.sin_addr), cl->peer_addr.sin_port);
         free(cl);
+    }
+}
+
+static void parse_var(struct uh_client *cl, char *query)
+{
+    struct kvlist *kv = &cl->request.var;
+    char *k, *v;
+
+    while (query && *query) {
+        k = query;
+        query = strchr(query, '&');
+        if (query)
+            *query++ = 0;
+
+        v = strchr(k, '=');
+        if (v)
+            *v++ = 0;
+
+        if (*k && v)
+            kvlist_set(kv, k, v);
     }
 }
 
@@ -231,23 +259,29 @@ static int client_parse_request(struct uh_client *cl, char *data)
         return CLIENT_STATE_DONE;
     }
 
+    kvlist_set(&req->url, "url", url);
+
     p = strchr(url, '?');
     if (p) {
         *p = 0;
-        if (p[1])
-            kvlist_set(&cl->request.hdr, "query", p + 1);
+        if (p[1]) {
+            kvlist_set(&req->url, "query", p + 1);
+            parse_var(cl, p + 1);
+        }
     }
 
     if (uh_urldecode(path, sizeof(path) - 1, url, strlen(url)) < 0)
         return CLIENT_STATE_DONE;
 
-    kvlist_set(&cl->request.hdr, "path", path);
+    kvlist_set(&req->url, "path", path);
     
     req->method = h_method;
     req->version = h_version;
     if (req->version < UH_HTTP_VER_1_1)
         cl->connection_close = true;
 
+    uh_log_debug("http path: %s", kvlist_get(&req->url, "path"));
+    uh_log_debug("http query: %s", kvlist_get(&req->url, "query"));
     uh_log_debug("http method: %s", http_methods[h_method]);
     uh_log_debug("http version: %s", http_versions[h_version]);
 
@@ -324,7 +358,7 @@ static inline bool client_data_cb(struct uh_client *cl, char *buf, int len)
 
 static void client_parse_header(struct uh_client *cl, char *data)
 {
-    struct http_request *r = &cl->request;
+    struct http_request *req = &cl->request;
     char *err;
     char *name;
     char *val;
@@ -347,7 +381,7 @@ static void client_parse_header(struct uh_client *cl, char *data)
             *name = tolower(*name);
 
     if (!strcmp(data, "content-length")) {
-        r->content_length = strtoul(val, &err, 0);
+        req->content_length = strtoul(val, &err, 0);
         if (err && *err) {
             cl->send_error(cl, 400, "Bad Request", "Invalid Content-Length");
             return;
@@ -359,7 +393,7 @@ static void client_parse_header(struct uh_client *cl, char *data)
         cl->connection_close = true;
     }
 
-    kvlist_set(&cl->request.hdr, data, val);
+    kvlist_set(&req->header, data, val);
 
     cl->state = CLIENT_STATE_HEADER;
 }
@@ -486,7 +520,9 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     uloop_timeout_set(&cl->timeout, UHTTPD_CONNECTION_TIMEOUT * 1000);
 
     list_add(&cl->list, &srv->clients);
-    kvlist_init(&cl->request.hdr, hdr_get_len);
+    kvlist_init(&cl->request.url, hdr_get_len);
+    kvlist_init(&cl->request.var, hdr_get_len);
+    kvlist_init(&cl->request.header, hdr_get_len);
     
     cl->srv = srv;
     cl->srv->nclients++;
@@ -507,8 +543,10 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->chunk_vprintf = uh_chunk_vprintf;
 
     cl->get_peer_addr = client_get_peer_addr;
+    cl->get_url = client_get_url;
     cl->get_path = client_get_path;
     cl->get_query = client_get_query;
+    cl->get_var = client_get_var;
     cl->get_header = client_get_header;
     cl->get_body = client_get_body;
 
