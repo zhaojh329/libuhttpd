@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <uhttpd.h>
+#include <uhttpd/uhttpd.h>
 
 #define port "8000"
 
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
     uh_log_debug("Listen on: *:%s", port);
 
 #if (UHTTPD_SSL_SUPPORT)
-    if (srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
+    if (srv->ssl_init(srv, "/etc/wifidog/wifidog.key", "/etc/wifidog/wifidog.crt") < 0)
         goto done;
 #endif
 

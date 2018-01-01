@@ -4,7 +4,7 @@
 #  LIBUBOX_INCLUDE_DIR  - The libubox include directories
 #  LIBUBOX_LIBRARY      - The libraries needed to use libubox
 
-find_path(LIBUBOX_INCLUDE_DIR uloop.h PATH_SUFFIXES libubox)
+find_path(LIBUBOX_INCLUDE_DIR libubox)
 find_library(LIBUBOX_LIBRARY ubox PATH_SUFFIXES lib64)
 
 include(FindPackageHandleStandardArgs)

@@ -4,13 +4,13 @@
 #  LIBUHTTPD_INCLUDE_DIR    - The libuhttpd include directories
 #  LIBUHTTPD_LIBRARY        - The libraries needed to use libuhttpd
 
-find_path(LIBUHTTPD_INCLUDE_DIR uhttpd.h PATH_SUFFIXES uhttpd)
+find_path(LIBUHTTPD_INCLUDE_DIR uhttpd)
 find_library(LIBUHTTPD_LIBRARY uhttpd PATH_SUFFIXES lib64)
 
 if(LIBUHTTPD_INCLUDE_DIR)
-  file(STRINGS "${LIBUHTTPD_INCLUDE_DIR}/uhttpd.h"
+  file(STRINGS "${LIBUHTTPD_INCLUDE_DIR}/uhttpd/uhttpd.h"
       LIBUHTTPD_VERSION_MAJOR REGEX "^#define[ \t]+UHTTPD_VERSION_MAJOR[ \t]+[0-9]+")
-  file(STRINGS "${LIBUHTTPD_INCLUDE_DIR}/uhttpd.h"
+  file(STRINGS "${LIBUHTTPD_INCLUDE_DIR}/uhttpd/uhttpd.h"
       LIBUHTTPD_VERSION_MINOR REGEX "^#define[ \t]+UHTTPD_VERSION_MINOR[ \t]+[0-9]+")
   string(REGEX REPLACE "[^0-9]+" "" LIBUHTTPD_VERSION_MAJOR "${LIBUHTTPD_VERSION_MAJOR}")
   string(REGEX REPLACE "[^0-9]+" "" LIBUHTTPD_VERSION_MINOR "${LIBUHTTPD_VERSION_MINOR}")
