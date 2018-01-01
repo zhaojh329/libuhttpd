@@ -99,7 +99,7 @@ int main(int argc, char **argv)
         goto done;
 #endif
 
-    uh_add_action(srv, "/hello", hello_action);
+    srv->add_action(srv, "/hello", hello_action);
     
     uloop_run();
 done:

@@ -87,6 +87,7 @@ struct uh_server *uh_server_new(const char *host, const char *port)
     srv->free = uh_server_free;
     srv->set_docroot = uh_set_docroot;
     srv->set_index_file = uh_set_index_file;
+    srv->add_action = uh_add_action;
 
 #if (UHTTPD_SSL_SUPPORT)
     srv->ssl_init = uh_ssl_init;
