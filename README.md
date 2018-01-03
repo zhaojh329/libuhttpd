@@ -14,19 +14,23 @@ A very tiny and fast HTTP server library based on [libubox] and referenced from 
 `Keep Watching for More Actions on This Space`
 
 # Features
-* action: processes requests by invoking registered C functions which mapped to a specific path.
-* tiny and fast
-* use [libubox] as its event backend
-* support HTTPS: OpenSSL, mbedtls and CyaSSl(wolfssl)
-* flexible and you can easily extend your application to have HTTP/HTTPS services
-* code structure is concise and understandable, also suitable for learning
+* Action - processes requests by invoking registered C functions which mapped to a specific path.
+* Tiny and fast
+* Use [libubox] as its event backend
+* Support HTTPS - OpenSSL, mbedtls and CyaSSl(wolfssl)
+* Flexible - you can easily extend your application to have HTTP/HTTPS services
+* Code structure is concise and understandable, also suitable for learning
+
+# TO DO
+* Lua API - Using Lua programming
+* Lua Template - Embed Lua code into HTML code, like embedding PHP into HTML
 
 # Dependencies
 * [libubox]
-* [ustream-ssl]: If you need to support SSL
-* [mbedtls]: If you choose mbedtls as your SSL backend
-* [CyaSSl(wolfssl)]: If you choose wolfssl as your SSL backend
-* [openssl]: If you choose openssl as your SSL backend
+* [ustream-ssl] - If you need to support SSL
+* [mbedtls] - If you choose mbedtls as your SSL backend
+* [CyaSSl(wolfssl)] - If you choose wolfssl as your SSL backend
+* [openssl] - If you choose openssl as your SSL backend
 
 # Configure
 See which configuration are supported

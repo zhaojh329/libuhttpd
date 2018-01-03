@@ -14,19 +14,23 @@
 `请保持关注以获取最新的项目动态`
 
 # 特性
-* action: 通过调用映射到特定路径的已注册C函数来处理请求。
+* Action - 通过调用映射到特定路径的已注册C函数来处理请求。
 * 小巧且快速
 * 使用[libubox]作为其事件后端
-* 支持HTTPS: OpenSSL, mbedtls 和 CyaSSl(wolfssl)
-* 可伸缩：你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
+* 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
+* 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
 * 代码结构简洁通俗易懂，亦适合学习
+
+# 计划支持
+* Lua API - 使用Lua编程
+* Lua模板 - 嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
 
 # 依赖
 * [libubox]
-* [ustream-ssl](https://git.lede-project.org/?p=project/ustream-ssl.git): 如果你需要支持SSL
-* [mbedtls](https://github.com/ARMmbed/mbedtls): 如果你选择mbedtls作为你的SSL后端
-* [CyaSSl(wolfssl)](https://github.com/wolfSSL/wolfssl): 如果你选择wolfssl作为你的SSL后端
-* [openssl](https://github.com/openssl/openssl): 如果你选择openssl作为你的SSL后端
+* [ustream-ssl] - 如果你需要支持SSL
+* [mbedtls] - 如果你选择mbedtls作为你的SSL后端
+* [CyaSSl(wolfssl)] - 如果你选择wolfssl作为你的SSL后端
+* [openssl] - 如果你选择openssl作为你的SSL后端
 
 # 配置
 查看支持哪些配置选项
