@@ -2,9 +2,9 @@
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
-[libubox]: https://git.lede-project.org/?p=project/libubox.git
-[uhttpd]: https://git.lede-project.org/?p=project/uhttpd.git
-[ustream-ssl]: https://git.lede-project.org/?p=project/ustream-ssl.git
+[libubox]: https://git.openwrt.org/?p=project/libubox.git
+[uhttpd]: https://git.openwrt.org/?p=project/uhttpd.git
+[ustream-ssl]: https://git.openwrt.org/?p=project/ustream-ssl.git
 [openssl]: https://github.com/openssl/openssl
 [mbedtls]: https://github.com/ARMmbed/mbedtls
 [CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
