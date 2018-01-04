@@ -63,6 +63,25 @@
 
 	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
 
+# 如何在OpenWRT中使用
+Add new feed into "feeds.conf.default":
+
+    src-git libuhttpd https://github.com/zhaojh329/libuhttpd-feed.git
+
+Install libuhttpd packages:
+
+    ./scripts/feeds update libuhttpd
+    ./scripts/feeds install -a -p libuhttpd
+
+Select package libuhttpd in menuconfig and compile new image.
+
+    Libraries  --->
+        Networking  --->
+            <*> libuhttpd-mbedtls.................................... libuhttpd (mbedtls)
+            < > libuhttpd-nossl....................................... libuhttpd (NO SSL)
+            < > libuhttpd-openssl.................................... libuhttpd (openssl)
+            < > libuhttpd-wolfssl.................................... libuhttpd (wolfssl)
+
 # 示例程序
 ```
 #include <uhttpd.h>
