@@ -41,22 +41,11 @@ See which configuration are supported
 # Build and install
 
 	~/libuhttpd/build$ make && sudo make install
-	
-# Build Example
 
-	~/libuhttpd/build$ cd ../example
-	~/libuhttpd/example$ mkdir build && cd build
-	~/libuhttpd/example/build$ cmake .. && make
-
-# Run Example
-First generate the SSL certificate file
-
-	~/libuhttpd/example/build$ cd ..
-	~/libuhttpd/example$ ./gen_cert.sh
-	
+# Run Example	
 Run
 
-	~/libuhttpd/example$ ./build/helloworld
+	~/libuhttpd/build$ ./example/helloworld
 	
 Then use the command curl or browser to test
 
@@ -84,6 +73,8 @@ Select package libuhttpd in menuconfig and compile new image.
 # Example
 ```
 #include <uhttpd.h>
+
+//#define EXAMPLE_SSL
 
 #define port "8000"
 
@@ -118,11 +109,12 @@ int main(int argc, char **argv)
 
     uh_log_debug("Listen on: *:%s", port);
 
+#ifdef EXAMPLE_SSL
 #if (UHTTPD_SSL_SUPPORT)
     if (srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
         goto done;
 #endif
-
+#endif
     srv->add_action(srv, "/hello", hello_action);
     
     uloop_run();

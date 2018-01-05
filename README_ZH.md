@@ -43,21 +43,10 @@
 
 	~/libuhttpd/build$ make && sudo make install
 
-# 编译示例程序
-
-	~/libuhttpd/build$ cd ../example
-	~/libuhttpd/example$ mkdir build && cd build
-	~/libuhttpd/example/build$ cmake .. && make
-
 # 运行示例程序
-首先生成SSL证书文件
-
-	~/libuhttpd/example/build$ cd ..
-	~/libuhttpd/example$ ./gen_cert.sh
-	
 运行
 
-	~/libuhttpd/example$ ./build/helloworld
+	~/libuhttpd/build$ ./example/helloworld
 	
 然后使用命令curl或者浏览器进行测试
 
@@ -85,6 +74,8 @@ Select package libuhttpd in menuconfig and compile new image.
 # 示例程序
 ```
 #include <uhttpd.h>
+
+//#define EXAMPLE_SSL
 
 #define port "8000"
 
@@ -119,11 +110,12 @@ int main(int argc, char **argv)
 
     uh_log_debug("Listen on: *:%s", port);
 
+#ifdef EXAMPLE_SSL
 #if (UHTTPD_SSL_SUPPORT)
     if (srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
         goto done;
 #endif
-
+#endif
     srv->add_action(srv, "/hello", hello_action);
     
     uloop_run();
