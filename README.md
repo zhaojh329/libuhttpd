@@ -76,7 +76,7 @@ Select package libuhttpd in menuconfig and compile new image.
 
 //#define EXAMPLE_SSL
 
-#define port "8000"
+#define port 8000
 
 static void hello_action(struct uh_client *cl)
 {
