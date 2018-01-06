@@ -41,6 +41,6 @@ struct uh_server {
 #endif    
 };
 
-struct uh_server *uh_server_new(const char *host, const char *port);
+struct uh_server *uh_server_new(const char *host, int port);
 
 #endif

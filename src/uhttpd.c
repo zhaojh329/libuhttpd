@@ -57,12 +57,12 @@ static void uh_accept_cb(struct uloop_fd *fd, unsigned int events)
     uh_accept_client(srv, srv->ssl);
 }
 
-struct uh_server *uh_server_new(const char *host, const char *port)
+struct uh_server *uh_server_new(const char *host, int port)
 {
     struct uh_server *srv = NULL;
     int sock = -1;
 
-    sock = usock(USOCK_TCP | USOCK_SERVER | USOCK_IPV4ONLY, host, port);
+    sock = usock(USOCK_TCP | USOCK_SERVER | USOCK_IPV4ONLY, host, usock_port(port));
     if (sock < 0) {
         uh_log_err("usock");
         return NULL;
