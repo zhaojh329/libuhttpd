@@ -51,11 +51,11 @@ int main(int argc, char **argv)
     if (!srv)
         goto done;
 
-    uh_log_debug("Listen on: *:%s", port);
+    uh_log_debug("Listen on: *:%d", port);
 
 #ifdef EXAMPLE_SSL
 #if (UHTTPD_SSL_SUPPORT)
-    if (srv->ssl_init(srv, "/etc/wifidog/wifidog.key", "/etc/wifidog/wifidog.crt") < 0)
+    if (srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
         goto done;
 #endif
 #endif

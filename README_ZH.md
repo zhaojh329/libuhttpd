@@ -108,7 +108,7 @@ int main(int argc, char **argv)
     if (!srv)
         goto done;
 
-    uh_log_debug("Listen on: *:%s", port);
+    uh_log_debug("Listen on: *:%d", port);
 
 #ifdef EXAMPLE_SSL
 #if (UHTTPD_SSL_SUPPORT)
