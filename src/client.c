@@ -213,8 +213,6 @@ static void client_free(struct uh_client *cl)
         kvlist_free(&cl->request.var);
         kvlist_free(&cl->request.header);
         cl->srv->nclients--;
-
-        uh_log_debug("client_free: %s:%d", inet_ntoa(cl->peer_addr.sin_addr), cl->peer_addr.sin_port);
         free(cl);
     }
 }
@@ -279,11 +277,6 @@ static int client_parse_request(struct uh_client *cl, char *data)
     req->version = h_version;
     if (req->version < UH_HTTP_VER_1_1)
         cl->connection_close = true;
-
-    uh_log_debug("http path: %s", kvlist_get(&req->url, "path"));
-    uh_log_debug("http query: %s", kvlist_get(&req->url, "query"));
-    uh_log_debug("http method: %s", http_methods[h_method]);
-    uh_log_debug("http version: %s", http_versions[h_version]);
 
     return CLIENT_STATE_HEADER;
 }

@@ -18,25 +18,21 @@
 #ifndef _LOG_H
 #define _LOG_H
 
-#include <syslog.h>
 #include "common.h"
+
+#include <libubox/ulog.h>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
 /*
  * Use the syslog output log and include the name and number of rows at the call
  */
-#define uh_log(priority, format...) __uh_log(__FILENAME__, __LINE__, priority, format)
+#define uh_log(priority, fmt...) __uh_log(__FILENAME__, __LINE__, priority, fmt)
 
-#if (UHTTPD_DEBUG)
-#define uh_log_debug(format...)     uh_log(LOG_DEBUG, format)
-#else
-#define uh_log_debug(format...)
-#endif
+#define uh_log_debug(fmt...)     uh_log(LOG_DEBUG, fmt)
+#define uh_log_info(fmt...)      uh_log(LOG_INFO, fmt)
+#define uh_log_err(fmt...)       uh_log(LOG_ERR, fmt)
 
-#define uh_log_info(format...)      uh_log(LOG_INFO, format)
-#define uh_log_err(format...)       uh_log(LOG_ERR, format)
-
-void  __uh_log(const char *filename, int line, int priority, const char *format, ...);
+void  __uh_log(const char *filename, int line, int priority, const char *fmt, ...);
 
 #endif

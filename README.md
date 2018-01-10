@@ -74,13 +74,10 @@ Select package libuhttpd in menuconfig and compile new image.
 ```
 #include <uhttpd.h>
 
-//#define EXAMPLE_SSL
-
-#define port 8000
-
 static void hello_action(struct uh_client *cl)
 {
     int body_len = 0;
+
     cl->send_header(cl, 200, "OK", -1);
     cl->append_header(cl, "Myheader", "Hello");
     cl->header_end(cl);
@@ -95,9 +92,42 @@ static void hello_action(struct uh_client *cl)
     cl->request_done(cl);
 }
 
+static void usage(const char *prog)
+{
+    fprintf(stderr, "Usage: %s [option]\n"
+        "          -p port  # Default port is 8080\n"
+        "          -s       # SSl on\n"
+        "          -v       # verbose\n", prog);
+    exit(1);
+}
+
 int main(int argc, char **argv)
 {
     struct uh_server *srv = NULL;
+    int verbose = false;
+    int ssl = false;
+    int port = 8080;
+    int opt;
+
+    while ((opt = getopt(argc, argv, "p:vs")) != -1) {
+        switch (opt)
+        {
+        case 'p':
+            port = atoi(optarg);
+            break;
+        case 's':
+            ssl = true;
+            break;
+        case 'v':
+            verbose = true;
+            break;
+        default: /* '?' */
+            usage(argv[0]);
+        }
+    }
+
+    if (!verbose)
+        ulog_threshold(LOG_ERR);
     
     uh_log_debug("libuhttpd version: %s", UHTTPD_VERSION_STRING);
 
@@ -107,14 +137,16 @@ int main(int argc, char **argv)
     if (!srv)
         goto done;
 
-    uh_log_debug("Listen on: *:%d", port);
-
-#ifdef EXAMPLE_SSL
-#if (UHTTPD_SSL_SUPPORT)
-    if (srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
+#if (!UHTTPD_SSL_SUPPORT)
+    if (ssl)
+        uh_log_debug("SSl is not compiled in");
+#else
+    if (ssl && srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
         goto done;
 #endif
-#endif
+
+    uh_log_debug("Listen on: %s *:%d", srv->ssl ? "https" : "http", port);
+
     srv->add_action(srv, "/hello", hello_action);
     
     uloop_run();

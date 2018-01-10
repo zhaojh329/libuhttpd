@@ -17,29 +17,22 @@
  
 #include "log.h"
 
-void __uh_log(const char *filename, int line, int priority, const char *format, ...)
+void __uh_log(const char *filename, int line, int priority, const char *fmt, ...)
 {
     va_list ap;
     static char buf[128];
 
     snprintf(buf, sizeof(buf), "(%s:%d) ", filename, line);
     
-    va_start(ap, format);
-    vsnprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), format, ap);
+    va_start(ap, fmt);
+    vsnprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), fmt, ap);
     va_end(ap);
 
     if (priority == LOG_ERR && errno > 0) {
         snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ":%s", strerror(errno));
         errno = 0;
     }
-    
-    syslog(priority, "%s", buf);
 
-#if (UHTTPD_DEBUG)
-    fprintf(stderr, "%s\n", buf);
-#else
-    if (priority == LOG_ERR)
-        fprintf(stderr, "%s\n", buf);
-#endif
+    ulog(priority, "%s\n", buf);
 }
 

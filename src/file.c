@@ -398,12 +398,6 @@ bool handle_file_request(struct uh_client *cl, const char *path)
     if (!pi)
         return false;
 
-    uh_log_debug("pi->root: %s", pi->root);
-    uh_log_debug("pi->phys: %s", pi->phys);
-    uh_log_debug("pi->name: %s", pi->name);
-    uh_log_debug("pi->info: %s", pi->info);
-    uh_log_debug("pi->redirected: %d", pi->redirected);
-
     if (pi->redirected)
         return true;
 
