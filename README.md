@@ -1,4 +1,4 @@
-# libuhttpd([中文](https://github.com/zhaojh329/libuhttpd/blob/master/README_ZH.md))
+# libuhttpd([中文](/README_ZH.md))
 
 ![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
 
