@@ -4,7 +4,7 @@ add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-inden
 # The version number.
 set(UHTTPD_VERSION_MAJOR 1)
 set(UHTTPD_VERSION_MINOR 0)
-set(UHTTPD_VERSION_PATCH 4)
+set(UHTTPD_VERSION_PATCH 5)
 
 # Check the third party Libraries
 find_package(Libubox REQUIRED)
