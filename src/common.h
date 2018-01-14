@@ -38,6 +38,7 @@
 #include <libubox/utils.h>
 #include <libubox/blobmsg.h>
 #include <libubox/kvlist.h>
+#include <libubox/avl-cmp.h>
 #include <libubox/ustream.h>
 
 #include "config.h"
