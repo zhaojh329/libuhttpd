@@ -56,6 +56,10 @@ add new feed into "feeds.conf.default":
 
     src-git libuhttpd https://github.com/zhaojh329/libuhttpd-feed.git
 
+for chaos_calmer(15.05)
+
+    src-git libuhttpd https://github.com/zhaojh329/libuhttpd-feed.git;for-15.05
+
 Install libuhttpd packages:
 
     ./scripts/feeds update libuhttpd
