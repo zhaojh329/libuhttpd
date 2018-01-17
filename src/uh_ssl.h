@@ -19,6 +19,8 @@
 #ifndef __UHTTPD_SSL_H
 #define __UHTTPD_SSL_H
 
+#include "config.h"
+
 #if (UHTTPD_SSL_SUPPORT)
 
 int uh_ssl_init(struct uh_server *srv, const char *key, const char *crt);

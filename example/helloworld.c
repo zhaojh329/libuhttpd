@@ -15,7 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <uhttpd.h>
+#include <libubox/ulog.h>
 
 static void hello_action(struct uh_client *cl)
 {
@@ -72,7 +76,7 @@ int main(int argc, char **argv)
     if (!verbose)
         ulog_threshold(LOG_ERR);
     
-    uh_log_debug("libuhttpd version: %s", UHTTPD_VERSION_STRING);
+    ULOG_INFO("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
     uloop_init();
 
@@ -82,13 +86,13 @@ int main(int argc, char **argv)
 
 #if (!UHTTPD_SSL_SUPPORT)
     if (ssl)
-        uh_log_debug("SSl is not compiled in");
+        ULOG_ERR("SSl is not compiled in\n");
 #else
     if (ssl && srv->ssl_init(srv, "server-key.pem", "server-cert.pem") < 0)
         goto done;
 #endif
 
-    uh_log_debug("Listen on: %s *:%d", srv->ssl ? "https" : "http", port);
+    ULOG_INFO("Listen on: %s *:%d\n", srv->ssl ? "https" : "http", port);
 
     srv->add_action(srv, "/hello", hello_action);
     

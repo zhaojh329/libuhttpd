@@ -18,6 +18,7 @@
 #ifndef _UHTTPD_H
 #define _UHTTPD_H
 
+#include "config.h"
 #include "client.h"
 #include "action.h"
 

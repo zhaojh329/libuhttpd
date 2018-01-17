@@ -14,7 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdarg.h>
+
 #include "log.h"
 
 void __uh_log(const char *filename, int line, int priority, const char *fmt, ...)

@@ -17,8 +17,11 @@
  */
 
 #include <dlfcn.h>
+#include <errno.h>
+
 #include "uhttpd.h"
 #include "uh_ssl.h"
+#include "log.h"
 
 static bool _init = false;
 static struct ustream_ssl_ops *ops;

@@ -15,9 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
+#include <unistd.h>
 #include <libubox/usock.h>
+#include <libubox/avl-cmp.h>
+
 #include "uhttpd.h"
 #include "uh_ssl.h"
+#include "log.h"
  
 static void uh_set_docroot(struct uh_server *srv, const char *docroot)
 {

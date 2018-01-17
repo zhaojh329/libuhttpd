@@ -15,11 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <ctype.h>
+#include <assert.h>
+#include <arpa/inet.h>
+#include <linux/limits.h>
+#include <libubox/blobmsg.h>
+
 #include "uhttpd.h"
 #include "client.h"
 #include "file.h"
 #include "utils.h"
 #include "uh_ssl.h"
+#include "log.h"
 
 const char *const http_versions[] = {
     [UH_HTTP_VER_0_9] = "HTTP/0.9",

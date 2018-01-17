@@ -15,11 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <fcntl.h>
 #include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "file.h"
 #include "utils.h"
 #include "uhttpd.h"
+#include "log.h"
 
 static const struct mimetype uh_mime_types[] = {
     { "txt",     "text/plain" },

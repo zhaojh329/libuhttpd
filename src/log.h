@@ -18,8 +18,7 @@
 #ifndef _LOG_H
 #define _LOG_H
 
-#include "common.h"
-
+#include <string.h>
 #include <libubox/ulog.h>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)

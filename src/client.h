@@ -18,7 +18,11 @@
 #ifndef _CLIENT_H_
 #define _CLIENT_H_
 
-#include "common.h"
+#include <netinet/in.h>
+#include <libubox/kvlist.h>
+#include <libubox/ustream.h>
+
+#include "config.h"
 
 #if (UHTTPD_SSL_SUPPORT)
 #include <libubox/ustream-ssl.h>

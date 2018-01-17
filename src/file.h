@@ -18,6 +18,8 @@
 #ifndef _FILE_H
 #define _FILE_H
 
+#include <sys/stat.h>
+
 #include "client.h"
 
 struct path_info {

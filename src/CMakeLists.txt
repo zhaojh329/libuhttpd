@@ -34,9 +34,7 @@ install(
     FILES
 	    ${CMAKE_CURRENT_BINARY_DIR}/config.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/uhttpd.h
-	    ${CMAKE_CURRENT_SOURCE_DIR}/log.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
-	    ${CMAKE_CURRENT_SOURCE_DIR}/common.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/action.h
     DESTINATION
     	include/uhttpd

@@ -19,8 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
+
 #include "action.h"
 #include "uhttpd.h"
+#include "log.h"
 
 #define UH_ACTION_DATA_BUF_SIZE   1024
 #define UH_ACTION_MAX_POST_SIZE   4096
