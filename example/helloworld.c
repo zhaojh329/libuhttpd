@@ -51,8 +51,8 @@ static void usage(const char *prog)
 int main(int argc, char **argv)
 {
     struct uh_server *srv = NULL;
-    int verbose = false;
-    int ssl = false;
+    bool verbose = false;
+    bool ssl = false;
     int port = 8080;
     int opt;
 
