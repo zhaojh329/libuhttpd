@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#ifndef _UHTTPD_CONFIG_H
+#define _UHTTPD_CONFIG_H
 
 #define UHTTPD_VERSION_MAJOR @UHTTPD_VERSION_MAJOR@
 #define UHTTPD_VERSION_MINOR @UHTTPD_VERSION_MINOR@
