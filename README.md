@@ -1,6 +1,18 @@
 # libuhttpd([中文](/README_ZH.md))
 
-![](https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic "License")
+[1]: https://img.shields.io/badge/license-GPLV3-brightgreen.svg?style=plastic
+[2]: /LICENSE
+[3]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=plastic
+[4]: https://github.com/zhaojh329/libuhttpd/pulls
+[5]: https://img.shields.io/badge/Issues-welcome-brightgreen.svg?style=plastic
+[6]: https://github.com/zhaojh329/libuhttpd/issues/new
+[7]: https://img.shields.io/badge/release-2.1.0-blue.svg
+[8]: https://github.com/zhaojh329/libuhttpd/releases
+
+[![license][1]][2]
+[![PRs Welcome][3]][4]
+[![Issue Welcome][5]][6]
+[![Release Version][7]][8]
 
 [libubox]: https://git.openwrt.org/?p=project/libubox.git
 [uhttpd]: https://git.openwrt.org/?p=project/uhttpd.git
