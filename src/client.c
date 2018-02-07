@@ -446,7 +446,7 @@ void uh_client_read_cb(struct uh_client *cl)
     } while(1);
 }
 
-static void client_ustream_read_cb(struct ustream *s, int bytes)
+static inline void client_ustream_read_cb(struct ustream *s, int bytes)
 {
     struct uh_client *cl = container_of(s, struct uh_client, sfd.stream);
     uh_client_read_cb(cl);
@@ -475,7 +475,7 @@ void uh_client_notify_state(struct uh_client *cl)
     client_free(cl);
 }
 
-static void client_notify_state(struct ustream *s)
+static inline void client_notify_state(struct ustream *s)
 {
     struct uh_client *cl = container_of(s, struct uh_client, sfd.stream);
 
