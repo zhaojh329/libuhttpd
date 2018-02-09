@@ -36,6 +36,7 @@ struct mimetype {
     const char *mime;
 };
 
+struct path_info *uh_path_lookup(struct uh_client *cl, const char *path);
 bool handle_file_request(struct uh_client *cl, const char *path);
 
 #endif

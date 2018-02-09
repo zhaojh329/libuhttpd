@@ -1,0 +1,11 @@
+<h1>HTTP_VERSION: <%=_uhttpd.HTTP_VERSION%></h1>
+<h1>HTTP_METHOD: <%=_uhttpd.HTTP_METHOD%></h1>
+<h1>REMOTE_HOST: <%=_uhttpd.REMOTE_HOST%></h1>
+<h1>HTTP_URL: <%=_uhttpd.HTTP_URL%></h1>
+<h1>HTTP_PATH: <%=_uhttpd.HTTP_PATH%></h1>
+<%for k, v in pairs(_uhttpd.headers) do%>
+<h1><%=k%>:<%=v%></h1>
+<%end%>
+<%for k, v in pairs(_uhttpd.variables) do%>
+<h1><%=k%>:<%=v%></h1>
+<%end%>

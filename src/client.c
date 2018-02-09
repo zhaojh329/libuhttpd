@@ -28,13 +28,13 @@
 #include "uh_ssl.h"
 #include "log.h"
 
-const char *const http_versions[] = {
+static const char *const http_versions[] = {
     [UH_HTTP_VER_0_9] = "HTTP/0.9",
     [UH_HTTP_VER_1_0] = "HTTP/1.0",
     [UH_HTTP_VER_1_1] = "HTTP/1.1"
 };
 
-const char *const http_methods[] = {
+static const char *const http_methods[] = {
     [UH_HTTP_MSG_GET] = "GET",
     [UH_HTTP_MSG_POST] = "POST",
     [UH_HTTP_MSG_HEAD] = "HEAD"
@@ -102,6 +102,16 @@ static void client_send_error(struct uh_client *cl, int code, const char *summar
     }
 
     cl->request_done(cl);
+}
+
+static inline const char *client_get_version(struct uh_client *cl)
+{
+    return http_versions[cl->request.version];
+}
+
+static inline const char *client_get_method(struct uh_client *cl)
+{
+    return http_methods[cl->request.method];
 }
 
 static inline const char *client_get_peer_addr(struct uh_client *cl)
@@ -542,6 +552,8 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->chunk_printf = uh_chunk_printf;
     cl->chunk_vprintf = uh_chunk_vprintf;
 
+    cl->get_version = client_get_version;
+    cl->get_method = client_get_method;
     cl->get_peer_addr = client_get_peer_addr;
     cl->get_url = client_get_url;
     cl->get_path = client_get_path;

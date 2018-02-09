@@ -111,6 +111,8 @@ struct uh_client {
     void (*chunk_printf)(struct uh_client *cl, const char *format, ...);
     void (*chunk_vprintf)(struct uh_client *cl, const char *format, va_list arg);
 
+    const char *(*get_method)(struct uh_client *cl);
+    const char *(*get_version)(struct uh_client *cl);
     const char *(*get_peer_addr)(struct uh_client *cl);
     const char *(*get_url)(struct uh_client *cl);
     const char *(*get_path)(struct uh_client *cl);

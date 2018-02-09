@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
+#include <limits.h>
 
 #include "file.h"
 #include "utils.h"
@@ -144,13 +145,12 @@ next:
 /* Returns NULL on error.
 ** NB: improperly encoded URL should give client 400 [Bad Syntax]; returning
 ** NULL here causes 404 [Not Found], but that's not too unreasonable. */
-struct path_info *uh_path_lookup(struct uh_client *cl, const char *url)
+struct path_info *uh_path_lookup(struct uh_client *cl, const char *path)
 {
     static char buf[PATH_MAX];
     static char path_phys[PATH_MAX];
     static char path_info[PATH_MAX];
     static struct path_info p;
-    const char *path = cl->get_path(cl);
     const char *query = cl->get_query(cl);
 
     const char *docroot = cl->srv->docroot;
@@ -160,10 +160,6 @@ struct path_info *uh_path_lookup(struct uh_client *cl, const char *url)
 
     int i = 0;
     int len;
-
-    /* back out early if url is undefined */
-    if (url == NULL)
-        return NULL;
 
     memset(&p, 0, sizeof(p));
     path_phys[0] = 0;

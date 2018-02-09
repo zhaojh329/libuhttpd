@@ -1,5 +1,5 @@
 
-add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation)
+add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation -Wno-pointer-to-int-cast)
 
 # The version number.
 set(UHTTPD_VERSION_MAJOR 1)
@@ -8,19 +8,29 @@ set(UHTTPD_VERSION_PATCH 5)
 
 # Check the third party Libraries
 find_package(Libubox REQUIRED)
+find_package(Lua)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
 
-set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl)
+set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl ${LUA_LIBRARY})
 set(SOURCE_FILES uhttpd.c client.c log.c utils.c file.c action.c)
 
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
 option(UHTTPD_SSL_SUPPORT "SSL support" ON)
 
+set(UHTTPD_LUA_SUPPORT_CONFIG 1)
+option(UHTTPD_LUA_SUPPORT "LUA support" ON)
+
 if(UHTTPD_SSL_SUPPORT)
     list(APPEND SOURCE_FILES uh_ssl.c)
 else()
     set(UHTTPD_SSL_SUPPORT_CONFIG 0)
+endif()
+
+if(UHTTPD_LUA_SUPPORT)
+    list(APPEND SOURCE_FILES lua_template.c)
+else()
+    set(UHTTPD_LUA_SUPPORT_CONFIG 0)
 endif()
 
 add_library(uhttpd SHARED ${SOURCE_FILES})
@@ -48,4 +58,5 @@ install(
 message("")
 message(STATUS "UHTTPD_VERSION: ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH}")
 message(STATUS "UHTTPD_SSL_SUPPORT: ${UHTTPD_SSL_SUPPORT}")
+message(STATUS "UHTTPD_LUA_SUPPORT: ${UHTTPD_LUA_SUPPORT}")
 message("")

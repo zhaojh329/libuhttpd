@@ -21,21 +21,21 @@
 [mbedtls]: https://github.com/ARMmbed/mbedtls
 [CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
 
-一个专门针对嵌入式Linux的非常小巧且快速的HTTP服务器C库，基于[libubox]，参考了[uhttpd]。
+一个轻量的全异步的HTTP服务器C库，基于[libubox]，参考了[uhttpd]。
 
 `请保持关注以获取最新的项目动态`
 
 # 特性
 * Action - 通过调用映射到特定路径的已注册C函数来处理请求。
-* 小巧且快速
+* 轻量、全异步
 * 使用[libubox]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
 * 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
 * 代码结构简洁通俗易懂，亦适合学习
+* Lua模板 - 嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
 
 # 计划支持
 * Lua API - 使用Lua编程
-* Lua模板 - 嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
 
 # 依赖
 * [libubox]

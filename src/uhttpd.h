@@ -39,9 +39,16 @@ struct uh_server {
 
 #if (UHTTPD_SSL_SUPPORT)
     int (*ssl_init)(struct uh_server *srv, const char *key, const char *crt);
-#endif    
+#endif
+#if (UHTTPD_LUA_SUPPORT)
+    void *L;
+#endif
 };
 
 struct uh_server *uh_server_new(const char *host, int port);
+
+#if (UHTTPD_LUA_SUPPORT)
+    void uh_template(struct uh_client *cl);
+#endif
 
 #endif
