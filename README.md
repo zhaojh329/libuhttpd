@@ -47,6 +47,7 @@ from [uhttpd] for Embedded Linux.
 
 # Configure
 See which configuration are supported
+
 	~/libuhttpd/$ mkdir build && cd build
 	~/libuhttpd/build$ cmake .. -L
 	~/libuhttpd/build$ cmake .. -LH
