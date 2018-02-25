@@ -562,8 +562,6 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->get_header = client_get_header;
     cl->get_body = client_get_body;
 
-    uh_log_debug("new connection: %s:%d", cl->get_peer_addr(cl), addr.sin_port);
-
     return;
 err:
     close(sfd);
