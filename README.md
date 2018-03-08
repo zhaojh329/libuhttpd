@@ -8,11 +8,14 @@
 [6]: https://github.com/zhaojh329/libuhttpd/issues/new
 [7]: https://img.shields.io/badge/release-2.0.0-blue.svg?style=plastic
 [8]: https://github.com/zhaojh329/libuhttpd/releases
+[9]: https://travis-ci.org/zhaojh329/libuhttpd.svg?branch=master
+[10]: https://travis-ci.org/zhaojh329/libuhttpd
 
 [![license][1]][2]
 [![PRs Welcome][3]][4]
 [![Issue Welcome][5]][6]
 [![Release Version][7]][8]
+[![Build Status][9]][10]
 
 [libubox]: https://git.openwrt.org/?p=project/libubox.git
 [uhttpd]: https://git.openwrt.org/?p=project/uhttpd.git
