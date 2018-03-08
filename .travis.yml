@@ -4,11 +4,18 @@ os:
   - linux
 
 before_install:
+  - sudo apt-get -qq update
   - sudo apt-get install -y libjson-c-dev liblua5.1-0-dev
+  - sudo apt-get remove libssl-dev
+
+install:
   - git clone https://git.openwrt.org/project/libubox.git
-  - cd libubox && cmake -DBUILD_LUA=OFF . && sudo make install && cd -
+  - pushd libubox && cmake -DBUILD_LUA=OFF . && make && sudo make install && popd
+  - wget https://www.openssl.org/source/openssl-1.0.2n.tar.gz
+  - tar zxvf openssl-1.0.2n.tar.gz
+  - pushd openssl-1.0.2n &&  ./config --prefix=/usr/local --openssldir=/usr/local/openssl shared && make && sudo make install && popd
   - git clone https://git.openwrt.org/project/ustream-ssl.git
-  - cd ustream-ssl && cmake . && sudo make install && cd -
+  - pushd ustream-ssl && cmake . && sudo make install && popd
 
 script:
   - mkdir build && cd build
