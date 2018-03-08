@@ -1,0 +1,16 @@
+language: c
+
+os:
+  - linux
+
+before_install:
+  - sudo apt-get install -y libjson-c-dev liblua5.1-0-dev
+  - git clone https://git.openwrt.org/project/libubox.git
+  - cd libubox && cmake -DBUILD_LUA=OFF . && sudo make install && cd -
+  - git clone https://git.openwrt.org/project/ustream-ssl.git
+  - cd ustream-ssl && cmake . && sudo make install && cd -
+
+script:
+  - mkdir build && cd build
+  - cmake ..
+  - make && sudo make install
