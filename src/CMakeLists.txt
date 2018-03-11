@@ -1,5 +1,5 @@
 
-add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation -Wno-pointer-to-int-cast)
+add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -Wno-misleading-indentation -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
 
 # The version number.
 set(UHTTPD_VERSION_MAJOR 2)
