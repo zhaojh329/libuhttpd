@@ -67,25 +67,13 @@ Run
 Then use the command curl or browser to test
 
 	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
-	
-# How to use on OpenWRT
-add new feed into "feeds.conf.default":
 
-    src-git libuhttpd https://github.com/zhaojh329/libuhttpd-feed.git
+# Install on OpenWrt
+    opkg update
+    opkg list | grep libuhttpd
+    opkg install libuhttpd-nossl
 
-Install libuhttpd packages:
-
-    ./scripts/feeds update libuhttpd
-    ./scripts/feeds install -a -p libuhttpd
-
-Select package libuhttpd in menuconfig and compile new image.
-
-    Libraries  --->
-        Networking  --->
-            <*> libuhttpd-mbedtls.................................... libuhttpd (mbedtls)
-            < > libuhttpd-nossl....................................... libuhttpd (NO SSL)
-            < > libuhttpd-openssl.................................... libuhttpd (openssl)
-            < > libuhttpd-wolfssl.................................... libuhttpd (wolfssl)
+If the install command fails, you can [compile it yourself](/BUILDOPENWRT.md).
 
 # Example
 ```
