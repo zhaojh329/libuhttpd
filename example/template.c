@@ -25,7 +25,15 @@
 
 static void hello_action(struct uh_client *cl)
 {
+#if (UHTTPD_LUA_SUPPORT)
     uh_template(cl);
+#else
+    cl->send_header(cl, 200, "OK", -1);
+    cl->header_end(cl);
+
+    cl->chunk_printf(cl, "<h1>Lua not enabled when compile</h1>");
+    cl->request_done(cl);
+#endif
 }
 
 static void usage(const char *prog)
