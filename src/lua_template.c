@@ -549,10 +549,12 @@ static int uh_lua_send(lua_State *L)
 
     buf = luaL_checklstring(L, 1, &len);
     if (len > 0) {
+        LUA_INTEGER p;
         struct uh_client *cl;
 
         lua_getglobal(L, "__cl");
-        cl = (struct uh_client *)lua_tointeger(L, -1);
+        p = lua_tointeger(L, -1);
+        cl = (struct uh_client *)(*(void **)&p);
         cl->chunk_send(cl, buf, len);
     }
 
@@ -594,7 +596,7 @@ void uh_template(struct uh_client *cl)
         lua_setglobal(L, "uh_send");    
     }
 
-    lua_pushinteger(L, (uint32_t)cl);
+    lua_pushinteger(L, (lua_Integer)(lua_Integer *)cl);
     lua_setglobal(L, "__cl");
 
     lua_newtable(L);
