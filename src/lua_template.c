@@ -1,4 +1,5 @@
 /*
+ * Based on code found at https://github.com/openwrt/luci/blob/master/modules/luci-base/src/template_parser.c
  * Copyright (C) 2017 Jianhui Zhao <jianhuizhao329@gmail.com>
  *
  * This program is free software; you can redistribute it and/or
