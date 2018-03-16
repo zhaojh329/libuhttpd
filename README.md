@@ -166,3 +166,7 @@ done:
 # Contributing
 If you would like to help making [libuhttpd](https://github.com/zhaojh329/libuhttpd) better,
 see the [CONTRIBUTING.md](https://github.com/zhaojh329/libuhttpd/blob/master/CONTRIBUTING.md) file.
+
+# QQ group: 153530783
+
+# If the project is helpful to you, please do not hesitate to star. Thank you!
