@@ -10,28 +10,41 @@ set(UHTTPD_VERSION_PATCH 3)
 find_package(Libubox REQUIRED)
 find_package(Lua)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR} ${LUA_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR})
 
-set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl ${LUA_LIBRARY})
+set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl)
 set(SOURCE_FILES uhttpd.c client.c log.c utils.c file.c action.c)
 
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
 option(UHTTPD_SSL_SUPPORT "SSL support" ON)
 
+
+set(LUA_SUPPORT_DEFAULT "ON")
+if (NOT LUA_FOUND)
+    set(LUA_SUPPORT_DEFAULT "OFF")
+endif (NOT LUA_FOUND)
+
 set(UHTTPD_LUA_SUPPORT_CONFIG 1)
-option(UHTTPD_LUA_SUPPORT "LUA support" ON)
+option(UHTTPD_LUA_SUPPORT "LUA support" ${LUA_SUPPORT_DEFAULT})
 
-if(UHTTPD_SSL_SUPPORT)
+if (UHTTPD_SSL_SUPPORT)
     list(APPEND SOURCE_FILES uh_ssl.c)
-else()
+else ()
     set(UHTTPD_SSL_SUPPORT_CONFIG 0)
-endif()
+endif ()
 
-if(UHTTPD_LUA_SUPPORT)
+if (UHTTPD_LUA_SUPPORT)
+    if (NOT LUA_FOUND)
+        message(FATAL_ERROR "Lua was not found on your system")
+    endif (NOT LUA_FOUND)
+
+    include_directories(${LUA_INCLUDE_DIR})
+    list(APPEND EXTRA_LIBS ${LUA_LIBRARY})
+
     list(APPEND SOURCE_FILES lua_template.c)
-else()
+else ()
     set(UHTTPD_LUA_SUPPORT_CONFIG 0)
-endif()
+endif ()
 
 add_library(uhttpd SHARED ${SOURCE_FILES})
 set_target_properties(uhttpd PROPERTIES VERSION ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH})
