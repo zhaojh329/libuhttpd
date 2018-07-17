@@ -42,6 +42,8 @@ if (UHTTPD_LUA_SUPPORT)
     list(APPEND EXTRA_LIBS ${LUA_LIBRARY})
 
     list(APPEND SOURCE_FILES lua_template.c)
+
+    add_subdirectory(lua)
 else ()
     set(UHTTPD_LUA_SUPPORT_CONFIG 0)
 endif ()
