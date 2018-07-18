@@ -128,7 +128,16 @@ static int lua_uh_ssl_init(lua_State *L)
     const char *cert = lua_tostring(L, 2);
     const char *key = lua_tostring(L, 3);
 
-    lsrv->srv->ssl_init(lsrv->srv, key, cert);
+#if (!UHTTPD_SSL_SUPPORT)
+    lua_pushstring(L, "SSL is not compiled in");
+    lua_error(L);
+    return 0;
+#endif
+
+    if (lsrv->srv->ssl_init(lsrv->srv, key, cert) < 0) {
+        lua_pushstring(L, "SSL init failed");
+        lua_error(L);
+    }
 
     return 0;
 }
