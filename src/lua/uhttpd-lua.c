@@ -118,6 +118,17 @@ static void lua_uh_action(struct uh_client *cl)
     lua_call(L, 2, 0);
 }
 
+static int lua_uh_ssl_init(lua_State *L)
+{
+	struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    const char *cert = lua_tostring(L, 2);
+    const char *key = lua_tostring(L, 3);
+
+    lsrv->srv->ssl_init(lsrv->srv, key, cert);
+
+    return 0;
+}
+
 static int lua_uh_add_action(lua_State *L)
 {
 	struct lua_uh_server *lsrv = lua_touserdata(L, 1);
@@ -158,6 +169,7 @@ static int lua_uh_server_free(lua_State *L)
 }
 
 static const luaL_Reg server_mt[] = {
+	{ "ssl_init", lua_uh_ssl_init },
 	{ "add_action", lua_uh_add_action },
 	{ "free", lua_uh_server_free },
 	{ NULL, NULL }

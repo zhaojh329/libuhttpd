@@ -30,6 +30,8 @@ print("uhttpd version:", uh.VERSION)
 
 local srv = uh.new(port)
 
+-- srv:ssl_init("uhttpd.crt", "uhttpd.key")
+
 print("Listen on:", port)
 
 srv:add_action("/lua", function(cl, opt)
