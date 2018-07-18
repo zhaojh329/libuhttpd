@@ -43,7 +43,7 @@ srv:add_action("/lua", function(cl, opt)
     uh.chunk_send(cl, string.format("<h1>HTTP Version: %s</h1>", opt.version))
     uh.chunk_send(cl, string.format("<h1>PATH: %s</h1>", opt.path))
     uh.chunk_send(cl, string.format("<h1>URL: %s</h1>", opt.url))
-    uh.chunk_send(cl, string.format("<h1>QUERY: %s</h1>", opt.query))
+    uh.chunk_send(cl, string.format("<h1>QUERY: %s</h1>", opt.query and opt.query or ""))
     uh.chunk_send(cl, string.format("<h1>Body: %s</h1>", opt.body and opt.body or ""))
 
     for k, v in pairs(opt.vars) do
