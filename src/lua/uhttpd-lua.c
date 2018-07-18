@@ -132,12 +132,12 @@ static int lua_uh_ssl_init(lua_State *L)
     lua_pushstring(L, "SSL is not compiled in");
     lua_error(L);
     return 0;
-#endif
-
+#else
     if (lsrv->srv->ssl_init(lsrv->srv, key, cert) < 0) {
         lua_pushstring(L, "SSL init failed");
         lua_error(L);
     }
+#endif
 
     return 0;
 }
