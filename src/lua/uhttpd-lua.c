@@ -101,6 +101,9 @@ static void lua_uh_action(struct uh_client *cl)
     lua_pushstring(L, cl->get_version(cl));
     lua_setfield(L, -2, "version");
 
+    lua_pushstring(L, cl->get_path(cl));
+    lua_setfield(L, -2, "path");
+
     lua_pushstring(L, cl->get_url(cl));
     lua_setfield(L, -2, "url");
 
