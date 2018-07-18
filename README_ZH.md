@@ -36,6 +36,7 @@
 * 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
 * 代码结构简洁通俗易懂，亦适合学习
 * Lua模板 - 嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
+* Lua API - 支持使用Lua编程
 
 # 计划支持
 * Lua API - 使用Lua编程
