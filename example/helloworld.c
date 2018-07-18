@@ -101,7 +101,9 @@ int main(int argc, char **argv)
     uloop_run();
 done:
     uloop_done();
-    srv->free(srv);
+
+    if (srv)
+        srv->free(srv);
     
     return 0;
 }
