@@ -23,21 +23,16 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-/* Compatibility defines */		
+/* Compatibility defines */     
 #if LUA_VERSION_NUM <= 501
-		
-#define lua_setuservalue(L, i) lua_setfenv((L), (i))		
-#define lua_getuservalue(L, i) lua_getfenv((L), (i))
 
 /* NOTE: this only works if nups == 0! */
 #define luaL_setfuncs(L, fns, nups) luaL_register((L), NULL, (fns))
 
-#define lua_rawlen(L, i) lua_objlen((L), (i))
-
 #endif
 
 struct lua_uh_server {
-	struct uh_server *srv;
+    struct uh_server *srv;
 };
 
 #endif
