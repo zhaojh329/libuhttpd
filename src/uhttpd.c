@@ -29,13 +29,13 @@
 static void uh_set_docroot(struct uh_server *srv, const char *docroot)
 {
     free(srv->docroot);
-    srv->docroot = strdup(".");
+    srv->docroot = strdup(docroot);
 }
 
 static void uh_set_index_file(struct uh_server *srv, const char *index_file)
 {
     free(srv->index_file);
-    srv->index_file = strdup("index.html");
+    srv->index_file = strdup(index_file);
 }
 
 static void uh_server_free(struct uh_server *srv)
