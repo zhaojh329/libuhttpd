@@ -199,6 +199,26 @@ static int lua_uh_set_error404_cb(lua_State *L)
     return 0;
 }
 
+static int lua_uh_set_options(lua_State *L)
+{
+    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct uh_server *srv = &lsrv->srv;
+
+    luaL_checktype(L, 2, LUA_TTABLE);
+
+    lua_getfield(L, 2, "docroot");
+    if (lua_tostring(L, -1))
+        srv->set_docroot(srv, lua_tostring(L, -1));
+    lua_pop(L, 1);
+
+    lua_getfield(L, 2, "index");
+    if (lua_tostring(L, -1))
+        srv->set_index_file(srv, lua_tostring(L, -1));
+    lua_pop(L, 1);
+
+    return 0;
+}
+
 static int lua_uh_server_free(lua_State *L)
 {
     struct lua_uh_server *lsrv = lua_touserdata(L, 1);
@@ -212,6 +232,7 @@ static const luaL_Reg server_mt[] = {
     { "ssl_init", lua_uh_ssl_init },
     { "add_action", lua_uh_add_action },
     { "set_error404_cb", lua_uh_set_error404_cb },
+    { "set_options", lua_uh_set_options },
     { "free", lua_uh_server_free },
     { NULL, NULL }
 };

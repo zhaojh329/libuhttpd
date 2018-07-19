@@ -30,6 +30,7 @@ print("uhttpd version:", uh.VERSION)
 
 local srv = uh.new(port)
 
+-- srv:set_options({docroot = "/home/zjh/www", index = "lua.html"})
 -- srv:ssl_init("uhttpd.crt", "uhttpd.key")
 
 print("Listen on:", port)
