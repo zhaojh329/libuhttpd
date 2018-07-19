@@ -84,14 +84,8 @@ static inline void add_body(struct uh_client *cl, lua_State *L)
     lua_setfield(L, -2, "body");
 }
 
-static void lua_uh_action(struct uh_client *cl)
+static void lua_prepare_action_argument(struct uh_client *cl, lua_State *L)
 {
-    struct uh_server *srv = cl->srv;
-    lua_State *L = srv->L;
-
-    lua_getglobal(L, "__uh_action_cb");
-    lua_getfield(L, -1, cl->get_path(cl));
-
     lua_pushlightuserdata(L, cl);
 
     lua_newtable(L);
@@ -118,6 +112,17 @@ static void lua_uh_action(struct uh_client *cl)
 
     add_all_var(cl, L);
     add_all_header(cl, L);
+}
+
+static void lua_uh_action(struct uh_client *cl)
+{
+    struct uh_server *srv = cl->srv;
+    lua_State *L = srv->L;
+
+    lua_getglobal(L, "__uh_action_cb");
+    lua_getfield(L, -1, cl->get_path(cl));
+
+    lua_prepare_action_argument(cl, L);
 
     lua_call(L, 2, 0);
 }
@@ -132,7 +137,7 @@ static int lua_uh_ssl_init(lua_State *L)
     const char *cert = lua_tostring(L, 2);
     const char *key = lua_tostring(L, 3);
 
-    if (lsrv->srv->ssl_init(lsrv->srv, key, cert) < 0) {
+    if (lsrv->srv.ssl_init(&lsrv->srv, key, cert) < 0) {
         lua_pushstring(L, "SSL init failed");
         lua_error(L);
     }
@@ -144,14 +149,7 @@ static int lua_uh_ssl_init(lua_State *L)
 static int lua_uh_add_action(lua_State *L)
 {
     struct lua_uh_server *lsrv = lua_touserdata(L, 1);
-    struct uh_server *srv = lsrv->srv;
     const char *path = lua_tostring(L, -2);
-
-    if (!srv) {
-        lua_pushstring(L, "Not initialized");
-        lua_error(L);
-        return 0;
-    }
 
     if (!path || !path[0] || !lua_isfunction(L, -1)) {
         lua_pushstring(L, "invalid arg list");
@@ -159,7 +157,7 @@ static int lua_uh_add_action(lua_State *L)
         return 0;
     }
 
-    srv->add_action(srv, path, lua_uh_action);
+    lsrv->srv.add_action(&lsrv->srv, path, lua_uh_action);
 
     lua_getglobal(L, "__uh_action_cb");
     lua_pushvalue(L, -2);
@@ -168,14 +166,44 @@ static int lua_uh_add_action(lua_State *L)
     return 0;
 }
 
+static void http_callback_404(struct uh_client *cl)
+{
+    struct lua_uh_server *lsrv = container_of(cl->srv, struct lua_uh_server, srv);
+    lua_State *L = cl->srv->L;
+
+    lua_getglobal(L, "__uh_error404_cb");
+    lua_rawgeti(L, -1, lsrv->error404_cb_ref);
+    lua_remove(L, -2);
+
+    lua_prepare_action_argument(cl, L);
+
+    lua_call(L, 2, 0);
+}
+
+static int lua_uh_set_error404_cb(lua_State *L)
+{
+    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+
+    if (!lua_isfunction(L, 2)) {
+        lua_pushstring(L, "invalid arg list");
+        lua_error(L);
+        return 0;
+    }
+
+    lua_getglobal(L, "__uh_error404_cb");
+    lua_pushvalue(L, 2);
+    lsrv->error404_cb_ref = luaL_ref(L, -2);
+
+    lsrv->srv.error404_cb = http_callback_404;
+
+    return 0;
+}
+
 static int lua_uh_server_free(lua_State *L)
 {
     struct lua_uh_server *lsrv = lua_touserdata(L, 1);
 
-    if (lsrv->srv) {
-        lsrv->srv->free(lsrv->srv);
-        lsrv->srv = NULL;
-    }
+    lsrv->srv.free(&lsrv->srv);
 
     return 0;
 }
@@ -183,6 +211,7 @@ static int lua_uh_server_free(lua_State *L)
 static const luaL_Reg server_mt[] = {
     { "ssl_init", lua_uh_ssl_init },
     { "add_action", lua_uh_add_action },
+    { "set_error404_cb", lua_uh_set_error404_cb },
     { "free", lua_uh_server_free },
     { NULL, NULL }
 };
@@ -190,20 +219,21 @@ static const luaL_Reg server_mt[] = {
 static int lua_uh_new(lua_State *L)
 {
     int port = lua_tointeger(L, -1);
-    const char *address = lua_tostring(L, -2);
+    const char *host = lua_tostring(L, -2);
     struct lua_uh_server *lsrv;
-    struct uh_server *srv;
+    int sock;
 
-    srv = uh_server_new(address, port);
-    if (!srv) {
+    sock = uh_server_open(host, port);
+    if (!sock) {
         lua_pushnil(L);
-        lua_pushstring(L, "Bind failed");
+        lua_pushstring(L, "Bind sock failed");
         return 2;
     }
 
     lsrv = uh_create_userdata(L, sizeof(struct lua_uh_server), server_mt, lua_uh_server_free);
-    lsrv->srv = srv;
-    lsrv->srv->L = L;
+
+    uh_server_init(&lsrv->srv, sock);
+    lsrv->srv.L = L;
 
     return 1;
 }
@@ -290,6 +320,9 @@ int luaopen_uhttpd(lua_State *L)
 {
     lua_newtable(L);
     lua_setglobal(L, "__uh_action_cb");
+
+    lua_newtable(L);
+    lua_setglobal(L, "__uh_error404_cb");
 
     lua_newtable(L);
     luaL_setfuncs(L, uhttpd_fun, 0);

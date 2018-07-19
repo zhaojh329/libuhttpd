@@ -34,6 +34,16 @@ local srv = uh.new(port)
 
 print("Listen on:", port)
 
+srv:set_error404_cb(function(cl, opt)
+    uh.send_header(cl, 200, "OK", -1)
+    uh.append_header(cl, "Myheader", "Hello")
+    uh.header_end(cl)
+
+    uh.chunk_send(cl, "<h1>Libuhttpd-Lua: Not found</h1>")
+
+    uh.request_done(cl)
+end)
+
 srv:add_action("/lua", function(cl, opt)
     uh.send_header(cl, 200, "OK", -1)
     uh.append_header(cl, "Myheader", "Hello")
