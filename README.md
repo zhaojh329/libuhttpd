@@ -37,7 +37,7 @@ from [uhttpd] for Embedded Linux.
 * Flexible - you can easily extend your application to have HTTP/HTTPS services
 * Code structure is concise and understandable, also suitable for learning
 * Lua Template - Embed Lua code into HTML code, like embedding PHP into HTML
-* Lua API - Support for programming with Lua
+* Lua binding
 
 # TO DO
 * Lua API - Using Lua programming
