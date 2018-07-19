@@ -124,15 +124,14 @@ static void lua_uh_action(struct uh_client *cl)
 
 static int lua_uh_ssl_init(lua_State *L)
 {
+#if (!UHTTPD_SSL_SUPPORT)
+    lua_pushstring(L, "SSL is not compiled in");
+    lua_error(L);
+#else
     struct lua_uh_server *lsrv = lua_touserdata(L, 1);
     const char *cert = lua_tostring(L, 2);
     const char *key = lua_tostring(L, 3);
 
-#if (!UHTTPD_SSL_SUPPORT)
-    lua_pushstring(L, "SSL is not compiled in");
-    lua_error(L);
-    return 0;
-#else
     if (lsrv->srv->ssl_init(lsrv->srv, key, cert) < 0) {
         lua_pushstring(L, "SSL init failed");
         lua_error(L);
