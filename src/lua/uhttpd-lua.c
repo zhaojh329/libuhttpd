@@ -290,7 +290,6 @@ static int lua_uh_send(lua_State *L)
     cl->send(cl, data, len);
 
     return 0;
-
 }
 
 static int lua_uh_chunk_send(lua_State *L)
@@ -303,7 +302,29 @@ static int lua_uh_chunk_send(lua_State *L)
     cl->chunk_send(cl, data, len);
 
     return 0;
+}
 
+static int lua_uh_send_error(lua_State *L)
+{
+    struct uh_client *cl = lua_touserdata(L, 1);
+    int code = lua_tointeger(L, 2);
+    const char *summary = lua_tostring(L, 3);
+    const char *msg = lua_tostring(L, 4);
+
+    cl->send_error(cl, code, summary, msg);
+
+    return 0;
+}
+
+static int lua_uh_redirect(lua_State *L)
+{
+    struct uh_client *cl = lua_touserdata(L, 1);
+    int code = lua_tointeger(L, 2);
+    const char *url = lua_tostring(L, 3);
+
+    cl->redirect(cl, code, url);
+
+    return 0;
 }
 
 static int lua_uh_request_done(lua_State *L)
@@ -322,6 +343,8 @@ static const luaL_Reg uhttpd_fun[] = {
     {"header_end", lua_uh_header_end},
     {"send", lua_uh_send},
     {"chunk_send", lua_uh_chunk_send},
+    {"send_error", lua_uh_send_error},
+    {"redirect", lua_uh_redirect},
     {"request_done", lua_uh_request_done},
     {NULL, NULL}
 };
