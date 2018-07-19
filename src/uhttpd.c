@@ -53,7 +53,6 @@ static void uh_server_free(struct uh_server *srv)
         uh_ssl_free();
         free(srv->docroot);
         free(srv->index_file);
-        free(srv);
     }
 }
 
@@ -64,23 +63,19 @@ static void uh_accept_cb(struct uloop_fd *fd, unsigned int events)
     uh_accept_client(srv, srv->ssl);
 }
 
-struct uh_server *uh_server_new(const char *host, int port)
+int uh_server_open(const char *host, int port)
 {
-    struct uh_server *srv = NULL;
-    int sock = -1;
-
-    sock = usock(USOCK_TCP | USOCK_SERVER | USOCK_IPV4ONLY, host, usock_port(port));
+    int sock = usock(USOCK_TCP | USOCK_SERVER | USOCK_IPV4ONLY, host, usock_port(port));
     if (sock < 0) {
         uh_log_err("usock");
-        return NULL;
+        return sock;
     }
 
-    srv = calloc(1, sizeof(struct uh_server));
-    if (!srv) {
-        uh_log_err("calloc");
-        goto err;
-    }
+    return sock;
+}
 
+void uh_server_init(struct uh_server *srv, int sock)
+{
     srv->docroot = strdup(".");
     srv->index_file = strdup("index.html");
 
@@ -99,6 +94,24 @@ struct uh_server *uh_server_new(const char *host, int port)
 #if (UHTTPD_SSL_SUPPORT)
     srv->ssl_init = uh_ssl_init;
 #endif  
+}
+
+struct uh_server *uh_server_new(const char *host, int port)
+{
+    struct uh_server *srv;
+    int sock;
+
+    sock = uh_server_open(host, port);
+    if (sock < 0)
+        return NULL;
+
+    srv = calloc(1, sizeof(struct uh_server));
+    if (!srv) {
+        uh_log_err("calloc");
+        goto err;
+    }
+
+    uh_server_init(srv, sock);
 
     return srv;
     

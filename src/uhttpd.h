@@ -49,6 +49,9 @@ struct uh_server {
 
 struct uh_server *uh_server_new(const char *host, int port);
 
+int uh_server_open(const char *host, int port);
+void uh_server_init(struct uh_server *srv, int sock);
+
 #if (UHTTPD_LUA_SUPPORT)
     void uh_template(struct uh_client *cl);
 #endif
