@@ -28,8 +28,7 @@ static void *uh_create_userdata(lua_State *L, size_t size, const luaL_Reg *reg, 
 
     memset(obj, 0, size);
 
-    /* creare metatable */
-    lua_newtable(L);
+    luaL_newmetatable(L, LUA_UH_SERVER_MT);
 
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1);
@@ -133,7 +132,7 @@ static int lua_uh_ssl_init(lua_State *L)
     lua_pushstring(L, "SSL is not compiled in");
     lua_error(L);
 #else
-    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
     const char *cert = lua_tostring(L, 2);
     const char *key = lua_tostring(L, 3);
 
@@ -148,7 +147,7 @@ static int lua_uh_ssl_init(lua_State *L)
 
 static int lua_uh_add_action(lua_State *L)
 {
-    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
     const char *path = lua_tostring(L, -2);
 
     if (!path || !path[0] || !lua_isfunction(L, -1)) {
@@ -182,7 +181,7 @@ static void http_callback_404(struct uh_client *cl)
 
 static int lua_uh_set_error404_cb(lua_State *L)
 {
-    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
 
     if (!lua_isfunction(L, 2)) {
         lua_pushstring(L, "invalid arg list");
@@ -201,7 +200,7 @@ static int lua_uh_set_error404_cb(lua_State *L)
 
 static int lua_uh_set_options(lua_State *L)
 {
-    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
     struct uh_server *srv = &lsrv->srv;
 
     luaL_checktype(L, 2, LUA_TTABLE);
@@ -221,7 +220,7 @@ static int lua_uh_set_options(lua_State *L)
 
 static int lua_uh_server_free(lua_State *L)
 {
-    struct lua_uh_server *lsrv = lua_touserdata(L, 1);
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
 
     lsrv->srv.free(&lsrv->srv);
 

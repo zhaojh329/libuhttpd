@@ -31,6 +31,8 @@
 
 #endif
 
+#define LUA_UH_SERVER_MT    "libuhttpd"
+
 struct lua_uh_server {
     struct uh_server srv;
     int error404_cb_ref;
