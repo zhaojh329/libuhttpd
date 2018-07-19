@@ -133,13 +133,11 @@ static int lua_uh_ssl_init(lua_State *L)
     lua_error(L);
 #else
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
-    const char *cert = lua_tostring(L, 2);
-    const char *key = lua_tostring(L, 3);
+    const char *cert = luaL_checkstring(L, 2);
+    const char *key = luaL_checkstring(L, 3);
 
-    if (lsrv->srv.ssl_init(&lsrv->srv, key, cert) < 0) {
-        lua_pushstring(L, "SSL init failed");
-        lua_error(L);
-    }
+    if (lsrv->srv.ssl_init(&lsrv->srv, key, cert) < 0)
+        luaL_error(L, "SSL init failed");
 #endif
 
     return 0;
@@ -148,19 +146,15 @@ static int lua_uh_ssl_init(lua_State *L)
 static int lua_uh_add_action(lua_State *L)
 {
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
-    const char *path = lua_tostring(L, -2);
+    const char *path = luaL_checkstring(L, 2);
 
-    if (!path || !path[0] || !lua_isfunction(L, -1)) {
-        lua_pushstring(L, "invalid arg list");
-        lua_error(L);
-        return 0;
-    }
-
-    lsrv->srv.add_action(&lsrv->srv, path, lua_uh_action);
+    luaL_checktype(L, 3, LUA_TFUNCTION);
 
     lua_getglobal(L, "__uh_action_cb");
-    lua_pushvalue(L, -2);
+    lua_pushvalue(L, 3);
     lua_setfield(L, -2, path);
+
+    lsrv->srv.add_action(&lsrv->srv, path, lua_uh_action);
 
     return 0;
 }
@@ -183,11 +177,7 @@ static int lua_uh_set_error404_cb(lua_State *L)
 {
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
 
-    if (!lua_isfunction(L, 2)) {
-        lua_pushstring(L, "invalid arg list");
-        lua_error(L);
-        return 0;
-    }
+    luaL_checktype(L, 2, LUA_TFUNCTION);
 
     lua_getglobal(L, "__uh_error404_cb");
     lua_pushvalue(L, 2);
