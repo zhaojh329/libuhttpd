@@ -363,5 +363,12 @@ int luaopen_uhttpd(lua_State *L)
     lua_pushstring(L, UHTTPD_VERSION_STRING);
     lua_setfield(L, -2, "VERSION");
 
+#if (UHTTPD_SSL_SUPPORT)
+    lua_pushboolean(L, 1);
+#else
+    lua_pushboolean(L, 0);
+#endif
+    lua_setfield(L, -2, "SSL_SUPPORTED");
+
     return 1;
 }
