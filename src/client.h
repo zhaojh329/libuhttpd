@@ -47,9 +47,9 @@ enum http_method {
 };
 
 enum http_version {
-    UH_HTTP_VER_0_9,
-    UH_HTTP_VER_1_0,
-    UH_HTTP_VER_1_1
+    UH_HTTP_VER_09,
+    UH_HTTP_VER_10,
+    UH_HTTP_VER_11
 };
 
 enum client_state {

@@ -31,9 +31,9 @@
 #include "log.h"
 
 static const char *const http_versions[] = {
-    [UH_HTTP_VER_0_9] = "HTTP/0.9",
-    [UH_HTTP_VER_1_0] = "HTTP/1.0",
-    [UH_HTTP_VER_1_1] = "HTTP/1.1"
+    [UH_HTTP_VER_09] = "HTTP/0.9",
+    [UH_HTTP_VER_10] = "HTTP/1.0",
+    [UH_HTTP_VER_11] = "HTTP/1.1"
 };
 
 static const char *const http_methods[] = {
@@ -340,7 +340,7 @@ static int client_parse_request(struct uh_client *cl, char *data)
     h_method = find_idx(http_methods, ARRAY_SIZE(http_methods), type);
     h_version = find_idx(http_versions, ARRAY_SIZE(http_versions), version);
     if (h_method < 0 || h_version < 0) {
-        req->version = UH_HTTP_VER_1_0;
+        req->version = UH_HTTP_VER_10;
         return CLIENT_STATE_DONE;
     }
 
@@ -362,7 +362,7 @@ static int client_parse_request(struct uh_client *cl, char *data)
     
     req->method = h_method;
     req->version = h_version;
-    if (req->version < UH_HTTP_VER_1_1)
+    if (req->version < UH_HTTP_VER_11)
         cl->connection_close = true;
 
     return CLIENT_STATE_HEADER;
