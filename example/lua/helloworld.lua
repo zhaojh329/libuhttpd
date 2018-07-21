@@ -41,18 +41,28 @@ local srv = uh.new(port)
 
 uh.log(uh.LOG_INFO, "Listen on:" .. port)
 
-srv:set_error404_cb(function(cl, opt)
+srv:set_error404_cb(function(cl, path)
     uh.send_header(cl, 200, "OK", -1)
-    uh.append_header(cl, "Myheader", "Hello")
     uh.header_end(cl)
 
-    uh.chunk_send(cl, "<h1>Libuhttpd-Lua: Not found</h1>")
+    uh.chunk_send(cl, string.format("<h1>Libuhttpd-Lua: '%s' Not found</h1>", path))
 
     uh.request_done(cl)
 end)
 
-srv:set_request_cb(function(cl, opt)
-    if opt.path ~= "/hello" then
+local http_methods = {
+    [uh.HTTP_METHOD_GET] = "GET",
+    [uh.HTTP_METHOD_POST] = "POST",
+    [uh.HTTP_METHOD_HEAD] = "HEAD"
+}
+local http_version = {
+    [uh.HTTP_VER_09] = "HTTP/0.9",
+    [uh.HTTP_VER_10] = "HTTP/1.0",
+    [uh.HTTP_VER_11] = "HTTP/1.1"
+}
+
+srv:set_request_cb(function(cl, path)
+    if path ~= "/hello" then
         return uh.REQUEST_CONTINUE
     end
 
@@ -61,19 +71,32 @@ srv:set_request_cb(function(cl, opt)
     uh.header_end(cl)
 
     uh.chunk_send(cl, string.format("<h1>Hello Libuhttpd %s</h1>", uh.VERSION))
-    uh.chunk_send(cl, string.format("<h1>REMOTE_ADDR: %s</h1>", opt.peer_addr))
-    uh.chunk_send(cl, string.format("<h1>METHOD: %s</h1>", opt.method))
-    uh.chunk_send(cl, string.format("<h1>HTTP Version: %s</h1>", opt.version))
-    uh.chunk_send(cl, string.format("<h1>PATH: %s</h1>", opt.path))
-    uh.chunk_send(cl, string.format("<h1>URL: %s</h1>", opt.url))
-    uh.chunk_send(cl, string.format("<h1>QUERY: %s</h1>", opt.query and opt.query or ""))
-    uh.chunk_send(cl, string.format("<h1>Body: %s</h1>", opt.body and opt.body or ""))
+    uh.chunk_send(cl, string.format("<h1>REMOTE_ADDR: %s</h1>", uh.get_remote_addr(cl)))
+    uh.chunk_send(cl, string.format("<h1>METHOD: %s</h1>", http_methods[uh.get_http_method(cl)]))
+    uh.chunk_send(cl, string.format("<h1>HTTP Version: %s</h1>", http_version[uh.get_http_version(cl)]))
+    uh.chunk_send(cl, string.format("<h1>URL: %s</h1>", uh.get_url(cl)))
+    uh.chunk_send(cl, string.format("<h1>QUERY: %s</h1>", uh.get_query(cl) or ""))
+    uh.chunk_send(cl, string.format("<h1>Body: %s</h1>", uh.get_body(cl) or ""))
 
-    for k, v in pairs(opt.vars) do
+    -- Get a http var
+    local var_x = uh.get_var(cl, "x")
+    uh.chunk_send(cl, string.format("<h1>Var x: %s</h1>", var_x or ""))
+
+    -- Get a http header
+    local user_agent = uh.get_header(cl, "user-agent")
+    uh.chunk_send(cl, string.format("<h1>User-Agent: %s</h1>", user_agent))
+
+    uh.chunk_send(cl, "<hr />")
+    -- Get all http vars
+    local vars = uh.get_var(cl)
+    for k, v in pairs(vars) do
         uh.chunk_send(cl, string.format("<h1>%s: %s</h1>", k, v))
     end
 
-    for k, v in pairs(opt.headers) do
+    uh.chunk_send(cl, "<hr />")
+    -- Get all http headers
+    local headers = uh.get_header(cl)
+    for k, v in pairs(headers) do
         uh.chunk_send(cl, string.format("<h1>%s: %s</h1>", k, v))
     end
 
