@@ -19,6 +19,7 @@
 
 #include <string.h>
 
+#include "log.h"
 #include "uhttpd.h"
 #include "uhttpd-lua.h"
 
@@ -336,6 +337,25 @@ static int lua_uh_request_done(lua_State *L)
     return 0;
 }
 
+static int lua_uh_log(lua_State *L)
+{
+    int priority = lua_tointeger(L, 1);
+    const char *msg = lua_tostring(L, 2);
+
+    luaL_where(L, 1);
+
+    ulog(priority, "%s%s\n", lua_tostring(L, -1), msg);
+
+    return 0;
+}
+
+static int lua_uh_set_log_threshold(lua_State *L)
+{
+    ulog_threshold(lua_tointeger(L, 1));
+
+    return 0;
+}
+
 static const luaL_Reg uhttpd_fun[] = {
     {"new", lua_uh_new},
     {"send_header", lua_uh_send_header},
@@ -346,6 +366,8 @@ static const luaL_Reg uhttpd_fun[] = {
     {"send_error", lua_uh_send_error},
     {"redirect", lua_uh_redirect},
     {"request_done", lua_uh_request_done},
+    {"log", lua_uh_log},
+    {"set_log_threshold", lua_uh_set_log_threshold},
     {NULL, NULL}
 };
 
@@ -369,6 +391,15 @@ int luaopen_uhttpd(lua_State *L)
     lua_pushboolean(L, 0);
 #endif
     lua_setfield(L, -2, "SSL_SUPPORTED");
+
+    lua_pushinteger(L, LOG_DEBUG);
+    lua_setfield(L, -2, "LOG_DEBUG");
+
+    lua_pushinteger(L, LOG_INFO);
+    lua_setfield(L, -2, "LOG_INFO");
+
+    lua_pushinteger(L, LOG_ERR);
+    lua_setfield(L, -2, "LOG_ERR");
 
     return 1;
 }

@@ -22,18 +22,24 @@
 local uloop = require "uloop"
 local uh = require "uhttpd"
 
+local verbose = true
 local port = 8914
+
+-- LOG_DEBUG LOG_INFO LOG_ERR
+if not verbose then
+    uh.set_log_threshold(uh.LOG_ERR)
+end
 
 uloop.init()
 
-print("uhttpd version:", uh.VERSION)
+uh.log(uh.LOG_INFO, "uhttpd version:" .. uh.VERSION)
 
 local srv = uh.new(port)
 
 -- srv:set_options({docroot = "/home/zjh/www", index = "lua.html"})
 -- srv:ssl_init("uhttpd.crt", "uhttpd.key")
 
-print("Listen on:", port)
+uh.log(uh.LOG_INFO, "Listen on:" .. port)
 
 srv:set_error404_cb(function(cl, opt)
     uh.send_header(cl, 200, "OK", -1)
