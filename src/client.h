@@ -41,9 +41,9 @@ enum request_status {
 };
 
 enum http_method {
-    UH_HTTP_MSG_GET,
-    UH_HTTP_MSG_POST,
-    UH_HTTP_MSG_HEAD
+    UH_HTTP_METHOD_GET,
+    UH_HTTP_METHOD_POST,
+    UH_HTTP_METHOD_HEAD
 };
 
 enum http_version {

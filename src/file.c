@@ -360,7 +360,7 @@ static void uh_file_data(struct uh_client *cl, struct path_info *pi, int fd)
     cl->printf(cl, "Content-Type: %s\r\n\r\n", uh_file_mime_lookup(pi->name));
 
     /* send header */
-    if (cl->request.method == UH_HTTP_MSG_HEAD) {
+    if (cl->request.method == UH_HTTP_METHOD_HEAD) {
         cl->request_done(cl);
         close(fd);
         return;

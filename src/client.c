@@ -37,9 +37,9 @@ static const char *const http_versions[] = {
 };
 
 static const char *const http_methods[] = {
-    [UH_HTTP_MSG_GET] = "GET",
-    [UH_HTTP_MSG_POST] = "POST",
-    [UH_HTTP_MSG_HEAD] = "HEAD"
+    [UH_HTTP_METHOD_GET] = "GET",
+    [UH_HTTP_METHOD_POST] = "POST",
+    [UH_HTTP_METHOD_HEAD] = "HEAD"
 };
 
 static inline void client_send(struct uh_client *cl, const void *data, int len)
@@ -207,11 +207,11 @@ static void uh_handle_request(struct uh_client *cl)
         struct dispatch *d = &cl->dispatch;
 
         switch (cl->request.method) {
-        case UH_HTTP_MSG_GET:
+        case UH_HTTP_METHOD_GET:
             if (cl->srv->request_cb(cl) == UH_REQUEST_DONE)
                 return;
             break;
-        case UH_HTTP_MSG_POST:
+        case UH_HTTP_METHOD_POST:
             d->post_data = post_post_data;
             d->post_done = post_post_done;
             d->free = post_data_free;
