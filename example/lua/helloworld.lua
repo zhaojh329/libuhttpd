@@ -51,7 +51,11 @@ srv:set_error404_cb(function(cl, opt)
     uh.request_done(cl)
 end)
 
-srv:add_action("/lua", function(cl, opt)
+srv:set_request_cb(function(cl, opt)
+    if opt.path ~= "/hello" then
+        return uh.REQUEST_CONTINUE
+    end
+
     uh.send_header(cl, 200, "OK", -1)
     uh.append_header(cl, "Myheader", "Hello")
     uh.header_end(cl)
@@ -74,6 +78,8 @@ srv:add_action("/lua", function(cl, opt)
     end
 
     uh.request_done(cl)
+
+    return uh.REQUEST_DONE
 end)
 
 uloop.run()

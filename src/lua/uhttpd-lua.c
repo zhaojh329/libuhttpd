@@ -114,17 +114,20 @@ static void lua_prepare_action_argument(struct uh_client *cl, lua_State *L)
     add_all_header(cl, L);
 }
 
-static void lua_uh_action(struct uh_client *cl)
+static int lua_uh_on_request(struct uh_client *cl)
 {
-    struct uh_server *srv = cl->srv;
-    lua_State *L = srv->L;
+    struct lua_uh_server *lsrv = container_of(cl->srv, struct lua_uh_server, srv);
+    lua_State *L = cl->srv->L;
 
-    lua_getglobal(L, "__uh_action_cb");
-    lua_getfield(L, -1, cl->get_path(cl));
+    lua_getglobal(L, "__uh_request_cb");
+    lua_rawgeti(L, -1, lsrv->request_cb_ref);
+    lua_remove(L, -2);
 
     lua_prepare_action_argument(cl, L);
 
-    lua_call(L, 2, 0);
+    lua_call(L, 2, 1);
+
+    return lua_tointeger(L, -1);
 }
 
 static int lua_uh_ssl_init(lua_State *L)
@@ -144,18 +147,17 @@ static int lua_uh_ssl_init(lua_State *L)
     return 0;
 }
 
-static int lua_uh_add_action(lua_State *L)
+static int lua_uh_set_request_cb(lua_State *L)
 {
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
-    const char *path = luaL_checkstring(L, 2);
 
-    luaL_checktype(L, 3, LUA_TFUNCTION);
+    luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    lua_getglobal(L, "__uh_action_cb");
-    lua_pushvalue(L, 3);
-    lua_setfield(L, -2, path);
+    lua_getglobal(L, "__uh_request_cb");
+    lua_pushvalue(L, 2);
+    lsrv->request_cb_ref = luaL_ref(L, -2);
 
-    lsrv->srv.add_action(&lsrv->srv, path, lua_uh_action);
+    lsrv->srv.request_cb = lua_uh_on_request;
 
     return 0;
 }
@@ -220,7 +222,7 @@ static int lua_uh_server_free(lua_State *L)
 
 static const luaL_Reg server_mt[] = {
     { "ssl_init", lua_uh_ssl_init },
-    { "add_action", lua_uh_add_action },
+    { "set_request_cb", lua_uh_set_request_cb },
     { "set_error404_cb", lua_uh_set_error404_cb },
     { "set_options", lua_uh_set_options },
     { "free", lua_uh_server_free },
@@ -374,7 +376,7 @@ static const luaL_Reg uhttpd_fun[] = {
 int luaopen_uhttpd(lua_State *L)
 {
     lua_newtable(L);
-    lua_setglobal(L, "__uh_action_cb");
+    lua_setglobal(L, "__uh_request_cb");
 
     lua_newtable(L);
     lua_setglobal(L, "__uh_error404_cb");
@@ -400,6 +402,12 @@ int luaopen_uhttpd(lua_State *L)
 
     lua_pushinteger(L, LOG_ERR);
     lua_setfield(L, -2, "LOG_ERR");
+
+    lua_pushinteger(L, UH_REQUEST_DONE);
+    lua_setfield(L, -2, "REQUEST_DONE");
+
+    lua_pushinteger(L, UH_REQUEST_CONTINUE);
+    lua_setfield(L, -2, "REQUEST_CONTINUE");
 
     return 1;
 }

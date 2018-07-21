@@ -148,16 +148,82 @@ static inline const char *client_get_header(struct uh_client *cl, const char *na
 
 static inline const char *client_get_body(struct uh_client *cl, int *len)
 {
-    *len = cl->dispatch.action.post_len;
-    return cl->dispatch.action.body;
+    *len = cl->dispatch.post_len;
+    return cl->dispatch.body;
+}
+
+static int post_post_data(struct uh_client *cl, const char *data, int len)
+{
+    struct dispatch *d = &cl->dispatch;
+    d->post_len += len;
+
+    if (d->post_len > UH_POST_MAX_POST_SIZE)
+        goto err;
+
+    if (d->post_len > UH_POST_DATA_BUF_SIZE) {
+        d->body = realloc(d->body, UH_POST_MAX_POST_SIZE);
+        if (!d->body) {
+            cl->send_error(cl, 500, "Internal Server Error", "No memory");
+            return 0;
+        }
+    }
+
+    memcpy(d->body, data, len);
+    return len;
+err:
+    cl->send_error(cl, 413, "Request Entity Too Large", NULL);
+    return 0;
+}
+
+static void post_post_done(struct uh_client *cl)
+{
+    char *path = kvlist_get(&cl->request.url, "path");
+
+    if (cl->srv->request_cb(cl) == UH_REQUEST_DONE)
+        return;
+
+    if (handle_file_request(cl, path))
+        return;
+
+    if (cl->srv->error404_cb) {
+        cl->srv->error404_cb(cl);
+        return;
+    }
+
+    cl->send_error(cl, 404, "Not Found", "The requested PATH %s was not found on this server.", path);
+}
+
+static void post_data_free(struct uh_client *cl)
+{
+    struct dispatch *d = &cl->dispatch;
+    free(d->body);
 }
 
 static void uh_handle_request(struct uh_client *cl)
 {
     char *path = kvlist_get(&cl->request.url, "path");
 
-    if (handle_action_request(cl, path))
-        return;
+    if (cl->srv->request_cb) {
+        struct dispatch *d = &cl->dispatch;
+
+        switch (cl->request.method) {
+        case UH_HTTP_MSG_GET:
+            if (cl->srv->request_cb(cl) == UH_REQUEST_DONE)
+                return;
+            break;
+        case UH_HTTP_MSG_POST:
+            d->post_data = post_post_data;
+            d->post_done = post_post_done;
+            d->free = post_data_free;
+            d->body = calloc(1, UH_POST_DATA_BUF_SIZE);
+            if (!d->body)
+                cl->send_error(cl, 500, "Internal Server Error", "No memory");
+            return;
+        default:
+            cl->send_error(cl, 400, "Bad Request", "Invalid Request");
+            return;
+        }
+    }
 
     if (handle_file_request(cl, path))
         return;
@@ -188,6 +254,8 @@ static void dispatch_done(struct uh_client *cl)
 {
     if (cl->dispatch.free)
         cl->dispatch.free(cl);
+
+    memset(&cl->dispatch, 0, sizeof(struct dispatch));
 }
 
 static inline int hdr_get_len(struct kvlist *kv, const void *data)
@@ -340,13 +408,13 @@ static void client_poll_post_data(struct uh_client *cl)
         if (!buf || !len)
             break;
 
-        if (!d->data_send)
+        if (!d->post_data)
             return;
 
         cur_len = min(r->content_length, len);
         if (cur_len) {
-            if (d->data_send)
-                cur_len = d->data_send(cl, buf, cur_len);
+            if (d->post_data)
+                cur_len = d->post_data(cl, buf, cur_len);
 
             r->content_length -= cur_len;
             ustream_consume(cl->us, cur_len);
@@ -355,8 +423,8 @@ static void client_poll_post_data(struct uh_client *cl)
     }
 
     if (!r->content_length && cl->state != CLIENT_STATE_DONE) {
-        if (cl->dispatch.data_done)
-            cl->dispatch.data_done(cl);
+        if (cl->dispatch.post_done)
+            cl->dispatch.post_done(cl);
 
         cl->state = CLIENT_STATE_DONE;
     }

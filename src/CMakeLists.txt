@@ -13,7 +13,7 @@ find_package(Lua)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${LIBUBOX_INCLUDE_DIR})
 
 set(EXTRA_LIBS ${LIBUBOX_LIBRARY} dl)
-set(SOURCE_FILES uhttpd.c client.c log.c utils.c file.c action.c)
+set(SOURCE_FILES uhttpd.c client.c log.c utils.c file.c)
 
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
 option(UHTTPD_SSL_SUPPORT "SSL support" ON)
@@ -60,7 +60,6 @@ install(
 	    ${CMAKE_CURRENT_BINARY_DIR}/config.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/uhttpd.h
 	    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
-	    ${CMAKE_CURRENT_SOURCE_DIR}/action.h
     DESTINATION
     	include/uhttpd
 )

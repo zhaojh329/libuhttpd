@@ -21,11 +21,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <uhttpd.h>
+#include <string.h>
 #include <libubox/ulog.h>
 
-static void hello_action(struct uh_client *cl)
+static int on_request(struct uh_client *cl)
 {
+    const char *path = cl->get_path(cl);
     int body_len = 0;
+
+    if (strcmp(path, "/hello"))
+        return UH_REQUEST_CONTINUE;
 
     cl->send_header(cl, 200, "OK", -1);
     cl->append_header(cl, "Myheader", "Hello");
@@ -39,6 +44,8 @@ static void hello_action(struct uh_client *cl)
     cl->chunk_printf(cl, "<h1>VAR name: %s</h1>", cl->get_var(cl, "name"));
     cl->chunk_printf(cl, "<h1>BODY:%s</h1>", cl->get_body(cl, &body_len));
     cl->request_done(cl);
+
+    return UH_REQUEST_DONE;
 }
 
 static void usage(const char *prog)
@@ -96,7 +103,7 @@ int main(int argc, char **argv)
 
     ULOG_INFO("Listen on: %s *:%d\n", srv->ssl ? "https" : "http", port);
 
-    srv->add_action(srv, "/hello", hello_action);
+    srv->request_cb = on_request;
     
     uloop_run();
 done:

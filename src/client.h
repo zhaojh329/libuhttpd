@@ -32,6 +32,14 @@
 
 #define UHTTPD_CONNECTION_TIMEOUT 30
 
+#define UH_POST_DATA_BUF_SIZE   1024
+#define UH_POST_MAX_POST_SIZE   4096
+
+enum request_status {
+    UH_REQUEST_DONE,
+    UH_REQUEST_CONTINUE
+};
+
 enum http_method {
     UH_HTTP_MSG_GET,
     UH_HTTP_MSG_POST,
@@ -64,21 +72,17 @@ struct http_request {
 struct uh_client;
 
 struct dispatch {
-    int (*data_send)(struct uh_client *cl, const char *data, int len);
-    void (*data_done)(struct uh_client *cl);
+    int (*post_data)(struct uh_client *cl, const char *data, int len);
+    void (*post_done)(struct uh_client *cl);
     void (*write_cb)(struct uh_client *cl);
     void (*free)(struct uh_client *cl);
 
-    union {
-        struct {
-            int fd;
-        } file;
-        struct {
-            int post_len;
-            char *body;
-            struct uh_action *a;
-        } action;
-    };
+    struct {
+        int fd;
+    } file;
+
+    int post_len;
+    char *body;
 };
 
 struct uh_client {

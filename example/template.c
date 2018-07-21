@@ -21,10 +21,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <uhttpd.h>
+#include <string.h>
 #include <libubox/ulog.h>
 
-static void hello_action(struct uh_client *cl)
+static int on_request(struct uh_client *cl)
 {
+    const char *path = cl->get_path(cl);
+
+    if (strcmp(path, "/template.html"))
+        return UH_REQUEST_CONTINUE;
+
 #if (UHTTPD_LUA_SUPPORT)
     uh_template(cl);
 #else
@@ -34,6 +40,8 @@ static void hello_action(struct uh_client *cl)
     cl->chunk_printf(cl, "<h1>Lua not enabled when compile</h1>");
     cl->request_done(cl);
 #endif
+
+    return UH_REQUEST_DONE;
 }
 
 static void usage(const char *prog)
@@ -72,7 +80,7 @@ int main(int argc, char **argv)
 
     if (!verbose)
         ulog_threshold(LOG_ERR);
-    
+
     ULOG_INFO("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
     uloop_init();
@@ -91,12 +99,16 @@ int main(int argc, char **argv)
 
     ULOG_INFO("Listen on: %s *:%d\n", srv->ssl ? "https" : "http", port);
 
-    srv->add_action(srv, "/template.html", hello_action);
-    
+    srv->request_cb = on_request;
+
     uloop_run();
 done:
     uloop_done();
-    srv->free(srv);
-    
+
+    if (srv) {
+        srv->free(srv);
+        free(srv);
+    }
+
     return 0;
 }

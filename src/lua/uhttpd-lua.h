@@ -36,6 +36,7 @@
 struct lua_uh_server {
     struct uh_server srv;
     int error404_cb_ref;
+    int request_cb_ref;
 };
 
 #endif

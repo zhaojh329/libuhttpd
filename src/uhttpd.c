@@ -49,7 +49,6 @@ static void uh_server_free(struct uh_server *srv)
         list_for_each_entry_safe(cl, tmp, &srv->clients, list)
             cl->free(cl);
 
-        uh_action_free(srv);
         uh_ssl_free();
         free(srv->docroot);
         free(srv->index_file);
@@ -89,7 +88,6 @@ void uh_server_init(struct uh_server *srv, int sock)
     srv->free = uh_server_free;
     srv->set_docroot = uh_set_docroot;
     srv->set_index_file = uh_set_index_file;
-    srv->add_action = uh_add_action;
 
 #if (UHTTPD_SSL_SUPPORT)
     srv->ssl_init = uh_ssl_init;
