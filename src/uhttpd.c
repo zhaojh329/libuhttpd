@@ -83,7 +83,6 @@ void uh_server_init(struct uh_server *srv, int sock)
     uloop_fd_add(&srv->fd, ULOOP_READ);
 
     INIT_LIST_HEAD(&srv->clients);
-    avl_init(&srv->actions, avl_strcmp, false, NULL);
     
     srv->free = uh_server_free;
     srv->set_docroot = uh_set_docroot;

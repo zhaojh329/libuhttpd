@@ -29,7 +29,6 @@ struct uh_server {
     char *docroot;
     char *index_file;
     int nclients;
-    struct avl_tree actions;
     struct list_head clients;
 
     void (*free)(struct uh_server *srv);
