@@ -25,31 +25,6 @@ local uh = require "uhttpd"
 local verbose = true
 local port = 8914
 
--- LOG_DEBUG LOG_INFO LOG_ERR
-if not verbose then
-    uh.set_log_threshold(uh.LOG_ERR)
-end
-
-uloop.init()
-
-uh.log(uh.LOG_INFO, "uhttpd version:" .. uh.VERSION)
-
-local srv = uh.new(port)
-
--- srv:set_options({docroot = "/home/zjh/www", index = "lua.html"})
--- srv:ssl_init("uhttpd.crt", "uhttpd.key")
-
-uh.log(uh.LOG_INFO, "Listen on:" .. port)
-
-srv:set_on_error404(function(cl, path)
-    uh.send_header(cl, 200, "OK", -1)
-    uh.header_end(cl)
-
-    uh.chunk_send(cl, string.format("<h1>Libuhttpd-Lua: '%s' Not found</h1>", path))
-
-    uh.request_done(cl)
-end)
-
 local http_methods = {
     [uh.HTTP_METHOD_GET] = "GET",
     [uh.HTTP_METHOD_POST] = "POST",
@@ -61,7 +36,14 @@ local http_version = {
     [uh.HTTP_VER_11] = "HTTP/1.1"
 }
 
-srv:set_on_request(function(cl, path)
+local function on_error404(cl, path)
+    uh.send_header(cl, 200, "OK", -1)
+    uh.header_end(cl)
+    uh.chunk_send(cl, string.format("<h1>Libuhttpd-Lua: '%s' Not found</h1>", path))
+    uh.request_done(cl)
+end
+
+local function on_request(cl, path)
     if path ~= "/hello" then
         return uh.REQUEST_CONTINUE
     end
@@ -103,6 +85,29 @@ srv:set_on_request(function(cl, path)
     uh.request_done(cl)
 
     return uh.REQUEST_DONE
-end)
+end
+
+
+-- LOG_DEBUG LOG_INFO LOG_ERR
+if not verbose then
+    uh.set_log_threshold(uh.LOG_ERR)
+end
+
+uloop.init()
+
+uh.log(uh.LOG_INFO, "uhttpd version:" .. uh.VERSION)
+
+local srv = uh.new(port)
+
+-- srv:ssl_init("uhttpd.crt", "uhttpd.key")
+
+uh.log(uh.LOG_INFO, "Listen on:" .. port)
+
+srv:set_options({
+    docroot = "/home/zjh/www",  -- Default is .
+    index = "lua.html",         -- Default is index.html
+    on_error404 = on_error404,
+    on_request = on_request
+})
 
 uloop.run()
