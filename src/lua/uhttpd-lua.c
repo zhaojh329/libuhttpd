@@ -51,8 +51,8 @@ static int lua_uh_on_request(struct uh_client *cl)
     const char *path = cl->get_path(cl);
     lua_State *L = cl->srv->L;
 
-    lua_getglobal(L, "__uh_request_cb");
-    lua_rawgeti(L, -1, lsrv->request_cb_ref);
+    lua_getglobal(L, "__uh_on_request");
+    lua_rawgeti(L, -1, lsrv->request_ref);
     lua_remove(L, -2);
 
     lua_pushlightuserdata(L, cl);
@@ -80,17 +80,17 @@ static int lua_uh_ssl_init(lua_State *L)
     return 0;
 }
 
-static int lua_uh_set_request_cb(lua_State *L)
+static int lua_uh_set_on_request(lua_State *L)
 {
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    lua_getglobal(L, "__uh_request_cb");
+    lua_getglobal(L, "__uh_on_request");
     lua_pushvalue(L, 2);
-    lsrv->request_cb_ref = luaL_ref(L, -2);
+    lsrv->request_ref = luaL_ref(L, -2);
 
-    lsrv->srv.request_cb = lua_uh_on_request;
+    lsrv->srv.on_request = lua_uh_on_request;
 
     return 0;
 }
@@ -101,8 +101,8 @@ static void http_callback_404(struct uh_client *cl)
     const char *path = cl->get_path(cl);
     lua_State *L = cl->srv->L;
 
-    lua_getglobal(L, "__uh_error404_cb");
-    lua_rawgeti(L, -1, lsrv->error404_cb_ref);
+    lua_getglobal(L, "__uh_on_error404");
+    lua_rawgeti(L, -1, lsrv->error404_ref);
     lua_remove(L, -2);
 
     lua_pushlightuserdata(L, cl);
@@ -111,17 +111,17 @@ static void http_callback_404(struct uh_client *cl)
     lua_call(L, 2, 0);
 }
 
-static int lua_uh_set_error404_cb(lua_State *L)
+static int lua_uh_set_on_error404(lua_State *L)
 {
     struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
 
-    lua_getglobal(L, "__uh_error404_cb");
+    lua_getglobal(L, "__uh_on_error404");
     lua_pushvalue(L, 2);
-    lsrv->error404_cb_ref = luaL_ref(L, -2);
+    lsrv->error404_ref = luaL_ref(L, -2);
 
-    lsrv->srv.error404_cb = http_callback_404;
+    lsrv->srv.on_error404 = http_callback_404;
 
     return 0;
 }
@@ -157,8 +157,8 @@ static int lua_uh_server_free(lua_State *L)
 
 static const luaL_Reg server_mt[] = {
     { "ssl_init", lua_uh_ssl_init },
-    { "set_request_cb", lua_uh_set_request_cb },
-    { "set_error404_cb", lua_uh_set_error404_cb },
+    { "set_on_request", lua_uh_set_on_request },
+    { "set_on_error404", lua_uh_set_on_error404 },
     { "set_options", lua_uh_set_options },
     { "free", lua_uh_server_free },
     { NULL, NULL }
@@ -441,10 +441,10 @@ static const luaL_Reg uhttpd_fun[] = {
 int luaopen_uhttpd(lua_State *L)
 {
     lua_newtable(L);
-    lua_setglobal(L, "__uh_request_cb");
+    lua_setglobal(L, "__uh_on_request");
 
     lua_newtable(L);
-    lua_setglobal(L, "__uh_error404_cb");
+    lua_setglobal(L, "__uh_on_error404");
 
     lua_newtable(L);
     luaL_setfuncs(L, uhttpd_fun, 0);

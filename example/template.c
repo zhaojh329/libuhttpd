@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 
     ULOG_INFO("Listen on: %s *:%d\n", srv->ssl ? "https" : "http", port);
 
-    srv->request_cb = on_request;
+    srv->on_request = on_request;
 
     uloop_run();
 done:

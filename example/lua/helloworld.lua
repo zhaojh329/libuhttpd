@@ -41,7 +41,7 @@ local srv = uh.new(port)
 
 uh.log(uh.LOG_INFO, "Listen on:" .. port)
 
-srv:set_error404_cb(function(cl, path)
+srv:set_on_error404(function(cl, path)
     uh.send_header(cl, 200, "OK", -1)
     uh.header_end(cl)
 
@@ -61,7 +61,7 @@ local http_version = {
     [uh.HTTP_VER_11] = "HTTP/1.1"
 }
 
-srv:set_request_cb(function(cl, path)
+srv:set_on_request(function(cl, path)
     if path ~= "/hello" then
         return uh.REQUEST_CONTINUE
     end

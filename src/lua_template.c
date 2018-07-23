@@ -572,8 +572,8 @@ void uh_template(struct uh_client *cl)
 
     pi = uh_path_lookup(cl, path);
     if (!pi) {
-        if (cl->srv->error404_cb) {
-            cl->srv->error404_cb(cl);
+        if (cl->srv->on_error404) {
+            cl->srv->on_error404(cl);
             return;
         }
 

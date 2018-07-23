@@ -179,14 +179,14 @@ static void post_post_done(struct uh_client *cl)
 {
     char *path = kvlist_get(&cl->request.url, "path");
 
-    if (cl->srv->request_cb(cl) == UH_REQUEST_DONE)
+    if (cl->srv->on_request(cl) == UH_REQUEST_DONE)
         return;
 
     if (handle_file_request(cl, path))
         return;
 
-    if (cl->srv->error404_cb) {
-        cl->srv->error404_cb(cl);
+    if (cl->srv->on_error404) {
+        cl->srv->on_error404(cl);
         return;
     }
 
@@ -203,12 +203,12 @@ static void uh_handle_request(struct uh_client *cl)
 {
     char *path = kvlist_get(&cl->request.url, "path");
 
-    if (cl->srv->request_cb) {
+    if (cl->srv->on_request) {
         struct dispatch *d = &cl->dispatch;
 
         switch (cl->request.method) {
         case UH_HTTP_METHOD_GET:
-            if (cl->srv->request_cb(cl) == UH_REQUEST_DONE)
+            if (cl->srv->on_request(cl) == UH_REQUEST_DONE)
                 return;
             break;
         case UH_HTTP_METHOD_POST:
@@ -228,8 +228,8 @@ static void uh_handle_request(struct uh_client *cl)
     if (handle_file_request(cl, path))
         return;
 
-    if (cl->srv->error404_cb) {
-        cl->srv->error404_cb(cl);
+    if (cl->srv->on_error404) {
+        cl->srv->on_error404(cl);
         return;
     }
 
