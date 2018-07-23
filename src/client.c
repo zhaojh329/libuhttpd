@@ -121,6 +121,11 @@ static inline const char *client_get_peer_addr(struct uh_client *cl)
     return inet_ntoa(cl->peer_addr.sin_addr);
 }
 
+static inline int client_get_peer_port(struct uh_client *cl)
+{
+    return ntohs(cl->peer_addr.sin_port);
+}
+
 static inline const char *client_get_url(struct uh_client *cl)
 {
     return kvlist_get(&cl->request.url, "url");
@@ -625,12 +630,16 @@ void uh_accept_client(struct uh_server *srv, bool ssl)
     cl->get_version = client_get_version;
     cl->get_method = client_get_method;
     cl->get_peer_addr = client_get_peer_addr;
+    cl->get_peer_port = client_get_peer_port;
     cl->get_url = client_get_url;
     cl->get_path = client_get_path;
     cl->get_query = client_get_query;
     cl->get_var = client_get_var;
     cl->get_header = client_get_header;
     cl->get_body = client_get_body;
+
+    if (srv->on_accept)
+        srv->on_accept(cl);
 
     return;
 err:

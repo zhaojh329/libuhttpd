@@ -24,6 +24,11 @@
 #include <string.h>
 #include <libubox/ulog.h>
 
+static void on_accept(struct uh_client *cl)
+{
+    ULOG_INFO("New connection from: %s:%d\n", cl->get_peer_addr(cl), cl->get_peer_port(cl));
+}
+
 static int on_request(struct uh_client *cl)
 {
     const char *path = cl->get_path(cl);
@@ -103,6 +108,7 @@ int main(int argc, char **argv)
 
     ULOG_INFO("Listen on: %s *:%d\n", srv->ssl ? "https" : "http", port);
 
+    srv->on_accept = on_accept;
     srv->on_request = on_request;
     
     uloop_run();

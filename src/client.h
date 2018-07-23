@@ -120,6 +120,7 @@ struct uh_client {
     const char *(*get_method)(struct uh_client *cl);
     const char *(*get_version)(struct uh_client *cl);
     const char *(*get_peer_addr)(struct uh_client *cl);
+    int (*get_peer_port)(struct uh_client *cl);
     const char *(*get_url)(struct uh_client *cl);
     const char *(*get_path)(struct uh_client *cl);
     const char *(*get_query)(struct uh_client *cl);

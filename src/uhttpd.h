@@ -36,6 +36,7 @@ struct uh_server {
     void (*set_index_file)(struct uh_server *srv, const char *index_file);
     void (*on_error404)(struct uh_client *cl);
     int (*on_request)(struct uh_client *cl);
+    void (*on_accept)(struct uh_client *cl);
 
 #if (UHTTPD_SSL_SUPPORT)
     int (*ssl_init)(struct uh_server *srv, const char *key, const char *crt);
