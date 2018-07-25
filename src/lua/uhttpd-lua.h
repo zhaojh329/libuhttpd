@@ -32,6 +32,11 @@
 #endif
 
 #define LUA_UH_SERVER_MT    "libuhttpd"
+#define LUA_UH_CLIENT_MT    "libuhttpd(cli)"
+
+struct lua_uh_client {
+	struct uh_client *cl;
+};
 
 struct lua_uh_server {
     struct uh_server srv;

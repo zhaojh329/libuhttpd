@@ -55,10 +55,10 @@ local http_version = {
 }
 
 srv:on_error404(function(cl, path)
-    uh.send_header(cl, 200, "OK", -1)
-    uh.header_end(cl)
-    uh.chunk_send(cl, string.format("<h1>Libuhttpd-Lua: '%s' Not found</h1>", path))
-    uh.request_done(cl)
+    cl:send_header(200, "OK", -1)
+    cl:header_end()
+    cl:chunk_send(string.format("<h1>Libuhttpd-Lua: '%s' Not found</h1>", path))
+    cl:request_done()
 end)
 
 
@@ -67,41 +67,41 @@ srv:on_request(function(cl, path)
         return uh.REQUEST_CONTINUE
     end
 
-    uh.send_header(cl, 200, "OK", -1)
-    uh.append_header(cl, "Myheader", "Hello")
-    uh.header_end(cl)
+    cl:send_header(200, "OK", -1)
+    cl:append_header("Myheader", "Hello")
+    cl:header_end()
 
-    uh.chunk_send(cl, string.format("<h1>Hello Libuhttpd %s</h1>", uh.VERSION))
-    uh.chunk_send(cl, string.format("<h1>REMOTE_ADDR: %s</h1>", uh.get_remote_addr(cl)))
-    uh.chunk_send(cl, string.format("<h1>METHOD: %s</h1>", http_methods[uh.get_http_method(cl)]))
-    uh.chunk_send(cl, string.format("<h1>HTTP Version: %s</h1>", http_version[uh.get_http_version(cl)]))
-    uh.chunk_send(cl, string.format("<h1>URL: %s</h1>", uh.get_url(cl)))
-    uh.chunk_send(cl, string.format("<h1>QUERY: %s</h1>", uh.get_query(cl) or ""))
-    uh.chunk_send(cl, string.format("<h1>Body: %s</h1>", uh.get_body(cl) or ""))
+    cl:chunk_send(string.format("<h1>Hello Libuhttpd %s</h1>", uh.VERSION))
+    cl:chunk_send(string.format("<h1>REMOTE_ADDR: %s</h1>", cl:get_remote_addr()))
+    cl:chunk_send(string.format("<h1>METHOD: %s</h1>", http_methods[cl:get_http_method()]))
+    cl:chunk_send(string.format("<h1>HTTP Version: %s</h1>", http_version[cl:get_http_version()]))
+    cl:chunk_send(string.format("<h1>URL: %s</h1>", cl:get_url()))
+    cl:chunk_send(string.format("<h1>QUERY: %s</h1>", cl:get_query() or ""))
+    cl:chunk_send(string.format("<h1>Body: %s</h1>", cl:get_body() or ""))
 
     -- Get a http var
-    local var_x = uh.get_var(cl, "x")
-    uh.chunk_send(cl, string.format("<h1>Var x: %s</h1>", var_x or ""))
+    local var_x = cl:get_var("x")
+    cl:chunk_send(string.format("<h1>Var x: %s</h1>", var_x or ""))
 
     -- Get a http header
-    local user_agent = uh.get_header(cl, "user-agent")
-    uh.chunk_send(cl, string.format("<h1>User-Agent: %s</h1>", user_agent))
+    local user_agent = cl:get_header("user-agent")
+    cl:chunk_send(string.format("<h1>User-Agent: %s</h1>", user_agent))
 
-    uh.chunk_send(cl, "<hr />")
+    cl:chunk_send("<hr />")
     -- Get all http vars
-    local vars = uh.get_var(cl)
+    local vars = cl:get_var()
     for k, v in pairs(vars) do
-        uh.chunk_send(cl, string.format("<h1>%s: %s</h1>", k, v))
+        cl:chunk_send(string.format("<h1>%s: %s</h1>", k, v))
     end
 
-    uh.chunk_send(cl, "<hr />")
+    cl:chunk_send("<hr />")
     -- Get all http headers
-    local headers = uh.get_header(cl)
+    local headers = cl:get_header()
     for k, v in pairs(headers) do
-        uh.chunk_send(cl, string.format("<h1>%s: %s</h1>", k, v))
+        cl:chunk_send(string.format("<h1>%s: %s</h1>", k, v))
     end
 
-    uh.request_done(cl)
+    cl:request_done()
 
     return uh.REQUEST_DONE
 end)

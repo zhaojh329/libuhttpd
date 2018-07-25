@@ -23,13 +23,27 @@
 #include "uhttpd.h"
 #include "uhttpd-lua.h"
 
-static void *uh_create_userdata(lua_State *L, size_t size, const luaL_Reg *reg, lua_CFunction gc)
+static const char *cli_registry = "libuhttpd-cli{obj}";
+
+#if 0
+static void lua_print_stack(lua_State *L, const char *info)
+{
+    int i = 1;
+    printf("----------%s----------\n", info);
+
+    for (; i <= lua_gettop(L); i++) {
+        printf("%d %s\n", i, lua_typename(L, lua_type(L, i)));
+    }
+}
+#endif
+
+static void *uh_create_userdata(lua_State *L, size_t size, const luaL_Reg *reg, const char *mt, lua_CFunction gc)
 {
     void *obj = lua_newuserdata(L, size);
 
     memset(obj, 0, size);
 
-    luaL_newmetatable(L, LUA_UH_SERVER_MT);
+    luaL_newmetatable(L, mt);
 
     /* metatable.__index = metatable */
     lua_pushvalue(L, -1);
@@ -45,22 +59,313 @@ static void *uh_create_userdata(lua_State *L, size_t size, const luaL_Reg *reg, 
     return obj;
 }
 
+static int lua_uh_send_header(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    int code = lua_tointeger(L, 2);
+    const char *summary = lua_tostring(L, 3);
+    int len = lua_tointeger(L, 4);
+
+    cl->send_header(cl, code, summary, len);
+
+    return 0;
+}
+
+static int lua_uh_append_header(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *name = lua_tostring(L, 2);
+    const char *value = lua_tostring(L, 2);
+
+    cl->append_header(cl, name, value);
+
+    return 0;
+}
+
+static int lua_uh_header_end(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+
+    cl->header_end(cl);
+
+    return 0;
+}
+
+static int lua_uh_send(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *data;
+    size_t len;
+
+    data = lua_tolstring(L, 2, &len);
+    cl->send(cl, data, len);
+
+    return 0;
+}
+
+static int lua_uh_chunk_send(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *data;
+    size_t len;
+
+    data = lua_tolstring(L, 2, &len);
+    cl->chunk_send(cl, data, len);
+
+    return 0;
+}
+
+static int lua_uh_send_error(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    int code = lua_tointeger(L, 2);
+    const char *summary = lua_tostring(L, 3);
+    const char *msg = lua_tostring(L, 4);
+
+    cl->send_error(cl, code, summary, msg);
+
+    return 0;
+}
+
+static int lua_uh_redirect(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    int code = lua_tointeger(L, 2);
+    const char *url = lua_tostring(L, 3);
+
+    cl->redirect(cl, code, url);
+
+    return 0;
+}
+
+static int lua_uh_request_done(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+
+    cl->request_done(cl);
+
+    return 0;
+}
+
+static int lua_uh_get_http_method(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+
+    lua_pushinteger(L, cl->request.method);
+
+    return 1;
+}
+
+static int lua_uh_get_http_version(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+
+    lua_pushinteger(L, cl->request.version);
+
+    return 1;
+}
+
+static int lua_uh_get_remote_addr(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *addr = cl->get_peer_addr(cl);
+
+    if (addr)
+        lua_pushstring(L, addr);
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
+static int lua_uh_get_header(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *name = lua_tostring(L, 2);
+    const char *value;
+
+    if (name) {
+        value = cl->get_header(cl, name);
+        if (value)
+            lua_pushstring(L, value);
+        else
+            lua_pushnil(L);
+        return 1;
+    }
+
+    lua_newtable(L);
+
+    kvlist_for_each(&cl->request.header, name, value) {
+        lua_pushstring(L, value);
+        lua_setfield(L, -2, name);
+    }
+
+    return 1;
+}
+
+static int lua_uh_get_var(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *name = lua_tostring(L, 2);
+    const char *value;
+
+    if (name) {
+        value = cl->get_var(cl, name);
+        if (value)
+            lua_pushstring(L, value);
+        else
+            lua_pushnil(L);
+        return 1;
+    }
+
+    lua_newtable(L);
+
+    kvlist_for_each(&cl->request.var, name, value) {
+        lua_pushstring(L, value);
+        lua_setfield(L, -2, name);
+    }
+
+    return 1;
+}
+
+static int lua_uh_get_query(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *query = cl->get_query(cl);
+
+    if (query)
+        lua_pushstring(L, query);
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
+static int lua_uh_get_url(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *url = cl->get_url(cl);
+
+    if (url)
+        lua_pushstring(L, url);
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
+static int lua_uh_get_body(lua_State *L)
+{
+    struct lua_uh_client *lcl = luaL_checkudata(L, 1, LUA_UH_CLIENT_MT);
+    struct uh_client *cl = lcl->cl;
+    const char *body;
+    int len;
+
+    body = cl->get_body(cl, &len);
+    if (body)
+        lua_pushlstring(L, body, len);
+    else
+        lua_pushnil(L);
+
+    return 1;
+}
+
+static int lua_uh_cli_free(lua_State *L)
+{
+    return 0;
+}
+
+static const luaL_Reg client_reg[] = {
+    {"send_header", lua_uh_send_header},
+    {"append_header", lua_uh_append_header},
+    {"header_end", lua_uh_header_end},
+    {"send", lua_uh_send},
+    {"chunk_send", lua_uh_chunk_send},
+    {"send_error", lua_uh_send_error},
+    {"redirect", lua_uh_redirect},
+    {"request_done", lua_uh_request_done},
+    {"get_http_method", lua_uh_get_http_method},
+    {"get_http_version", lua_uh_get_http_version},
+    {"get_remote_addr", lua_uh_get_remote_addr},
+    {"get_header", lua_uh_get_header},
+    {"get_var", lua_uh_get_var},
+    {"get_query", lua_uh_get_query},
+    {"get_url", lua_uh_get_url},
+    {"get_body", lua_uh_get_body},
+    { "free", lua_uh_cli_free },
+    { NULL, NULL }
+};
+
+static void lua_on_accept(struct uh_client *cl)
+{
+    lua_State *L = cl->srv->L;
+    struct lua_uh_client *lcl;
+
+    lua_pushlightuserdata(L, &cli_registry);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+    lua_pushlightuserdata(L, cl);
+    lcl = uh_create_userdata(L, sizeof(struct lua_uh_client), client_reg, LUA_UH_CLIENT_MT, lua_uh_cli_free);
+    lcl->cl = cl;
+    lua_rawset(L, -3);
+}
+
+static int lua_do_request_cb(lua_State *L, struct uh_client *cl)
+{
+    const char *path = cl->get_path(cl);
+
+    lua_pushlightuserdata(L, &cli_registry);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+
+    lua_pushlightuserdata(L, cl);
+    lua_rawget(L, -2);
+
+    lua_insert(L, -2);
+    lua_pop(L, 1);
+
+    lua_pushstring(L, path);
+
+    lua_call(L, 2, 1);
+
+    return lua_tointeger(L, -1);
+}
+
 static int lua_on_request(struct uh_client *cl)
 {
     struct lua_uh_server *lsrv = container_of(cl->srv, struct lua_uh_server, srv);
-    const char *path = cl->get_path(cl);
     lua_State *L = cl->srv->L;
 
     lua_getglobal(L, "__uh_on_request");
     lua_rawgeti(L, -1, lsrv->request_ref);
     lua_remove(L, -2);
 
-    lua_pushlightuserdata(L, cl);
-    lua_pushstring(L, path);
+    return lua_do_request_cb(L, cl);
+}
 
-    lua_call(L, 2, 1);
+static void lua_on_error404(struct uh_client *cl)
+{
+    struct lua_uh_server *lsrv = container_of(cl->srv, struct lua_uh_server, srv);
+    lua_State *L = cl->srv->L;
 
-    return lua_tointeger(L, -1);
+    lua_getglobal(L, "__uh_on_error404");
+    lua_rawgeti(L, -1, lsrv->error404_ref);
+    lua_remove(L, -2);
+
+    lua_do_request_cb(L, cl);
 }
 
 static int lua_uh_ssl_init(lua_State *L)
@@ -78,22 +383,6 @@ static int lua_uh_ssl_init(lua_State *L)
 #endif
 
     return 0;
-}
-
-static void lua_on_error404(struct uh_client *cl)
-{
-    struct lua_uh_server *lsrv = container_of(cl->srv, struct lua_uh_server, srv);
-    const char *path = cl->get_path(cl);
-    lua_State *L = cl->srv->L;
-
-    lua_getglobal(L, "__uh_on_error404");
-    lua_rawgeti(L, -1, lsrv->error404_ref);
-    lua_remove(L, -2);
-
-    lua_pushlightuserdata(L, cl);
-    lua_pushstring(L, path);
-
-    lua_call(L, 2, 0);
 }
 
 static int lua_uh_set_options(lua_State *L)
@@ -155,7 +444,7 @@ static int lua_uh_server_free(lua_State *L)
     return 0;
 }
 
-static const luaL_Reg server_mt[] = {
+static const luaL_Reg server_reg[] = {
     { "ssl_init", lua_uh_ssl_init },
     { "set_options", lua_uh_set_options },
     { "on_error404", lua_uh_set_error404_cb },
@@ -178,220 +467,12 @@ static int lua_uh_new(lua_State *L)
         return 2;
     }
 
-    lsrv = uh_create_userdata(L, sizeof(struct lua_uh_server), server_mt, lua_uh_server_free);
+    lsrv = uh_create_userdata(L, sizeof(struct lua_uh_server), server_reg, LUA_UH_SERVER_MT, lua_uh_server_free);
 
     uh_server_init(&lsrv->srv, sock);
+
     lsrv->srv.L = L;
-
-    return 1;
-}
-
-static int lua_uh_send_header(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    int code = lua_tointeger(L, 2);
-    const char *summary = lua_tostring(L, 3);
-    int len = lua_tointeger(L, 4);
-
-    cl->send_header(cl, code, summary, len);
-
-    return 0;
-}
-
-static int lua_uh_append_header(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *name = lua_tostring(L, 2);
-    const char *value = lua_tostring(L, 2);
-
-    cl->append_header(cl, name, value);
-
-    return 0;
-}
-
-static int lua_uh_header_end(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-
-    cl->header_end(cl);
-
-    return 0;
-}
-
-static int lua_uh_send(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *data;
-    size_t len;
-
-    data = lua_tolstring(L, 2, &len);
-    cl->send(cl, data, len);
-
-    return 0;
-}
-
-static int lua_uh_chunk_send(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *data;
-    size_t len;
-
-    data = lua_tolstring(L, 2, &len);
-    cl->chunk_send(cl, data, len);
-
-    return 0;
-}
-
-static int lua_uh_send_error(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    int code = lua_tointeger(L, 2);
-    const char *summary = lua_tostring(L, 3);
-    const char *msg = lua_tostring(L, 4);
-
-    cl->send_error(cl, code, summary, msg);
-
-    return 0;
-}
-
-static int lua_uh_redirect(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    int code = lua_tointeger(L, 2);
-    const char *url = lua_tostring(L, 3);
-
-    cl->redirect(cl, code, url);
-
-    return 0;
-}
-
-static int lua_uh_request_done(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-
-    cl->request_done(cl);
-
-    return 0;
-}
-
-static int lua_uh_get_http_method(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-
-    lua_pushinteger(L, cl->request.method);
-
-    return 1;
-}
-
-static int lua_uh_get_http_version(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-
-    lua_pushinteger(L, cl->request.version);
-
-    return 1;
-}
-
-static int lua_uh_get_remote_addr(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *addr = cl->get_peer_addr(cl);
-
-    if (addr)
-        lua_pushstring(L, addr);
-    else
-        lua_pushnil(L);
-
-    return 1;
-}
-
-static int lua_uh_get_header(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *name = lua_tostring(L, 2);
-    const char *value;
-
-    if (name) {
-        value = cl->get_header(cl, name);
-        if (value)
-            lua_pushstring(L, value);
-        else
-            lua_pushnil(L);
-        return 1;
-    }
-
-    lua_newtable(L);
-
-    kvlist_for_each(&cl->request.header, name, value) {
-        lua_pushstring(L, value);
-        lua_setfield(L, -2, name);
-    }
-
-    return 1;
-}
-
-static int lua_uh_get_var(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *name = lua_tostring(L, 2);
-    const char *value;
-
-    if (name) {
-        value = cl->get_var(cl, name);
-        if (value)
-            lua_pushstring(L, value);
-        else
-            lua_pushnil(L);
-        return 1;
-    }
-
-    lua_newtable(L);
-
-    kvlist_for_each(&cl->request.var, name, value) {
-        lua_pushstring(L, value);
-        lua_setfield(L, -2, name);
-    }
-
-    return 1;
-}
-
-static int lua_uh_get_query(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *query = cl->get_query(cl);
-
-    if (query)
-        lua_pushstring(L, query);
-    else
-        lua_pushnil(L);
-
-    return 1;
-}
-
-static int lua_uh_get_url(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *url = cl->get_url(cl);
-
-    if (url)
-        lua_pushstring(L, url);
-    else
-        lua_pushnil(L);
-
-    return 1;
-}
-
-static int lua_uh_get_body(lua_State *L)
-{
-    struct uh_client *cl = lua_touserdata(L, 1);
-    const char *body;
-    int len;
-
-    body = cl->get_body(cl, &len);
-    if (body)
-        lua_pushlstring(L, body, len);
-    else
-        lua_pushnil(L);
+    lsrv->srv.on_accept = lua_on_accept;
 
     return 1;
 }
@@ -417,22 +498,6 @@ static int lua_uh_set_log_threshold(lua_State *L)
 
 static const luaL_Reg uhttpd_fun[] = {
     {"new", lua_uh_new},
-    {"send_header", lua_uh_send_header},
-    {"append_header", lua_uh_append_header},
-    {"header_end", lua_uh_header_end},
-    {"send", lua_uh_send},
-    {"chunk_send", lua_uh_chunk_send},
-    {"send_error", lua_uh_send_error},
-    {"redirect", lua_uh_redirect},
-    {"request_done", lua_uh_request_done},
-    {"get_http_method", lua_uh_get_http_method},
-    {"get_http_version", lua_uh_get_http_version},
-    {"get_remote_addr", lua_uh_get_remote_addr},
-    {"get_header", lua_uh_get_header},
-    {"get_var", lua_uh_get_var},
-    {"get_query", lua_uh_get_query},
-    {"get_url", lua_uh_get_url},
-    {"get_body", lua_uh_get_body},
     {"log", lua_uh_log},
     {"set_log_threshold", lua_uh_set_log_threshold},
     {NULL, NULL}
@@ -440,6 +505,14 @@ static const luaL_Reg uhttpd_fun[] = {
 
 int luaopen_uhttpd(lua_State *L)
 {
+    /**
+    * Create a "registry" of light userdata pointers into the
+    * fulluserdata so that we can get handles into the lua objects.
+    */
+    lua_pushlightuserdata(L, &cli_registry);
+    lua_newtable(L);
+    lua_rawset(L, LUA_REGISTRYINDEX);
+
     lua_newtable(L);
     lua_setglobal(L, "__uh_on_request");
 
