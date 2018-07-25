@@ -113,25 +113,35 @@ static int lua_uh_set_options(lua_State *L)
         srv->set_index_file(srv, lua_tostring(L, -1));
     lua_pop(L, 1);
 
-    lua_getfield(L, 2, "on_error404");
-    if (!lua_isnil(L, -1)) {
-        luaL_checktype(L, -1, LUA_TFUNCTION);
-        lua_getglobal(L, "__uh_on_error404");
-        lua_pushvalue(L, -2);
-        lsrv->error404_ref = luaL_ref(L, -2);
-        lsrv->srv.on_error404 = lua_on_error404;
-        lua_pop(L, 1);
-    }
+    return 0;
+}
 
-    lua_getfield(L, 2, "on_request");
-    if (!lua_isnil(L, -1)) {
-        luaL_checktype(L, -1, LUA_TFUNCTION);
-        lua_getglobal(L, "__uh_on_request");
-        lua_pushvalue(L, -2);
-        lsrv->request_ref = luaL_ref(L, -2);
-        lsrv->srv.on_request = lua_on_request;
-        lua_pop(L, 1);
-    }
+static int lua_uh_set_error404_cb(lua_State *L)
+{
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
+
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    lua_getglobal(L, "__uh_on_error404");
+    lua_pushvalue(L, -2);
+    lsrv->error404_ref = luaL_ref(L, -2);
+    lua_pop(L, 1);
+
+    lsrv->srv.on_error404 = lua_on_error404;
+
+    return 0;
+}
+
+static int lua_uh_set_request_cb(lua_State *L)
+{
+    struct lua_uh_server *lsrv = luaL_checkudata(L, 1, LUA_UH_SERVER_MT);
+
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+    lua_getglobal(L, "__uh_on_request");
+    lua_pushvalue(L, -2);
+    lsrv->request_ref = luaL_ref(L, -2);
+    lua_pop(L, 1);
+
+    lsrv->srv.on_request = lua_on_request;
 
     return 0;
 }
@@ -148,6 +158,8 @@ static int lua_uh_server_free(lua_State *L)
 static const luaL_Reg server_mt[] = {
     { "ssl_init", lua_uh_ssl_init },
     { "set_options", lua_uh_set_options },
+    { "on_error404", lua_uh_set_error404_cb },
+    { "on_request", lua_uh_set_request_cb },
     { "free", lua_uh_server_free },
     { NULL, NULL }
 };
