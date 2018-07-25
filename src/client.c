@@ -305,6 +305,10 @@ static void client_free(struct uh_client *cl)
         kvlist_free(&cl->request.var);
         kvlist_free(&cl->request.header);
         cl->srv->nclients--;
+
+        if (cl->srv->on_client_free)
+            cl->srv->on_client_free(cl);
+
         free(cl);
     }
 }

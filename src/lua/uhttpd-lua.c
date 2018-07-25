@@ -49,8 +49,10 @@ static void *uh_create_userdata(lua_State *L, size_t size, const luaL_Reg *reg, 
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
 
-    lua_pushcfunction(L, gc);
-    lua_setfield(L, -2, "__gc");
+    if (gc) {
+        lua_pushcfunction(L, gc);
+        lua_setfield(L, -2, "__gc");
+    }
 
     luaL_setfuncs(L, reg, 0);
 
@@ -285,11 +287,6 @@ static int lua_uh_get_body(lua_State *L)
     return 1;
 }
 
-static int lua_uh_cli_free(lua_State *L)
-{
-    return 0;
-}
-
 static const luaL_Reg client_reg[] = {
     {"send_header", lua_uh_send_header},
     {"append_header", lua_uh_append_header},
@@ -307,7 +304,6 @@ static const luaL_Reg client_reg[] = {
     {"get_query", lua_uh_get_query},
     {"get_url", lua_uh_get_url},
     {"get_body", lua_uh_get_body},
-    { "free", lua_uh_cli_free },
     { NULL, NULL }
 };
 
@@ -319,9 +315,11 @@ static void lua_on_accept(struct uh_client *cl)
     lua_pushlightuserdata(L, &cli_registry);
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushlightuserdata(L, cl);
-    lcl = uh_create_userdata(L, sizeof(struct lua_uh_client), client_reg, LUA_UH_CLIENT_MT, lua_uh_cli_free);
+    lcl = uh_create_userdata(L, sizeof(struct lua_uh_client), client_reg, LUA_UH_CLIENT_MT, NULL);
     lcl->cl = cl;
     lua_rawset(L, -3);
+
+    lua_pop(L, 1);
 }
 
 static int lua_do_request_cb(lua_State *L, struct uh_client *cl)
@@ -453,6 +451,20 @@ static const luaL_Reg server_reg[] = {
     { NULL, NULL }
 };
 
+static void lua_on_client_free(struct uh_client *cl)
+{
+    lua_State *L = cl->srv->L;
+
+    lua_pushlightuserdata(L, &cli_registry);
+    lua_rawget(L, LUA_REGISTRYINDEX);
+
+    lua_pushlightuserdata(L, cl);
+    lua_pushnil(L);
+    lua_rawset(L, -3);
+
+    lua_pop(L, 1);
+}
+
 static int lua_uh_new(lua_State *L)
 {
     int port = lua_tointeger(L, -1);
@@ -473,6 +485,7 @@ static int lua_uh_new(lua_State *L)
 
     lsrv->srv.L = L;
     lsrv->srv.on_accept = lua_on_accept;
+    lsrv->srv.on_client_free = lua_on_client_free;
 
     return 1;
 }
