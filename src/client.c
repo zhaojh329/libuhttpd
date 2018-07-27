@@ -19,6 +19,7 @@
 
 #include <ctype.h>
 #include <assert.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <linux/limits.h>
 #include <libubox/blobmsg.h>
