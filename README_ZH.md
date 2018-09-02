@@ -73,6 +73,8 @@
 
 # [示例程序](/example)
 
+# [捐赠](https://gitee.com/zhaojh329/libuhttpd#project-donate-overview)
+
 # 贡献代码
 如果你想帮助[libuhttpd](https://github.com/zhaojh329/libuhttpd)变得更好，请参考
 [CONTRIBUTING_ZH.md](https://github.com/zhaojh329/libuhttpd/blob/master/CONTRIBUTING_ZH.md)。
