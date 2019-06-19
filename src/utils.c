@@ -46,7 +46,7 @@ void uh_chunk_send(struct uh_client *cl, const void *data, int len)
     uloop_timeout_set(&cl->timeout, UHTTPD_CONNECTION_TIMEOUT * 1000);
     ustream_printf(us, "%X\r\n", len);
     ustream_write(us, data, len, true);
-    ustream_printf(us, "\r\n", len);
+    ustream_printf(us, "\r\n");
 }
 
 void uh_chunk_printf(struct uh_client *cl, const char *format, ...)
@@ -76,7 +76,7 @@ void uh_chunk_vprintf(struct uh_client *cl, const char *format, va_list arg)
         ustream_write(cl->us, buf, len, true);
     else
         ustream_vprintf(cl->us, format, arg);
-    ustream_printf(us, "\r\n", len);
+    ustream_printf(us, "\r\n");
 }
 
 char *uh_split_header(char *str)
