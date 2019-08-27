@@ -22,37 +22,61 @@
  * SOFTWARE.
  */
 
-#ifndef _UHTTPD_H
-#define _UHTTPD_H
+#ifndef _UH_SSL_H
+#define _UH_SSL_H
 
-#include <ev.h>
-
-#include "connection.h"
 #include "config.h"
 #include "log.h"
 
-struct uh_server {
-    int sock;
-    struct ev_loop *loop;
-    struct ev_io ior;
-    struct uh_connection *conns;
-    void (*free)(struct uh_server *srv);
-    void (*on_request)(struct uh_connection *conn);
 #if UHTTPD_SSL_SUPPORT
-    void *ssl_ctx;
-    int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
+
+#if UHTTPD_HAVE_OPENSSL
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#elif UHTTPD_HAVE_WOLFSSL
+#define WC_NO_HARDEN
+#include <wolfssl/openssl/ssl.h>
+#include <wolfssl/openssl/err.h>
+#else
+#include <mbedtls/debug.h>
+#include <mbedtls/ecp.h>
+#include <mbedtls/platform.h>
+#include <mbedtls/ssl.h>
+#include <mbedtls/x509_crt.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
+#include <mbedtls/error.h>
+
+#if defined(MBEDTLS_SSL_CACHE_C)
+#include <mbedtls/ssl_cache.h>
+#endif
+
+struct mbedtls_ctx {
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_config conf;
+    mbedtls_x509_crt cert;
+    mbedtls_pk_context pkey;
+#if defined(MBEDTLS_SSL_CACHE_C)
+    mbedtls_ssl_cache_context cache;
 #endif
 };
 
-/*
- *  uh_server_new - creat an uh_server struct and init it
- *  @loop: If NULL will use EV_DEFAULT
- *  @host: If NULL will listen on "0.0.0.0"
- *  @port: port to listen on
- */
-struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port);
+#endif
 
-int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port);
+#define UH_SSL_ERROR_NONE       0
+#define UH_SSL_ERROR_AGAIN      -1
+#define UH_SSL_ERROR_UNKNOWN    -2
+
+void *uh_ssl_ctx_init(const char *cert, const char *key);
+void uh_ssl_ctx_free(void *ctx);
+void uh_ssl_free(void *ssl);
+
+void *uh_ssl_new(void *ctx, int sock);
+int uh_ssl_handshake(void *ssl);
+int uh_ssl_read(void *ssl, void *buf, size_t count);
+int uh_ssl_write(void *ssl, void *buf, size_t count);
 
 #endif
 
+#endif
