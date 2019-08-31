@@ -17,29 +17,25 @@
 [![Release Version][7]][8]
 [![Build Status][9]][10]
 
-[libubox]: https://git.openwrt.org/?p=project/libubox.git
-[uhttpd]: https://git.openwrt.org/?p=project/uhttpd.git
-[ustream-ssl]: https://git.openwrt.org/?p=project/ustream-ssl.git
+[libev]: http://software.schmorp.de/pkg/libev.html
+[http-parser]: https://github.com/nodejs/http-parser
 [openssl]: https://github.com/openssl/openssl
-[mbedtls]: https://github.com/ARMmbed/mbedtls
+[mbedtls(polarssl)]: https://github.com/ARMmbed/mbedtls
+[CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
 [CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
 
-一个轻量的全异步的HTTP服务器C库，基于[libubox]，参考了[uhttpd]。
-
-`请保持关注以获取最新的项目动态`
+一个轻量的全异步的HTTP服务器C库，基于[libev]和[http-parser]，主要用于嵌入式Linux。
 
 # 特性
 * 轻量、全异步
-* 使用[libubox]作为其事件后端
+* 使用[libev]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
 * 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
 * 代码结构简洁通俗易懂，亦适合学习
-* Lua模板 - 嵌入LUA代码到HTML中，就像嵌入PHP到HTML中一样
-* Lua绑定
 
 # 依赖
-* [libubox]
-* [ustream-ssl] - 如果你需要支持SSL
+* [libev]
+* [http-parser] - 已经集成到源码里面
 * [mbedtls] - 如果你选择mbedtls作为你的SSL后端
 * [CyaSSl(wolfssl)] - 如果你选择wolfssl作为你的SSL后端
 * [openssl] - 如果你选择openssl作为你的SSL后端
@@ -58,11 +54,11 @@
 # 运行示例程序
 运行
 
-	~/libuhttpd/build$ ./example/helloworld
+	~/libuhttpd/build$ ./example/example -v
 	
 然后使用命令curl或者浏览器进行测试
 
-	$ curl -k 'https://127.0.0.1:8000/hello?name=test' -d '{"name":"libuhttpd"}' -v
+	$ curl -k 'https://127.0.0.1:8000/hello'
 
 # 安装到OpenWRT
     opkg update
