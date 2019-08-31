@@ -20,9 +20,8 @@
 [libev]: http://software.schmorp.de/pkg/libev.html
 [http-parser]: https://github.com/nodejs/http-parser
 [openssl]: https://github.com/openssl/openssl
-[mbedtls(polarssl)]: https://github.com/ARMmbed/mbedtls
-[CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
-[CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
+[mbedtls]: https://github.com/ARMmbed/mbedtls
+[wolfssl]: https://github.com/wolfSSL/wolfssl
 
 一个轻量的全异步的HTTP服务器C库，基于[libev]和[http-parser]，主要用于嵌入式Linux。
 
@@ -37,7 +36,7 @@
 * [libev]
 * [http-parser] - 已经集成到源码里面
 * [mbedtls] - 如果你选择mbedtls作为你的SSL后端
-* [CyaSSl(wolfssl)] - 如果你选择wolfssl作为你的SSL后端
+* [wolfssl] - 如果你选择wolfssl作为你的SSL后端
 * [openssl] - 如果你选择openssl作为你的SSL后端
 
 # 配置

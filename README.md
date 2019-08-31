@@ -20,9 +20,8 @@
 [libev]: http://software.schmorp.de/pkg/libev.html
 [http-parser]: https://github.com/nodejs/http-parser
 [openssl]: https://github.com/openssl/openssl
-[mbedtls(polarssl)]: https://github.com/ARMmbed/mbedtls
-[CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
-[CyaSSl(wolfssl)]: https://github.com/wolfSSL/wolfssl
+[mbedtls]: https://github.com/ARMmbed/mbedtls
+[wolfssl]: https://github.com/wolfSSL/wolfssl
 
 A Lightweight and fully asynchronous HTTP server library based on [libev] and [http-parser] for Embedded Linux.
 
@@ -37,7 +36,7 @@ A Lightweight and fully asynchronous HTTP server library based on [libev] and [h
 * [libev]
 * [http-parser] - Has been integrated into the source code.
 * [mbedtls] - If you choose mbedtls as your SSL backend
-* [CyaSSl(wolfssl)] - If you choose wolfssl as your SSL backend
+* [wolfssl] - If you choose wolfssl as your SSL backend
 * [openssl] - If you choose openssl as your SSL backend
 
 # Configure
