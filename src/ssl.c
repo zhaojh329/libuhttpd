@@ -161,7 +161,7 @@ static const char *mbedtls_err_string(int err)
 
 static int mbedtls_net_send(void *ctx, const unsigned char *buf, size_t len)
 {
-    int sock = (long long)ctx;
+    int sock = (intptr_t)ctx;
     int n = write(sock, buf, len);
     if (n >= 0)
         return n;
@@ -170,7 +170,7 @@ static int mbedtls_net_send(void *ctx, const unsigned char *buf, size_t len)
 
 static int mbedtls_net_recv(void *ctx, unsigned char *buf, size_t len)
 {
-    int sock = (long long)ctx;
+    int sock = (intptr_t)ctx;
     int n = read(sock, buf, len);
     if (n >= 0)
         return n;
@@ -185,7 +185,7 @@ void *uh_ssl_new(void *ctx, int sock)
     mbedtls_ssl_context *ssl = calloc(1, sizeof(mbedtls_ssl_context));
 
     mbedtls_ssl_setup(ssl, &mctx->conf);
-    mbedtls_ssl_set_bio(ssl, (void *)(long long)sock, mbedtls_net_send, mbedtls_net_recv, NULL);
+    mbedtls_ssl_set_bio(ssl, (void *)(intptr_t)sock, mbedtls_net_send, mbedtls_net_recv, NULL);
 #else
     SSL *ssl = SSL_new(ctx);
     SSL_set_fd(ssl, sock);
