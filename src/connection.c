@@ -341,10 +341,10 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
 #if UHTTPD_SSL_SUPPORT
     if (conn->ssl)
-        ret = buffer_pull_to_fd(&conn->wb, w->fd, buffer_length(&conn->wb), conn_ssl_write, conn->ssl);
+        ret = buffer_pull_to_fd_ex(&conn->wb, w->fd, buffer_length(&conn->wb), conn_ssl_write, conn->ssl);
     else
 #endif
-        ret = buffer_pull_to_fd(&conn->wb, w->fd, buffer_length(&conn->wb), NULL, NULL);
+        ret = buffer_pull_to_fd(&conn->wb, w->fd, buffer_length(&conn->wb));
 
     if (ret < 0) {
         uh_log_err("write error: %s\n", strerror(errno));
@@ -404,10 +404,10 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
 #if UHTTPD_SSL_SUPPORT
     if (conn->ssl)
-        ret = buffer_put_fd(rb, w->fd, -1, &eof, conn_ssl_read, conn->ssl);
+        ret = buffer_put_fd_ex(rb, w->fd, -1, &eof, conn_ssl_read, conn->ssl);
     else
 #endif
-        ret = buffer_put_fd(rb, w->fd, -1, &eof, NULL, NULL);
+        ret = buffer_put_fd(rb, w->fd, -1, &eof);
 
     if (ret < 0) {
         conn_error(conn, 500, NULL);
