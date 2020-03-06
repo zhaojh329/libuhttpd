@@ -29,7 +29,7 @@
 #include <stdarg.h>
 #include <arpa/inet.h>
 
-#include "http_parser.h"
+#include "http-parser/http_parser.h"
 #include "buffer.h"
 #include "config.h"
 

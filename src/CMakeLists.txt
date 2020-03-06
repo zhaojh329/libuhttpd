@@ -12,7 +12,7 @@ find_package(Libev REQUIRED)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/buffer ${CMAKE_CURRENT_BINARY_DIR} ${LIBEV_INCLUDE_DIR})
 
 set(EXTRA_LIBS ${LIBEV_LIBRARY} dl m)
-set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http_parser.c ssl.c)
+set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http-parser/http_parser.c ssl.c)
 
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
 option(UHTTPD_SSL_SUPPORT "SSL support" ON)

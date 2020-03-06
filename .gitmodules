@@ -1,3 +1,6 @@
 [submodule "src/buffer"]
 	path = src/buffer
 	url = https://github.com/zhaojh329/buffer
+[submodule "src/http-parser"]
+	path = src/http-parser
+	url = https://github.com/nodejs/http-parser.git

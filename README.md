@@ -34,7 +34,7 @@ A Lightweight and fully asynchronous HTTP server library based on [libev] and [h
 
 # Dependencies
 * [libev]
-* [http-parser] - Has been integrated into the source code.
+* [http-parser] - A parser for HTTP messages written in C
 * [mbedtls] - If you choose mbedtls as your SSL backend
 * [wolfssl] - If you choose wolfssl as your SSL backend
 * [openssl] - If you choose openssl as your SSL backend
