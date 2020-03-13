@@ -102,6 +102,8 @@ int main(int argc, char **argv)
 
     srv->on_request = on_request;
 
+    srv->load_plugin(srv, "/usr/local/lib/uhttpd/test.so");
+
     uh_log_info("Listen on: *:%d\n", port);
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);

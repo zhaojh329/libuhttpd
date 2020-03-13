@@ -26,7 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <stdio.h>
+#include <dlfcn.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -111,6 +111,40 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
 }
 #endif
 
+static int uh_load_plugin(struct uh_server *srv, const char *path)
+{
+    struct uh_plugin *p;
+    void *dlh;
+
+    dlh = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
+    if (!dlh) {
+        uh_log_err("dlopen fail: %s\n", dlerror());
+        return -1;
+    }
+
+    p = dlsym(dlh, "uh_plugin");
+    if (!p) {
+        uh_log_err("not found symbol 'uh_plugin'\n");
+        return -1;
+    }
+
+    if (!p->path || !p->path[0] || !p->handler) {
+        uh_log_err("invalid plugin\n");
+        return -1;
+    }
+
+    if (!srv->plugins) {
+        srv->plugins = p;
+        return 0;
+    }
+
+    p->next = srv->plugins;
+    srv->plugins->prev = p;
+    srv->plugins = p;
+
+    return 0;
+}
+
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
     struct sockaddr_in addr = {
@@ -149,6 +183,8 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 #if UHTTPD_SSL_SUPPORT
     srv->ssl_init = uh_server_ssl_init;
 #endif
+
+    srv->load_plugin = uh_load_plugin;
 
     ev_io_init(&srv->ior, uh_accept_cb, sock, EV_READ);
     ev_io_start(srv->loop, &srv->ior);

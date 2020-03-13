@@ -97,6 +97,8 @@ target_link_libraries(uhttpd_s ${EXTRA_LIBS})
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
+add_subdirectory(plugins)
+
 install(
     FILES
         uhttpd.h

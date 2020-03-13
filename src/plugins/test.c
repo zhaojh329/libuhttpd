@@ -22,46 +22,16 @@
  * SOFTWARE.
  */
 
-#ifndef _UHTTPD_H
-#define _UHTTPD_H
+#include "uhttpd.h"
 
-#include <ev.h>
+static void test_handler(struct uh_connection *conn)
+{
+    conn->send_head(conn, 200, -1, NULL);
+    conn->chunk_printf(conn, "Url: %s\n", conn->get_url(conn));
+    conn->chunk_end(conn);
+}
 
-#include "connection.h"
-#include "config.h"
-#include "log.h"
-
-struct uh_plugin {
-    const char *path;
-    void (*handler)(struct uh_connection *conn);
-    struct uh_plugin *prev;
-    struct uh_plugin *next;
+struct uh_plugin uh_plugin = {
+    .path = "/test",
+    .handler = test_handler
 };
-
-struct uh_server {
-    int sock;
-    struct ev_loop *loop;
-    struct ev_io ior;
-    struct uh_connection *conns;
-    void (*free)(struct uh_server *srv);
-    void (*on_request)(struct uh_connection *conn);
-#if UHTTPD_SSL_SUPPORT
-    void *ssl_ctx;
-    int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
-#endif
-    struct uh_plugin *plugins;
-    int (*load_plugin)(struct uh_server *srv, const char *path);
-};
-
-/*
- *  uh_server_new - creat an uh_server struct and init it
- *  @loop: If NULL will use EV_DEFAULT
- *  @host: If NULL will listen on "0.0.0.0"
- *  @port: port to listen on
- */
-struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port);
-
-int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port);
-
-#endif
-

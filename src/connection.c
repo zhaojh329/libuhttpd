@@ -252,16 +252,32 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
     return 0;
 }
 
+static bool run_plugins(struct uh_connection *conn)
+{
+    struct uh_plugin *p = conn->srv->plugins;
+
+    while (p) {
+        if (!strcmp(conn->get_url(conn), p->path)) {
+            p->handler(conn);
+            return true;
+        }
+        p = p->next;
+    }
+    return false;
+}
+
 static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
     int i;
 
-    if (conn->srv->on_request)
-        conn->srv->on_request(conn);
-    else
-        conn_error(conn, 404, NULL);
+    if (!run_plugins(conn)) {
+        if (conn->srv->on_request)
+            conn->srv->on_request(conn);
+        else
+            conn_error(conn, 404, NULL);
+    }
 
     buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
 
