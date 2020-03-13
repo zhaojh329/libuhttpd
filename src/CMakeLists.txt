@@ -103,7 +103,7 @@ install(
         connection.h
         log.h
         buffer/buffer.h
-        http_parser.h
+        http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/config.h
     DESTINATION
         include/uhttpd
