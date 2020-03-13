@@ -54,9 +54,9 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 static void usage(const char *prog)
 {
     fprintf(stderr, "Usage: %s [option]\n"
-        "          -p port  # Default port is 8080\n"
-        "          -s       # SSl on\n"
-        "          -v       # verbose\n", prog);
+            "          -p port  # Default port is 8080\n"
+            "          -s       # SSl on\n"
+            "          -v       # verbose\n", prog);
     exit(1);
 }
 
@@ -71,11 +71,11 @@ int main(int argc, char **argv)
     int opt;
 
     while ((opt = getopt(argc, argv, "p:sv")) != -1) {
-        switch (opt)
-        {
+        switch (opt) {
         case 'p':
             port = atoi(optarg);
-            break;\
+            break;
+            \
         case 's':
             ssl = true;
         case 'v':
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 
     if (!verbose)
         uh_log_threshold(LOG_ERR);
-    
+
     uh_log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
     srv = uh_server_new(loop, "0.0.0.0", port);
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 err:
     srv->free(srv);
     free(srv);
-    
+
     return 0;
 }
 

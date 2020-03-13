@@ -134,7 +134,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
 
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) <0) {
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         close(sock);
         uh_log_err("bind: %s\n", strerror(errno));
         return -1;

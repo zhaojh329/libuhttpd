@@ -45,23 +45,23 @@ struct uh_request {
     struct {
         int offset;
         int len;
-    }url_info;
+    } url_info;
     char *url;
     struct {
         int name_offset;
         int name_len;
         int value_offset;
         int value_len;
-    }headers_info[UHTTPD_MAX_HEADER_NUM];
+    } headers_info[UHTTPD_MAX_HEADER_NUM];
     int header_num;
     struct {
         char *name;
         char *value;
-    }headers[UHTTPD_MAX_HEADER_NUM];
+    } headers[UHTTPD_MAX_HEADER_NUM];
     struct {
         int offset;
         int len;
-    }body;
+    } body;
 };
 
 struct uh_connection {

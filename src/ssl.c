@@ -56,8 +56,8 @@ void *uh_ssl_ctx_init(const char *cert, const char *key)
         goto err;
     }
 
-    if(mbedtls_ssl_config_defaults(&ctx->conf, MBEDTLS_SSL_IS_SERVER,
-                    MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
+    if (mbedtls_ssl_config_defaults(&ctx->conf, MBEDTLS_SSL_IS_SERVER,
+                                    MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT) != 0) {
         uh_log_err("Failed to init SSL config\n");
         goto err;
     }
@@ -67,7 +67,7 @@ void *uh_ssl_ctx_init(const char *cert, const char *key)
 
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_conf_session_cache(&ctx->conf, &ctx->cache,
-        mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
+                                   mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
 #endif
 
     mbedtls_ssl_conf_ca_chain(&ctx->conf, ctx->cert.next, NULL);

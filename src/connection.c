@@ -442,8 +442,8 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
     }
 
     if (after > 0) {
-        ev_timer_set (w, after, 0.0);
-        ev_timer_start (loop, w);
+        ev_timer_set(w, after, 0.0);
+        ev_timer_start(loop, w);
         return;
     }
 
