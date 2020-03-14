@@ -150,13 +150,28 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
 /* data of the request field */
 #define O2D(c, o) ((const char *)c->rb.data + o)
 
-static const char *conn_get_url(struct uh_connection *conn)
+static const char *conn_get_path(struct uh_connection *conn)
 {
+    struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
 
-    if (!req->url)
-        req->url = strndup(O2D(conn, req->url_info.offset), req->url_info.len);
-    return req->url;
+    if (!req->url.path)
+        req->url.path = strndup(O2D(conn, u->field_data[UF_PATH].off) + req->url.offset, u->field_data[UF_PATH].len);
+    return req->url.path;
+}
+
+static const char *conn_get_query(struct uh_connection *conn)
+{
+    struct http_parser_url *u = &conn->url_parser;
+    struct uh_request *req = &conn->req;
+
+    if (!(u->field_set & (1 << UF_QUERY)))
+        return "";
+
+    if (!req->url.query)
+        req->url.query = strndup(O2D(conn, u->field_data[UF_QUERY].off) + req->url.offset, u->field_data[UF_QUERY].len);
+
+    return req->url.query;
 }
 
 static const char *conn_get_header(struct uh_connection *conn, const char *name)
@@ -204,10 +219,11 @@ static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    req->url_info.offset = ROF(conn, at);
-    req->url_info.len = length;
+    req->url.offset = ROF(conn, at);
 
-    return 0;
+    http_parser_url_init(&conn->url_parser);
+
+    return http_parser_parse_url(at, length, false, &conn->url_parser);
 }
 
 static int on_header_field_cb(struct http_parser *parser, const char *at, size_t length)
@@ -257,7 +273,7 @@ static bool run_plugins(struct uh_connection *conn)
     struct uh_plugin *p = conn->srv->plugins;
 
     while (p) {
-        if (!strcmp(conn->get_url(conn), p->path)) {
+        if (!strcmp(conn->get_path(conn), p->path)) {
             p->handler(conn);
             return true;
         }
@@ -281,8 +297,11 @@ static int on_message_complete_cb(struct http_parser *parser)
 
     buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
 
-    if (req->url)
-        free(req->url);
+    if (req->url.path)
+        free(req->url.path);
+
+    if (req->url.query)
+        free(req->url.query);
 
     for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
         if (req->headers[i].name)
@@ -513,7 +532,8 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->chunk_vprintf = conn_chunk_vprintf;
     conn->chunk_end = conn_chunk_end;
 
-    conn->get_url = conn_get_url;
+    conn->get_path = conn_get_path;
+    conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
     conn->get_body = conn_get_body;
 

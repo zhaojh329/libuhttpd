@@ -44,9 +44,10 @@ struct uh_server;
 struct uh_request {
     struct {
         int offset;
-        int len;
-    } url_info;
-    char *url;
+        char *path;
+        char *query;
+    } url;
+
     struct {
         int name_offset;
         int name_len;
@@ -80,6 +81,7 @@ struct uh_connection {
     struct uh_server *srv;
     struct sockaddr_in addr;
     struct http_parser parser;
+    struct http_parser_url url_parser;
     struct uh_connection *prev;
     struct uh_connection *next;
     void (*free)(struct uh_connection *conn);
@@ -94,7 +96,8 @@ struct uh_connection {
     void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
     void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*chunk_end)(struct uh_connection *conn);
-    const char *(*get_url)(struct uh_connection *conn);
+    const char *(*get_path)(struct uh_connection *conn);
+    const char *(*get_query)(struct uh_connection *conn);
     const char *(*get_header)(struct uh_connection *conn, const char *name);
     const char *(*get_body)(struct uh_connection *conn, int *len);
 };
