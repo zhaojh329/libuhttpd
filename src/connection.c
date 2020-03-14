@@ -234,7 +234,7 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
 
     if (n == UHTTPD_MAX_HEADER_NUM) {
         uh_log_err("Header too more\n");
-        return 0;
+        return 1;
     }
 
     req->headers_info[n].name_offset = ROF(conn, at);
