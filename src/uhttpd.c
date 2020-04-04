@@ -26,9 +26,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <dlfcn.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#ifdef HAVE_DLOPEN
+#include <dlfcn.h>
+#endif
 
 #include "uhttpd.h"
 #include "utils.h"
@@ -113,6 +115,7 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
 
 static int uh_load_plugin(struct uh_server *srv, const char *path)
 {
+#ifdef HAVE_DLOPEN
     struct uh_plugin *p;
     void *dlh;
 
@@ -143,6 +146,10 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
     srv->plugins = p;
 
     return 0;
+#else
+    uh_log_err("Not support plugin\n");
+    return -1;
+#endif
 }
 
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)

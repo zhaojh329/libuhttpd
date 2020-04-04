@@ -8,10 +8,18 @@ set(UHTTPD_VERSION_PATCH 1)
 
 # Check the third party Libraries
 find_package(Libev REQUIRED)
+find_library(LIBDL dl)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/buffer ${CMAKE_CURRENT_BINARY_DIR} ${LIBEV_INCLUDE_DIR})
 
-set(EXTRA_LIBS ${LIBEV_LIBRARY} dl m)
+set(EXTRA_LIBS ${LIBEV_LIBRARY} m)
+
+if(NOT ${LIBDL} STREQUAL "LIBDL-NOTFOUND")
+    message(STATUS "Found Libdl: ${LIBDL}")
+    list(APPEND EXTRA_LIBS ${LIBDL})
+    add_definitions(-DHAVE_DLOPEN)
+endif()
+
 set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http-parser/http_parser.c ssl.c)
 
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
@@ -100,7 +108,9 @@ target_link_libraries(uhttpd_s ${EXTRA_LIBS})
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-add_subdirectory(plugins)
+if(NOT ${LIBDL} STREQUAL "LIBDL-NOTFOUND")
+    add_subdirectory(plugins)
+endif()
 
 install(
     FILES
