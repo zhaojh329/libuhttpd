@@ -21,6 +21,13 @@ endif()
 
 set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http-parser/http_parser.c ssl.c)
 
+option(BUILD_SHARED_LIBS "Build shared library" ON)
+option(BUILD_STATIC_LIBS "Build static library" ON)
+
+if(NOT BUILD_SHARED_LIBS AND NOT BUILD_STATIC_LIBS)
+    message(FATAL_ERROR "BUILD_SHARED_LIBS and BUILD_STATIC_LIBS can't be OFF at the same time, please select at least one of them")
+endif()
+
 set(UHTTPD_SSL_SUPPORT_CONFIG 1)
 option(UHTTPD_SSL_SUPPORT "SSL support" ON)
 
@@ -96,13 +103,25 @@ else()
     endif()
 endif()
 
-add_library(uhttpd SHARED ${SOURCE_FILES})
-set_target_properties(uhttpd PROPERTIES VERSION ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH})
-target_link_libraries(uhttpd ${EXTRA_LIBS})
+if(BUILD_SHARED_LIBS)
+    add_library(uhttpd SHARED ${SOURCE_FILES})
+    set_target_properties(uhttpd PROPERTIES VERSION ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH})
+    target_link_libraries(uhttpd ${EXTRA_LIBS})
+    install(
+        TARGETS uhttpd
+        LIBRARY DESTINATION lib
+    )
+endif()
 
-add_library(uhttpd_s STATIC ${SOURCE_FILES})
-set_target_properties(uhttpd_s PROPERTIES OUTPUT_NAME uhttpd)
-target_link_libraries(uhttpd_s ${EXTRA_LIBS})
+if(BUILD_STATIC_LIBS)
+    add_library(uhttpd_s STATIC ${SOURCE_FILES})
+    set_target_properties(uhttpd_s PROPERTIES OUTPUT_NAME uhttpd)
+    target_link_libraries(uhttpd_s ${EXTRA_LIBS})
+    install(
+        TARGETS uhttpd_s
+        ARCHIVE DESTINATION lib
+    )
+endif()
 
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -121,12 +140,6 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/config.h
     DESTINATION
         include/uhttpd
-)
-
-install(
-    TARGETS uhttpd uhttpd_s
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
 )
 
 message(STATUS "UHTTPD_VERSION: ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH}")
