@@ -96,7 +96,7 @@ else()
     endif()
 endif()
 
-add_library(uhttpd SHARED ${SOURCE_FILES})
+add_library(uhttpd ${SOURCE_FILES})
 set_target_properties(uhttpd PROPERTIES VERSION ${UHTTPD_VERSION_MAJOR}.${UHTTPD_VERSION_MINOR}.${UHTTPD_VERSION_PATCH})
 target_link_libraries(uhttpd ${EXTRA_LIBS})
 
