@@ -4,7 +4,7 @@ add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
 # The version number.
 set(UHTTPD_VERSION_MAJOR 3)
 set(UHTTPD_VERSION_MINOR 1)
-set(UHTTPD_VERSION_PATCH 2)
+set(UHTTPD_VERSION_PATCH 3)
 
 # Check the third party Libraries
 find_package(Libev REQUIRED)
