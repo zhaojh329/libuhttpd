@@ -76,7 +76,6 @@ int main(int argc, char **argv)
         case 'p':
             port = atoi(optarg);
             break;
-            \
         case 's':
             ssl = true;
         case 'v':
