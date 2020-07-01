@@ -101,6 +101,8 @@ struct uh_connection {
     void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
     void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*chunk_end)(struct uh_connection *conn);
+    enum http_method (*get_method)(struct uh_connection *conn);
+    const char *(*get_method_str)(struct uh_connection *conn);
     const char *(*get_path)(struct uh_connection *conn);
     const char *(*get_query)(struct uh_connection *conn);
     const char *(*get_header)(struct uh_connection *conn, const char *name);

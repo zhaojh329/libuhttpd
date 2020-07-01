@@ -36,6 +36,7 @@ static void on_request(struct uh_connection *conn)
 
     conn->send_head(conn, 200, -1, NULL);
     conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
+    conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
     conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));
     conn->chunk_printf(conn, "Query: %s\n", conn->get_query(conn));
     conn->chunk_printf(conn, "User-Agent: %s\n", conn->get_header(conn, "User-Agent"));

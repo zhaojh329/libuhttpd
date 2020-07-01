@@ -158,6 +158,16 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
     conn_send(conn, "\r\n", 2);
 }
 
+static enum http_method conn_get_method(struct uh_connection *conn)
+{
+    return conn->parser.method;
+}
+
+static const char *conn_get_method_str(struct uh_connection *conn)
+{
+    return http_method_str(conn->parser.method);
+}
+
 /* offset of the request field */
 #define ROF(c, a) (a - (const char *)c->rb.data)
 
@@ -569,6 +579,8 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->chunk_vprintf = conn_chunk_vprintf;
     conn->chunk_end = conn_chunk_end;
 
+    conn->get_method = conn_get_method;
+    conn->get_method_str = conn_get_method_str;
     conn->get_path = conn_get_path;
     conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
