@@ -34,7 +34,7 @@ static void on_request(struct uh_connection *conn)
     int body_len;
     const char *body = conn->get_body(conn, &body_len);
 
-    conn->send_head(conn, 200, -1, NULL);
+    conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
     conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
     conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
     conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));

@@ -144,7 +144,7 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
     struct buffer *wb = &conn->wb;
     va_list arg;
 
-    assert((code == 301 || code == 302) && location);
+    assert((code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_FOUND) && location);
 
     conn_send_status_line(conn, code, NULL);
 
@@ -316,7 +316,7 @@ static int on_message_complete_cb(struct http_parser *parser)
         if (conn->srv->on_request)
             conn->srv->on_request(conn);
         else
-            conn_error(conn, 404, NULL);
+            conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
     }
 
     buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
@@ -491,7 +491,7 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         ret = buffer_put_fd(rb, w->fd, -1, &eof);
 
     if (ret < 0) {
-        conn_error(conn, 500, NULL);
+        conn_error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, NULL);
         uh_log_err("read error: %s\n", strerror(errno));
         return;
     }
@@ -507,9 +507,9 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     length = buffer_length(rb);
     nparsed = http_parser_execute(parser, &settings, (const char *)rb->data, length);
     if (parser->upgrade)
-        conn_error(conn, 501, NULL);
+        conn_error(conn, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
     else if (nparsed != length)
-        conn_error(conn, 400, http_errno_description(parser->http_errno));
+        conn_error(conn, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
 }
 
 static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
@@ -528,7 +528,7 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
         return;
     }
 
-    conn_error(conn, 408, NULL);
+    conn_error(conn, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
 struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr)
