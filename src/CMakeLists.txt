@@ -9,7 +9,12 @@ set(UHTTPD_VERSION_PATCH 4)
 # Check the third party Libraries
 find_package(Libev REQUIRED)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/buffer ${CMAKE_CURRENT_BINARY_DIR} ${LIBEV_INCLUDE_DIR})
+include_directories(
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/http-parser
+	${CMAKE_CURRENT_SOURCE_DIR}/buffer
+	${CMAKE_CURRENT_BINARY_DIR}
+	${LIBEV_INCLUDE_DIR})
 
 set(EXTRA_LIBS ${LIBEV_LIBRARY} m)
 
