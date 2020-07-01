@@ -26,7 +26,9 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <assert.h>
+#include <sys/sendfile.h>
 
 #include "connection.h"
 #include "uhttpd.h"
@@ -34,10 +36,22 @@
 #include "ssl.h"
 
 
-
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
     buffer_put_data(&conn->wb, data, len);
+    ev_io_start(conn->srv->loop, &conn->iow);
+}
+
+static void conn_send_file(struct uh_connection *conn, const char *path)
+{
+    struct stat st;
+
+    conn->file.fd = open(path, O_RDONLY);
+
+    fstat(conn->file.fd, &st);
+
+    conn->file.size = st.st_size;
+
     ev_io_start(conn->srv->loop, &conn->iow);
 }
 
@@ -335,6 +349,9 @@ static void conn_free(struct uh_connection *conn)
     buffer_free(&conn->rb);
     buffer_free(&conn->wb);
 
+    if (conn->file.fd > 0)
+        close(conn->file.fd);
+
     if (conn->prev)
         conn->prev->next = conn->next;
     else
@@ -388,6 +405,25 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     }
 
     if (buffer_length(&conn->wb) == 0) {
+        if (conn->file.fd > 0) {
+            ssize_t ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
+            if (ret < 0) {
+                if (errno != EAGAIN) {
+                    uh_log_err("write error: %s\n", strerror(errno));
+                    conn_free(conn);
+                }
+                return;
+            }
+
+            if (ret < conn->file.size) {
+                conn->file.size -= ret;
+                return;
+            }
+
+            close(conn->file.fd);
+            conn->file.fd = -1;
+        }
+
         if (conn->flags & CONN_F_SEND_AND_CLOSE)
             conn_free(conn);
         else
@@ -520,6 +556,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
 
     conn->free = conn_free;
     conn->send = conn_send;
+    conn->send_file = conn_send_file;
     conn->printf = conn_printf;
     conn->vprintf = conn_vprintf;
     conn->send_status_line = conn_send_status_line;

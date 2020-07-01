@@ -71,6 +71,10 @@ struct uh_connection {
     void *ssl;
 #endif
     uint8_t flags;
+    struct {
+        int fd;
+        int size;
+    } file;
     struct ev_io ior;
     struct ev_io iow;
     struct buffer rb;
@@ -86,6 +90,7 @@ struct uh_connection {
     struct uh_connection *next;
     void (*free)(struct uh_connection *conn);
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
+    void (*send_file)(struct uh_connection *conn, const char *path);
     void (*printf)(struct uh_connection *conn, const char *format, ...);
     void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
