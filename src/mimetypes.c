@@ -27,7 +27,7 @@
 
 #include "mimetypes.h"
 
-static const struct mimetype uh_mime_types[] = {
+static const struct mimetype mime_types[] = {
     { "txt",     "text/plain" },
     { "log",     "text/plain" },
     { "js",      "text/javascript" },
@@ -96,7 +96,7 @@ static const struct mimetype uh_mime_types[] = {
 
 const char *file_mime_lookup(const char *path)
 {
-    const struct mimetype *m = &uh_mime_types[0];
+    const struct mimetype *m = &mime_types[0];
     const char *e;
 
     while (m->extn) {
