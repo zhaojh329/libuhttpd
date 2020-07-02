@@ -33,6 +33,7 @@
 #include "connection.h"
 #include "uhttpd.h"
 #include "utils.h"
+#include "file.h"
 #include "ssl.h"
 
 
@@ -573,6 +574,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->send_head = conn_send_head;
     conn->error = conn_error;
     conn->redirect = conn_redirect;
+    conn->serve_file = serve_file;
 
     conn->chunk_send = conn_chunk_send;
     conn->chunk_printf = conn_chunk_printf;

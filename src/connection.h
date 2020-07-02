@@ -97,6 +97,7 @@ struct uh_connection {
     void (*send_head)(struct uh_connection *conn, int code, int content_length, const char *extra_headers);
     void (*error)(struct uh_connection *conn, int code, const char *reason);
     void (*redirect)(struct uh_connection *conn, int code, const char *location, ...);
+    void (*serve_file)(struct uh_connection *conn, const char *docroot, const char *index_page);
     void (*chunk_send)(struct uh_connection *conn, const void *data, ssize_t len);
     void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
     void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);

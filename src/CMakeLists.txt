@@ -24,7 +24,7 @@ if(HAVE_DLOPEN)
     add_definitions(-DHAVE_DLOPEN)
 endif()
 
-set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http-parser/http_parser.c ssl.c)
+set(SOURCE_FILES uhttpd.c log.c connection.c buffer/buffer.c http-parser/http_parser.c ssl.c file.c mimetypes.c)
 
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 option(BUILD_STATIC_LIBS "Build static library" ON)

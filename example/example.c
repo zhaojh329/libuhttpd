@@ -29,19 +29,27 @@
 
 #include "uhttpd.h"
 
+static bool serve_file = false;
+static const char *docroot = ".";
+static const char *index_page = "index.html";
+
 static void on_request(struct uh_connection *conn)
 {
-    int body_len;
-    const char *body = conn->get_body(conn, &body_len);
+    if (!serve_file) {
+        int body_len;
+        const char *body = conn->get_body(conn, &body_len);
 
-    conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
-    conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
-    conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
-    conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));
-    conn->chunk_printf(conn, "Query: %s\n", conn->get_query(conn));
-    conn->chunk_printf(conn, "User-Agent: %s\n", conn->get_header(conn, "User-Agent"));
-    conn->chunk_printf(conn, "Body: %.*s\n", body_len, body);
-    conn->chunk_end(conn);
+        conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
+        conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
+        conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
+        conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));
+        conn->chunk_printf(conn, "Query: %s\n", conn->get_query(conn));
+        conn->chunk_printf(conn, "User-Agent: %s\n", conn->get_header(conn, "User-Agent"));
+        conn->chunk_printf(conn, "Body: %.*s\n", body_len, body);
+        conn->chunk_end(conn);
+    } else {
+        conn->serve_file(conn, docroot, index_page);
+    }
 }
 
 static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
@@ -58,6 +66,7 @@ static void usage(const char *prog)
     fprintf(stderr, "Usage: %s [option]\n"
             "          -p port  # Default port is 8080\n"
             "          -s       # SSl on\n"
+            "          -f       # Serve file\n"
             "          -v       # verbose\n", prog);
     exit(1);
 }
@@ -72,13 +81,16 @@ int main(int argc, char **argv)
     int port = 8080;
     int opt;
 
-    while ((opt = getopt(argc, argv, "p:sv")) != -1) {
+    while ((opt = getopt(argc, argv, "p:sfv")) != -1) {
         switch (opt) {
         case 'p':
             port = atoi(optarg);
             break;
         case 's':
             ssl = true;
+            break;
+        case 'f':
+            serve_file = true;
             break;
         case 'v':
             verbose = true;
