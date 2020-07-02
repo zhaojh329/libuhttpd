@@ -120,6 +120,18 @@ static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
     return true;
 }
 
+static void file_if_gzip(struct uh_connection *conn, const char *path)
+{
+    const char *hdr = conn->get_header(conn, "Accept-Encoding");
+    const char *extn = rindex(path, '.');
+
+    if (!hdr || !strstr(hdr, "gzip"))
+        return;
+
+    if (extn && !strcmp(extn, ".gz"))
+        conn->printf(conn, "Content-Encoding: gzip\r\n");
+}
+
 void serve_file(struct uh_connection *conn, const char *docroot, const char *index_page)
 {
     const char *path = conn->get_path(conn);
@@ -184,7 +196,11 @@ void serve_file(struct uh_connection *conn, const char *docroot, const char *ind
     file_response_ok_hdrs(conn, &st);
 
     conn->printf(conn, "Content-Type: %s\r\n", file_mime_lookup(path));
-    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n\r\n", st.st_size);
+    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", st.st_size);
+
+    file_if_gzip(conn, path);
+
+    conn->printf(conn, "\r\n");
 
     if (conn->get_method(conn) == HTTP_HEAD)
         return;
