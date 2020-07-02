@@ -79,6 +79,7 @@ int main(int argc, char **argv)
             break;
         case 's':
             ssl = true;
+            break;
         case 'v':
             verbose = true;
             break;
