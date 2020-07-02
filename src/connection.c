@@ -212,7 +212,7 @@ static const char *conn_get_header(struct uh_connection *conn, const char *name)
     }
 
     if (i == UHTTPD_MAX_HEADER_NUM)
-        return "";
+        return NULL;
 
     for (j = 0; j < UHTTPD_MAX_HEADER_NUM; j++) {
         if (req->headers_info[j].name_offset > 0) {
@@ -226,7 +226,7 @@ static const char *conn_get_header(struct uh_connection *conn, const char *name)
         }
     }
 
-    return "";
+    return NULL;
 }
 
 static const char *conn_get_body(struct uh_connection *conn, int *len)

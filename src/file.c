@@ -88,7 +88,7 @@ static void file_response_304(struct uh_connection *conn, struct stat *s)
 static bool file_if_modified_since(struct uh_connection *conn, struct stat *s)
 {
     const char *hdr = conn->get_header(conn, "If-Modified-Since");
-    if (!hdr[0])
+    if (!hdr)
         return true;
 
     if (date2unix(hdr) >= s->st_mtime) {
@@ -101,8 +101,7 @@ static bool file_if_modified_since(struct uh_connection *conn, struct stat *s)
 
 static bool file_if_range(struct uh_connection *conn, struct stat *s)
 {
-    const char *hdr = conn->get_header(conn, "If-Range");
-    if (hdr[0]) {
+    if (conn->get_header(conn, "If-Range")) {
         conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
@@ -113,7 +112,7 @@ static bool file_if_range(struct uh_connection *conn, struct stat *s)
 static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
 {
     const char *hdr = conn->get_header(conn, "If-Modified-Since");
-    if (hdr[0] && date2unix(hdr) <= s->st_mtime) {
+    if (hdr && date2unix(hdr) <= s->st_mtime) {
         conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
