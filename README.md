@@ -23,7 +23,7 @@
 [mbedtls]: https://github.com/ARMmbed/mbedtls
 [wolfssl]: https://github.com/wolfSSL/wolfssl
 
-A Lightweight and fully asynchronous HTTP server library based on [libev] and [http-parser] for Embedded Linux.
+A very flexible, lightweight and fully asynchronous HTTP server library based on [libev] and [http-parser] for Embedded Linux.
 
 # Features
 * Lightweight and fully asynchronous

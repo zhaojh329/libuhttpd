@@ -23,7 +23,7 @@
 [mbedtls]: https://github.com/ARMmbed/mbedtls
 [wolfssl]: https://github.com/wolfSSL/wolfssl
 
-一个轻量的全异步的HTTP服务器C库，基于[libev]和[http-parser]，主要用于嵌入式Linux。
+一个非常灵活的,轻量的,全异步的HTTP服务器C库，基于[libev]和[http-parser]，主要用于嵌入式Linux。
 
 # 特性
 * 轻量、全异步
