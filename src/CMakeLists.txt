@@ -18,6 +18,8 @@ include_directories(
 
 set(EXTRA_LIBS ${LIBEV_LIBRARY} m)
 
+include(CheckLibraryExists)
+
 check_library_exists(dl dlopen "" HAVE_DLOPEN)
 if(HAVE_DLOPEN)
     list(APPEND EXTRA_LIBS dl)
