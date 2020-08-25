@@ -43,6 +43,7 @@ struct uh_server;
 
 struct uh_request {
     struct {
+        int length;
         int offset;
         char *path;
         char *query;

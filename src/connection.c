@@ -245,11 +245,14 @@ static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    req->url.offset = ROF(conn, at);
+    if (req->url.offset == 0) {
+        req->url.offset = ROF(conn, at);
+        http_parser_url_init(&conn->url_parser);
+    }
 
-    http_parser_url_init(&conn->url_parser);
+    req->url.length += length;
 
-    return http_parser_parse_url(at, length, false, &conn->url_parser);
+    return 0;
 }
 
 static int on_header_field_cb(struct http_parser *parser, const char *at, size_t length)
@@ -313,6 +316,8 @@ static int on_message_complete_cb(struct http_parser *parser)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
     int i;
+
+    http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
 
     if (!run_plugins(conn)) {
         if (conn->srv->on_request)
@@ -460,9 +465,8 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
     struct uh_connection *conn = container_of(w, struct uh_connection, ior);
     struct http_parser *parser = &conn->parser;
-    static uint8_t sep[] = {'\r', '\n', '\r', '\n'};
     struct buffer *rb = &conn->rb;
-    int ret, length, nparsed;
+    int ret, nread, length, nparsed;
     bool eof;
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE) {
@@ -485,6 +489,8 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
     conn->activity = ev_now(loop);
 
+    length = buffer_length(rb);
+
 #if UHTTPD_SSL_SUPPORT
     if (conn->ssl)
         ret = buffer_put_fd_ex(rb, w->fd, -1, &eof, conn_ssl_read, conn->ssl);
@@ -503,14 +509,12 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         return;
     }
 
-    if (buffer_find(rb, 0, 1024, sep, 4) < 0)
-        return;
+    nread = buffer_length(rb) - length;
 
-    length = buffer_length(rb);
-    nparsed = http_parser_execute(parser, &settings, (const char *)rb->data, length);
+    nparsed = http_parser_execute(parser, &settings, (const char *)rb->data + length, nread);
     if (parser->upgrade)
         conn_error(conn, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
-    else if (nparsed != length)
+    else if (nparsed != nread)
         conn_error(conn, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
 }
 
@@ -591,4 +595,3 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
 
     return conn;
 }
-
