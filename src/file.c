@@ -24,6 +24,7 @@
 
 #define _DEFAULT_SOURCE
 #define _XOPEN_SOURCE
+#define _FILE_OFFSET_BITS 64
 
 #include <stdio.h>
 #include <stdlib.h>
