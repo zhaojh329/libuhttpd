@@ -34,7 +34,7 @@
 #include "config.h"
 
 #define UHTTPD_CONNECTION_TIMEOUT   30.0
-#define UHTTPD_MAX_HEADER_NUM       20
+#define UHTTPD_MAX_HEADER_NUM       50
 
 #define CONN_F_SEND_AND_CLOSE       (1 << 0)    /* Push remaining data and close  */
 #define CONN_F_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */
