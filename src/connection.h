@@ -56,10 +56,12 @@ struct uh_request {
         int value_len;
     } headers_info[UHTTPD_MAX_HEADER_NUM];
     int header_num;
+    bool last_was_header_value;
     struct {
         char *name;
         char *value;
     } headers[UHTTPD_MAX_HEADER_NUM];
+
     struct {
         int offset;
         int len;

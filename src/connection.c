@@ -240,6 +240,16 @@ static const char *conn_get_body(struct uh_connection *conn, int *len)
     return at;
 }
 
+static int on_message_begin_cb(struct http_parser *parser)
+{
+    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_request *req = &conn->req;
+
+    req->last_was_header_value = true;
+
+    return 0;
+}
+
 static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
@@ -259,15 +269,20 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
-    int n = req->header_num;
 
-    if (n == UHTTPD_MAX_HEADER_NUM) {
-        uh_log_err("Header too more\n");
-        return 1;
+    if (req->last_was_header_value) {
+        req->last_was_header_value = false;
+        req->header_num++;
+
+        if (req->header_num == UHTTPD_MAX_HEADER_NUM) {
+            uh_log_err("Header too more\n");
+            return 1;
+        }
+
+        req->headers_info[req->header_num - 1].name_offset = ROF(conn, at);
     }
 
-    req->headers_info[n].name_offset = ROF(conn, at);
-    req->headers_info[n].name_len = length;
+    req->headers_info[req->header_num - 1].name_len += length;
 
     return 0;
 }
@@ -276,12 +291,13 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
-    int n = req->header_num;
 
-    req->headers_info[n].value_offset = ROF(conn, at);
-    req->headers_info[n].value_len = length;
+    if (!req->last_was_header_value) {
+        req->last_was_header_value = true;
+        req->headers_info[req->header_num - 1].value_offset = ROF(conn, at);
+    }
 
-    req->header_num++;
+    req->headers_info[req->header_num - 1].value_len += length;
 
     return 0;
 }
@@ -291,8 +307,9 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    req->body.offset = ROF(conn, at);
-    req->body.len = length;
+    if (req->body.offset == 0)
+        req->body.offset = ROF(conn, at);
+    req->body.len += length;
 
     return 0;
 }
@@ -347,6 +364,7 @@ static int on_message_complete_cb(struct http_parser *parser)
 }
 
 static struct http_parser_settings settings = {
+    .on_message_begin = on_message_begin_cb,
     .on_url = on_url_cb,
     .on_header_field = on_header_field_cb,
     .on_header_value = on_header_value_cb,
