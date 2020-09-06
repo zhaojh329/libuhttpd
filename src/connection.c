@@ -208,7 +208,7 @@ static const char *conn_get_header(struct uh_connection *conn, const char *name)
     for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
         if (!req->headers[i].name)
             break;
-        if (!strcmp(req->headers[i].name, name))
+        if (!strcasecmp(req->headers[i].name, name))
             return req->headers[i].value;
     }
 
@@ -218,7 +218,7 @@ static const char *conn_get_header(struct uh_connection *conn, const char *name)
     for (j = 0; j < UHTTPD_MAX_HEADER_NUM; j++) {
         if (req->headers_info[j].name_offset > 0) {
             const char *p = O2D(conn, req->headers_info[j].name_offset);
-            if (name_len == req->headers_info[j].name_len && !strncmp(p, name, req->headers_info[j].name_len)) {
+            if (name_len == req->headers_info[j].name_len && !strncasecmp(p, name, req->headers_info[j].name_len)) {
                 req->headers[i].name = strndup(p, req->headers_info[j].name_len);
                 req->headers[i].value = strndup(O2D(conn, req->headers_info[j].value_offset), req->headers_info[j].value_len);
                 req->headers_info[j].name_len = 0;
