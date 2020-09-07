@@ -127,6 +127,10 @@ static void conn_send_head(struct uh_connection *conn, int code, int content_len
         conn_printf(conn, "%s", "Transfer-Encoding: chunked\r\n");
     else
         conn_printf(conn, "Content-Length: %d\r\n", content_length);
+
+    if (!http_should_keep_alive(&conn->parser))
+        conn_printf(conn, "%s", "Connection: close\r\n");
+
     conn_send(conn, "\r\n", 2);
 }
 
@@ -329,6 +333,8 @@ static int on_message_complete_cb(struct http_parser *parser)
 
     memset(req, 0, sizeof(struct uh_request));
 
+    ev_io_start(conn->srv->loop, &conn->iow);
+
     return 0;
 }
 
@@ -428,7 +434,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
             conn->file.fd = -1;
         }
 
-        if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        if ((conn->flags & CONN_F_SEND_AND_CLOSE) || !http_should_keep_alive(&conn->parser))
             conn_free(conn);
         else
             ev_io_stop(loop, w);
