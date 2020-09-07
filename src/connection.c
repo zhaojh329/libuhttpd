@@ -173,13 +173,19 @@ static const char *conn_get_method_str(struct uh_connection *conn)
     return http_method_str(conn->parser.method);
 }
 
+/* offset of the request field */
+#define ROF(c, a) (a - (const char *)c->rb.data)
+
+/* data of the request field */
+#define O2D(c, o) ((const char *)c->rb.data + o)
+
 static struct uh_str conn_get_path(struct uh_connection *conn)
 {
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
     struct uh_str path;
 
-    path.p = req->url.p + u->field_data[UF_PATH].off;
+    path.p = O2D(conn, u->field_data[UF_PATH].off) + req->url.offset;
     path.len = u->field_data[UF_PATH].len;
 
     return path;
@@ -194,7 +200,7 @@ static struct uh_str conn_get_query(struct uh_connection *conn)
     if (!(u->field_set & (1 << UF_QUERY)))
         return query;
 
-    query.p = req->url.p + u->field_data[UF_QUERY].off;
+    query.p = O2D(conn, u->field_data[UF_QUERY].off) + req->url.offset;
     query.len = u->field_data[UF_QUERY].len;
 
     return query;
@@ -204,18 +210,19 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
 {
     struct uh_request *req = &conn->req;
     int name_len = strlen(name);
-    struct uh_str *field;
     struct uh_str value = {};
     int i;
 
     for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
-        field = &req->headers[i].field;
-        if (!field->p)
+        if (req->headers[i].field.offset == 0)
             return value;
 
-        if (name_len == field->len && !strncasecmp(field->p, name, name_len)) {
-            value.p = req->headers[i].value.p;
-            value.len = req->headers[i].value.len;
+        if (req->headers[i].field.length != name_len)
+            continue;
+
+        if (!strncasecmp(O2D(conn, req->headers[i].field.offset), name, name_len)) {
+            value.p = O2D(conn, req->headers[i].value.offset);
+            value.len = req->headers[i].value.length;
         }
     }
 
@@ -224,7 +231,13 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
 
 static struct uh_str conn_get_body(struct uh_connection *conn)
 {
-    return conn->req.body;
+    struct uh_request *req = &conn->req;
+    struct uh_str body;
+
+    body.p = O2D(conn, req->body.offset);
+    body.len = req->body.length;
+
+    return body;
 }
 
 static int on_message_begin_cb(struct http_parser *parser)
@@ -242,11 +255,11 @@ static int on_message_begin_cb(struct http_parser *parser)
 static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
-    struct uh_str *url = &conn->req.url;
+    struct uh_request *req = &conn->req;
 
-    if (!url->p)
-        url->p = at;
-    url->len += length;
+    if (req->url.offset == 0)
+        req->url.offset = ROF(conn, at);
+    req->url.length += length;
 
     return 0;
 }
@@ -265,10 +278,10 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
             return 1;
         }
 
-        req->headers[req->header_num - 1].field.p = at;
+        req->headers[req->header_num - 1].field.offset = ROF(conn, at);
     }
 
-    req->headers[req->header_num - 1].field.len += length;
+    req->headers[req->header_num - 1].field.length += length;
 
     return 0;
 }
@@ -280,10 +293,10 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
 
     if (!req->last_was_header_value) {
         req->last_was_header_value = true;
-        req->headers[req->header_num - 1].value.p = at;
+        req->headers[req->header_num - 1].value.offset = ROF(conn, at);
     }
 
-    req->headers[req->header_num - 1].value.len += length;
+    req->headers[req->header_num - 1].value.length += length;
 
     return 0;
 }
@@ -293,9 +306,9 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    if (!req->body.p)
-        req->body.p = at;
-    req->body.len += length;
+    if (req->body.offset == 0)
+        req->body.offset = ROF(conn, at);
+    req->body.length += length;
 
     return 0;
 }
@@ -320,7 +333,7 @@ static int on_message_complete_cb(struct http_parser *parser)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    http_parser_parse_url(req->url.p, req->url.len, false, &conn->url_parser);
+    http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
 
     if (!run_plugins(conn)) {
         if (conn->srv->on_request)

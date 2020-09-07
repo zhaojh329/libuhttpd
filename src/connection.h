@@ -47,16 +47,28 @@ struct uh_str {
 };
 
 struct uh_request {
-    struct uh_str url;
+    struct {
+        ssize_t offset;
+        size_t length;
+    } url;
 
     int header_num;
     bool last_was_header_value;
     struct {
-        struct uh_str field;
-        struct uh_str value;
+        struct {
+            ssize_t offset;
+            size_t length;
+        } field;
+        struct {
+            ssize_t offset;
+            size_t length;
+        } value;
     } headers[UHTTPD_MAX_HEADER_NUM];
 
-    struct uh_str body;
+    struct {
+        ssize_t offset;
+        size_t length;
+    } body;
 };
 
 struct uh_connection {
