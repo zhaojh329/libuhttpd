@@ -98,10 +98,10 @@ struct uh_connection {
     void (*chunk_end)(struct uh_connection *conn);
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
-    const struct uh_str (*get_path)(struct uh_connection *conn);
-    const struct uh_str (*get_query)(struct uh_connection *conn);
-    const struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
-    const struct uh_str (*get_body)(struct uh_connection *conn);
+    struct uh_str (*get_path)(struct uh_connection *conn);
+    struct uh_str (*get_query)(struct uh_connection *conn);
+    struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
+    struct uh_str (*get_body)(struct uh_connection *conn);
 };
 
 struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr);

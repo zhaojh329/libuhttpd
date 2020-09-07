@@ -36,10 +36,10 @@ static const char *index_page = "index.html";
 static void on_request(struct uh_connection *conn)
 {
     if (!serve_file) {
-        const struct uh_str path = conn->get_path(conn);
-        const struct uh_str query = conn->get_query(conn);
-        const struct uh_str ua = conn->get_header(conn, "User-Agent");
-        const struct uh_str body = conn->get_body(conn);
+        struct uh_str path = conn->get_path(conn);
+        struct uh_str query = conn->get_query(conn);
+        struct uh_str ua = conn->get_header(conn, "User-Agent");
+        struct uh_str body = conn->get_body(conn);
 
         conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
         conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);

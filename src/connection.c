@@ -173,7 +173,7 @@ static const char *conn_get_method_str(struct uh_connection *conn)
     return http_method_str(conn->parser.method);
 }
 
-static const struct uh_str conn_get_path(struct uh_connection *conn)
+static struct uh_str conn_get_path(struct uh_connection *conn)
 {
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
@@ -185,7 +185,7 @@ static const struct uh_str conn_get_path(struct uh_connection *conn)
     return path;
 }
 
-static const struct uh_str conn_get_query(struct uh_connection *conn)
+static struct uh_str conn_get_query(struct uh_connection *conn)
 {
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
@@ -200,7 +200,7 @@ static const struct uh_str conn_get_query(struct uh_connection *conn)
     return query;
 }
 
-static const struct uh_str conn_get_header(struct uh_connection *conn, const char *name)
+static struct uh_str conn_get_header(struct uh_connection *conn, const char *name)
 {
     struct uh_request *req = &conn->req;
     int name_len = strlen(name);
@@ -222,7 +222,7 @@ static const struct uh_str conn_get_header(struct uh_connection *conn, const cha
     return value;
 }
 
-static const struct uh_str conn_get_body(struct uh_connection *conn)
+static struct uh_str conn_get_body(struct uh_connection *conn)
 {
     return conn->req.body;
 }
