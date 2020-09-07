@@ -102,8 +102,8 @@ const char *file_mime_lookup(const char *path)
     while (m->extn) {
         e = &path[strlen(path)-1];
 
-        while (e >= path) {
-            if ((*e == '.' || *e == '/') && !strcasecmp(&e[1], m->extn))
+        while (e >= path && *e != '/') {
+            if (*e == '.' && !strcasecmp(&e[1], m->extn))
                 return m->mime;
 
             e--;

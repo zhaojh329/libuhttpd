@@ -169,75 +169,58 @@ static const char *conn_get_method_str(struct uh_connection *conn)
     return http_method_str(conn->parser.method);
 }
 
-/* offset of the request field */
-#define ROF(c, a) (a - (const char *)c->rb.data)
-
-/* data of the request field */
-#define O2D(c, o) ((const char *)c->rb.data + o)
-
-static const char *conn_get_path(struct uh_connection *conn)
+static const struct uh_str conn_get_path(struct uh_connection *conn)
 {
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
+    struct uh_str path;
 
-    if (!req->url.path)
-        req->url.path = strndup(O2D(conn, u->field_data[UF_PATH].off) + req->url.offset, u->field_data[UF_PATH].len);
-    return req->url.path;
+    path.p = req->url.p + u->field_data[UF_PATH].off;
+    path.len = u->field_data[UF_PATH].len;
+
+    return path;
 }
 
-static const char *conn_get_query(struct uh_connection *conn)
+static const struct uh_str conn_get_query(struct uh_connection *conn)
 {
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
+    struct uh_str query = {};
 
     if (!(u->field_set & (1 << UF_QUERY)))
-        return "";
+        return query;
 
-    if (!req->url.query)
-        req->url.query = strndup(O2D(conn, u->field_data[UF_QUERY].off) + req->url.offset, u->field_data[UF_QUERY].len);
+    query.p = req->url.p + u->field_data[UF_QUERY].off;
+    query.len = u->field_data[UF_QUERY].len;
 
-    return req->url.query;
+    return query;
 }
 
-static const char *conn_get_header(struct uh_connection *conn, const char *name)
+static const struct uh_str conn_get_header(struct uh_connection *conn, const char *name)
 {
     struct uh_request *req = &conn->req;
     int name_len = strlen(name);
-    int i, j;
+    struct uh_str *field;
+    struct uh_str value = {};
+    int i;
 
     for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
-        if (!req->headers[i].name)
-            break;
-        if (!strcasecmp(req->headers[i].name, name))
-            return req->headers[i].value;
-    }
+        field = &req->headers[i].field;
+        if (!field->p)
+            return value;
 
-    if (i == UHTTPD_MAX_HEADER_NUM)
-        return NULL;
-
-    for (j = 0; j < UHTTPD_MAX_HEADER_NUM; j++) {
-        if (req->headers_info[j].name_offset > 0) {
-            const char *p = O2D(conn, req->headers_info[j].name_offset);
-            if (name_len == req->headers_info[j].name_len && !strncasecmp(p, name, req->headers_info[j].name_len)) {
-                req->headers[i].name = strndup(p, req->headers_info[j].name_len);
-                req->headers[i].value = strndup(O2D(conn, req->headers_info[j].value_offset), req->headers_info[j].value_len);
-                req->headers_info[j].name_len = 0;
-                return req->headers[i].value;
-            }
+        if (name_len == field->len && !strncasecmp(field->p, name, name_len)) {
+            value.p = req->headers[i].value.p;
+            value.len = req->headers[i].value.len;
         }
     }
 
-    return NULL;
+    return value;
 }
 
-static const char *conn_get_body(struct uh_connection *conn, int *len)
+static const struct uh_str conn_get_body(struct uh_connection *conn)
 {
-    struct uh_request *req = &conn->req;
-    const char *at = O2D(conn, req->body.offset);
-
-    *len = req->body.len;
-
-    return at;
+    return conn->req.body;
 }
 
 static int on_message_begin_cb(struct http_parser *parser)
@@ -247,20 +230,19 @@ static int on_message_begin_cb(struct http_parser *parser)
 
     req->last_was_header_value = true;
 
+    http_parser_url_init(&conn->url_parser);
+
     return 0;
 }
 
 static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
-    struct uh_request *req = &conn->req;
+    struct uh_str *url = &conn->req.url;
 
-    if (req->url.offset == 0) {
-        req->url.offset = ROF(conn, at);
-        http_parser_url_init(&conn->url_parser);
-    }
-
-    req->url.length += length;
+    if (!url->p)
+        url->p = at;
+    url->len += length;
 
     return 0;
 }
@@ -279,10 +261,10 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
             return 1;
         }
 
-        req->headers_info[req->header_num - 1].name_offset = ROF(conn, at);
+        req->headers[req->header_num - 1].field.p = at;
     }
 
-    req->headers_info[req->header_num - 1].name_len += length;
+    req->headers[req->header_num - 1].field.len += length;
 
     return 0;
 }
@@ -294,10 +276,10 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
 
     if (!req->last_was_header_value) {
         req->last_was_header_value = true;
-        req->headers_info[req->header_num - 1].value_offset = ROF(conn, at);
+        req->headers[req->header_num - 1].value.p = at;
     }
 
-    req->headers_info[req->header_num - 1].value_len += length;
+    req->headers[req->header_num - 1].value.len += length;
 
     return 0;
 }
@@ -307,8 +289,8 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
-    if (req->body.offset == 0)
-        req->body.offset = ROF(conn, at);
+    if (!req->body.p)
+        req->body.p = at;
     req->body.len += length;
 
     return 0;
@@ -317,9 +299,10 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 static bool run_plugins(struct uh_connection *conn)
 {
     struct uh_plugin *p = conn->srv->plugins;
+    struct uh_str path = conn->get_path(conn);
 
     while (p) {
-        if (!strcmp(conn->get_path(conn), p->path)) {
+        if (strlen(p->path) == path.len && !strncmp(path.p, p->path, path.len)) {
             p->handler(conn);
             return true;
         }
@@ -332,9 +315,8 @@ static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
-    int i;
 
-    http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
+    http_parser_parse_url(req->url.p, req->url.len, false, &conn->url_parser);
 
     if (!run_plugins(conn)) {
         if (conn->srv->on_request)
@@ -344,19 +326,6 @@ static int on_message_complete_cb(struct http_parser *parser)
     }
 
     buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
-
-    if (req->url.path)
-        free(req->url.path);
-
-    if (req->url.query)
-        free(req->url.query);
-
-    for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
-        if (req->headers[i].name)
-            free(req->headers[i].name);
-        if (req->headers[i].value)
-            free(req->headers[i].value);
-    }
 
     memset(req, 0, sizeof(struct uh_request));
 
@@ -441,7 +410,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
     if (buffer_length(&conn->wb) == 0) {
         if (conn->file.fd > 0) {
-            ssize_t ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
+            ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
             if (ret < 0) {
                 if (errno != EAGAIN) {
                     uh_log_err("write error: %s\n", strerror(errno));

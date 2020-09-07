@@ -41,31 +41,22 @@
 
 struct uh_server;
 
-struct uh_request {
-    struct {
-        int length;
-        int offset;
-        char *path;
-        char *query;
-    } url;
+struct uh_str {
+    const char *p;
+    size_t len;
+};
 
-    struct {
-        int name_offset;
-        int name_len;
-        int value_offset;
-        int value_len;
-    } headers_info[UHTTPD_MAX_HEADER_NUM];
+struct uh_request {
+    struct uh_str url;
+
     int header_num;
     bool last_was_header_value;
     struct {
-        char *name;
-        char *value;
+        struct uh_str field;
+        struct uh_str value;
     } headers[UHTTPD_MAX_HEADER_NUM];
 
-    struct {
-        int offset;
-        int len;
-    } body;
+    struct uh_str body;
 };
 
 struct uh_connection {
@@ -107,10 +98,10 @@ struct uh_connection {
     void (*chunk_end)(struct uh_connection *conn);
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
-    const char *(*get_path)(struct uh_connection *conn);
-    const char *(*get_query)(struct uh_connection *conn);
-    const char *(*get_header)(struct uh_connection *conn, const char *name);
-    const char *(*get_body)(struct uh_connection *conn, int *len);
+    const struct uh_str (*get_path)(struct uh_connection *conn);
+    const struct uh_str (*get_query)(struct uh_connection *conn);
+    const struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
+    const struct uh_str (*get_body)(struct uh_connection *conn);
 };
 
 struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr);

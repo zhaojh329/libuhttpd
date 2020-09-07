@@ -32,11 +32,12 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <fcntl.h>
 #include <inttypes.h>
 
 #include "connection.h"
 #include "mimetypes.h"
-
+#include "log.h"
 
 static const char *file_mktag(struct stat *s, char *buf, int len)
 {
@@ -55,13 +56,16 @@ static char *unix2date(time_t ts, char *buf, int len)
     return buf;
 }
 
-static time_t date2unix(const char *date)
+static time_t date2unix(const struct uh_str date)
 {
     struct tm t;
+    char buf[128] = "";
 
     memset(&t, 0, sizeof(t));
 
-    if (strptime(date, "%a, %d %b %Y %H:%M:%S %Z", &t) != NULL)
+    strncpy(buf, date.p, date.len);
+
+    if (strptime(buf, "%a, %d %b %Y %H:%M:%S %Z", &t) != NULL)
         return timegm(&t);
 
     return 0;
@@ -88,8 +92,8 @@ static void file_response_304(struct uh_connection *conn, struct stat *s)
 
 static bool file_if_modified_since(struct uh_connection *conn, struct stat *s)
 {
-    const char *hdr = conn->get_header(conn, "If-Modified-Since");
-    if (!hdr)
+    const struct uh_str hdr = conn->get_header(conn, "If-Modified-Since");
+    if (!hdr.p)
         return true;
 
     if (date2unix(hdr) >= s->st_mtime) {
@@ -102,7 +106,8 @@ static bool file_if_modified_since(struct uh_connection *conn, struct stat *s)
 
 static bool file_if_range(struct uh_connection *conn, struct stat *s)
 {
-    if (conn->get_header(conn, "If-Range")) {
+    const struct uh_str hdr = conn->get_header(conn, "If-Range");
+    if (hdr.p) {
         conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
@@ -112,8 +117,8 @@ static bool file_if_range(struct uh_connection *conn, struct stat *s)
 
 static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
 {
-    const char *hdr = conn->get_header(conn, "If-Modified-Since");
-    if (hdr && date2unix(hdr) <= s->st_mtime) {
+    const struct uh_str hdr = conn->get_header(conn, "If-Modified-Since");
+    if (hdr.p && date2unix(hdr) <= s->st_mtime) {
         conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
@@ -121,22 +126,37 @@ static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
     return true;
 }
 
-static void file_if_gzip(struct uh_connection *conn, const char *path)
+static void file_if_gzip(struct uh_connection *conn, const char *path, const char *mime)
 {
-    const char *hdr = conn->get_header(conn, "Accept-Encoding");
-    const char *extn = rindex(path, '.');
+    const struct uh_str hdr = conn->get_header(conn, "Accept-Encoding");
+    uint8_t magic[2] = {};
+    int fd;
 
-    if (!hdr || !strstr(hdr, "gzip"))
+    if (!hdr.p || !memmem(hdr.p, hdr.len, "gzip", 4))
         return;
 
-    if (extn && !strcmp(extn, ".gz"))
-        conn->printf(conn, "Content-Encoding: gzip\r\n");
+    if (strcmp(mime, "text/css") && strcmp(mime, "text/javascript") && strcmp(mime, "text/html"))
+        return;
+
+    fd = open(path, O_RDONLY);
+    if (read(fd, magic, 2) != 2) {
+        close(fd);
+        return;
+    }
+    close(fd);
+
+    /* gzip magic */
+    if (magic[0] != 0x1f || magic[1] != 0x8b)
+        return;
+
+    conn->printf(conn, "Content-Encoding: gzip\r\n");
 }
 
 void serve_file(struct uh_connection *conn, const char *docroot, const char *index_page)
 {
-    const char *path = conn->get_path(conn);
+    const struct uh_str path = conn->get_path(conn);
     static char fullpath[512];
+    const char *mime;
     struct stat st;
 
     if (!docroot || !docroot[0])
@@ -147,12 +167,12 @@ void serve_file(struct uh_connection *conn, const char *docroot, const char *ind
 
     strcpy(fullpath, docroot);
 
-    if (!strcmp(path, "/")) {
+    if (!strncmp(path.p, "/", path.len)) {
         strcat(fullpath, "/");
-        path = index_page;
+        strcat(fullpath, index_page);
+    } else {
+        strncat(fullpath, path.p, path.len);
     }
-    
-    strcat(fullpath, path);
 
     if (stat(fullpath, &st) < 0) {
         int code;
@@ -196,10 +216,12 @@ void serve_file(struct uh_connection *conn, const char *docroot, const char *ind
     conn->send_status_line(conn, HTTP_STATUS_OK, NULL);
     file_response_ok_hdrs(conn, &st);
 
-    conn->printf(conn, "Content-Type: %s\r\n", file_mime_lookup(path));
+    mime = file_mime_lookup(fullpath);
+
+    conn->printf(conn, "Content-Type: %s\r\n", mime);
     conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", st.st_size);
 
-    file_if_gzip(conn, path);
+    file_if_gzip(conn, fullpath, mime);
 
     conn->printf(conn, "\r\n");
 

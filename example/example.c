@@ -36,16 +36,18 @@ static const char *index_page = "index.html";
 static void on_request(struct uh_connection *conn)
 {
     if (!serve_file) {
-        int body_len;
-        const char *body = conn->get_body(conn, &body_len);
+        const struct uh_str path = conn->get_path(conn);
+        const struct uh_str query = conn->get_query(conn);
+        const struct uh_str ua = conn->get_header(conn, "User-Agent");
+        const struct uh_str body = conn->get_body(conn);
 
         conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
         conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
         conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
-        conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));
-        conn->chunk_printf(conn, "Query: %s\n", conn->get_query(conn));
-        conn->chunk_printf(conn, "User-Agent: %s\n", conn->get_header(conn, "User-Agent"));
-        conn->chunk_printf(conn, "Body: %.*s\n", body_len, body);
+        conn->chunk_printf(conn, "Path: %.*s\n", path.len ,path.p);
+        conn->chunk_printf(conn, "Query: %.*s\n", query.len, query.p);
+        conn->chunk_printf(conn, "User-Agent: %.*s\n", ua.len, ua.p);
+        conn->chunk_printf(conn, "Body: %.*s\n", body.len, body.p);
         conn->chunk_end(conn);
     } else {
         conn->serve_file(conn, docroot, index_page);
