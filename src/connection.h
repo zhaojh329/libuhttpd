@@ -94,7 +94,6 @@ struct uh_connection {
     struct http_parser_url url_parser;
     struct uh_connection *prev;
     struct uh_connection *next;
-    void (*free)(struct uh_connection *conn);
     void (*done)(struct uh_connection *conn);   /* Must be called at last, if not call 'error', 'redirect' and 'serve_file' */
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
     void (*send_file)(struct uh_connection *conn, const char *path);

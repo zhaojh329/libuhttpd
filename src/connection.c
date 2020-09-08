@@ -373,7 +373,7 @@ static struct http_parser_settings settings = {
     .on_message_complete = on_message_complete_cb
 };
 
-static void conn_free(struct uh_connection *conn)
+void conn_free(struct uh_connection *conn)
 {
     struct ev_loop *loop = conn->srv->loop;
     struct sockaddr_in *addr = &conn->addr;
@@ -589,7 +589,6 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
 
     conn->parser.data = conn;
 
-    conn->free = conn_free;
     conn->done = conn_done;
     conn->send = conn_send;
     conn->send_file = conn_send_file;
