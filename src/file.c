@@ -229,4 +229,5 @@ void serve_file(struct uh_connection *conn, const char *docroot, const char *ind
         return;
 
     conn->send_file(conn, fullpath);
+    conn->done(conn);
 }

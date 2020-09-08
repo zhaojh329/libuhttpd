@@ -36,6 +36,14 @@
 #include "file.h"
 #include "ssl.h"
 
+static void conn_done(struct uh_connection *conn)
+{
+    buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
+
+    if (!http_should_keep_alive(&conn->parser))
+        conn->flags |= CONN_F_SEND_AND_CLOSE;
+    ev_io_start(conn->srv->loop, &conn->iow);
+}
 
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
@@ -142,6 +150,8 @@ static void conn_error(struct uh_connection *conn, int code, const char *reason)
     conn_send(conn, reason, strlen(reason));
 
     conn->flags |= CONN_F_SEND_AND_CLOSE;
+
+    conn_done(conn);
 }
 
 static void conn_redirect(struct uh_connection *conn, int code, const char *location, ...)
@@ -161,6 +171,8 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
 
     conn_printf(conn, "Content-Length: 0\r\n");
     conn_send(conn, "\r\n", 2);
+
+    conn_done(conn);
 }
 
 static enum http_method conn_get_method(struct uh_connection *conn)
@@ -245,9 +257,13 @@ static int on_message_begin_cb(struct http_parser *parser)
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
 
+    memset(req, 0, sizeof(struct uh_request));
+
     req->last_was_header_value = true;
 
     http_parser_url_init(&conn->url_parser);
+
+    ev_timer_start(conn->srv->loop, &conn->timer);
 
     return 0;
 }
@@ -331,22 +347,19 @@ static bool run_plugins(struct uh_connection *conn)
 static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_server *srv = conn->srv;
     struct uh_request *req = &conn->req;
+
+    ev_timer_stop(srv->loop, &conn->timer);
 
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
 
     if (!run_plugins(conn)) {
-        if (conn->srv->on_request)
-            conn->srv->on_request(conn);
+        if (srv->on_request)
+            srv->on_request(conn);
         else
             conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
     }
-
-    buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
-
-    memset(req, 0, sizeof(struct uh_request));
-
-    ev_io_start(conn->srv->loop, &conn->iow);
 
     return 0;
 }
@@ -447,7 +460,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
             conn->file.fd = -1;
         }
 
-        if ((conn->flags & CONN_F_SEND_AND_CLOSE) || !http_should_keep_alive(&conn->parser))
+        if (conn->flags & CONN_F_SEND_AND_CLOSE)
             conn_free(conn);
         else
             ev_io_stop(loop, w);
@@ -577,6 +590,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->parser.data = conn;
 
     conn->free = conn_free;
+    conn->done = conn_done;
     conn->send = conn_send;
     conn->send_file = conn_send_file;
     conn->printf = conn_printf;

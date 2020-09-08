@@ -49,6 +49,7 @@ static void on_request(struct uh_connection *conn)
         conn->chunk_printf(conn, "User-Agent: %.*s\n", ua.len, ua.p);
         conn->chunk_printf(conn, "Body: %.*s\n", body.len, body.p);
         conn->chunk_end(conn);
+        conn->done(conn);
     } else {
         conn->serve_file(conn, docroot, index_page);
     }
