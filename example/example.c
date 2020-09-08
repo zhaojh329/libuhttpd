@@ -108,6 +108,8 @@ int main(int argc, char **argv)
 
     uh_log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
+    signal(SIGPIPE, SIG_IGN);
+
     srv = uh_server_new(loop, "0.0.0.0", port);
     if (!srv)
         return -1;
