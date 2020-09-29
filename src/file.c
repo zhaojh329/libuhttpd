@@ -117,7 +117,7 @@ static bool file_if_range(struct uh_connection *conn, struct stat *s)
 
 static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
 {
-    const struct uh_str hdr = conn->get_header(conn, "If-Modified-Since");
+    const struct uh_str hdr = conn->get_header(conn, "If-Unmodified-Since");
     if (hdr.p && date2unix(hdr) <= s->st_mtime) {
         conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
