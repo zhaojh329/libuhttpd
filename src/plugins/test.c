@@ -26,8 +26,10 @@
 
 static void test_handler(struct uh_connection *conn)
 {
+    struct uh_str path = conn->get_path(conn);
+
     conn->send_head(conn, 200, -1, NULL);
-    conn->chunk_printf(conn, "Path: %s\n", conn->get_path(conn));
+    conn->chunk_printf(conn, "Path: %.*s\n", path.len, path.p);
     conn->chunk_end(conn);
 }
 
