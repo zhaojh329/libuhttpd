@@ -31,7 +31,7 @@ static void test_handler(struct uh_connection *conn)
     conn->chunk_end(conn);
 }
 
-struct uh_plugin uh_plugin = {
+struct uh_plugin_handler uh_plugin_handler = {
     .path = "/test",
     .handler = test_handler
 };

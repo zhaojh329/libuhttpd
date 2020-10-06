@@ -134,6 +134,8 @@ err:
     srv->free(srv);
     free(srv);
 
+    ev_loop_destroy(loop);
+
     return 0;
 }
 

@@ -31,9 +31,14 @@
 #include "config.h"
 #include "log.h"
 
-struct uh_plugin {
+struct uh_plugin_handler {
     const char *path;
     void (*handler)(struct uh_connection *conn);
+};
+
+struct uh_plugin {
+    struct uh_plugin_handler *h;
+    void *dlh;
     struct uh_plugin *prev;
     struct uh_plugin *next;
 };

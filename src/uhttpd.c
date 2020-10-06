@@ -42,6 +42,7 @@ void conn_free(struct uh_connection *conn);
 static void uh_server_free(struct uh_server *srv)
 {
     struct uh_connection *conn = srv->conns;
+    struct uh_plugin *p = srv->plugins;
 
     ev_io_stop(srv->loop, &srv->ior);
 
@@ -53,6 +54,16 @@ static void uh_server_free(struct uh_server *srv)
         conn_free(conn);
         conn = next;
     }
+
+#ifdef HAVE_DLOPEN
+    while (p) {
+        struct uh_plugin *temp = p;
+        dlclose(p->dlh);
+        p = p->next;
+        free(temp);
+        break;
+    }
+#endif
 
 #if UHTTPD_SSL_SUPPORT
     uh_ssl_ctx_free(srv->ssl_ctx);
@@ -118,25 +129,37 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
 static int uh_load_plugin(struct uh_server *srv, const char *path)
 {
 #ifdef HAVE_DLOPEN
+    struct uh_plugin_handler *h;
     struct uh_plugin *p;
     void *dlh;
 
-    dlh = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
+    dlh = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (!dlh) {
         uh_log_err("dlopen fail: %s\n", dlerror());
         return -1;
     }
 
-    p = dlsym(dlh, "uh_plugin");
-    if (!p) {
-        uh_log_err("not found symbol 'uh_plugin'\n");
+    h = dlsym(dlh, "uh_plugin_handler");
+    if (!h) {
+        dlclose(dlh);
+        uh_log_err("not found symbol 'uh_plugin_handler'\n");
         return -1;
     }
 
-    if (!p->path || !p->path[0] || !p->handler) {
+    if (!h->path || !h->path[0] || !h->handler) {
+        dlclose(dlh);
         uh_log_err("invalid plugin\n");
         return -1;
     }
+
+    p = calloc(1, sizeof(struct uh_plugin));
+    if (!p) {
+        uh_log_err("calloc: %s\n", strerror(errno));
+        return -1;
+    }
+
+    p->h = h;
+    p->dlh = dlh;
 
     if (!srv->plugins) {
         srv->plugins = p;

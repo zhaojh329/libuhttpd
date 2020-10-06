@@ -335,8 +335,8 @@ static bool run_plugins(struct uh_connection *conn)
     struct uh_str path = conn->get_path(conn);
 
     while (p) {
-        if (strlen(p->path) == path.len && !strncmp(path.p, p->path, path.len)) {
-            p->handler(conn);
+        if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
+            p->h->handler(conn);
             return true;
         }
         p = p->next;
