@@ -175,6 +175,11 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
     conn_done(conn);
 }
 
+static uint32_t conn_get_addr(struct uh_connection *conn)
+{
+    return ntohl(conn->addr.sin_addr.s_addr);
+}
+
 static enum http_method conn_get_method(struct uh_connection *conn)
 {
     return conn->parser.method;
@@ -605,6 +610,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->chunk_vprintf = conn_chunk_vprintf;
     conn->chunk_end = conn_chunk_end;
 
+    conn->get_addr = conn_get_addr;
     conn->get_method = conn_get_method;
     conn->get_method_str = conn_get_method_str;
     conn->get_path = conn_get_path;
