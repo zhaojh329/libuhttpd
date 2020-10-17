@@ -42,7 +42,9 @@ void conn_free(struct uh_connection *conn);
 static void uh_server_free(struct uh_server *srv)
 {
     struct uh_connection *conn = srv->conns;
+#ifdef HAVE_DLOPEN
     struct uh_plugin *p = srv->plugins;
+#endif
 
     ev_io_stop(srv->loop, &srv->ior);
 
