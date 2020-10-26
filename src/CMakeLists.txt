@@ -1,5 +1,11 @@
 
-add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
+add_definitions(-O -Wall --std=gnu99 -D_GNU_SOURCE)
+
+option(UHTTPD_ENABLE_WERROR "Build with -Werror" ON)
+
+if(UHTTPD_ENABLE_WERROR)
+add_definitions(-Werror)
+endif()
 
 # The version number.
 set(UHTTPD_VERSION_MAJOR 3)
