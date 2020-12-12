@@ -138,10 +138,6 @@ endif()
 # configure a header file to pass some of the CMake settings to the source code
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-if(HAVE_DLOPEN)
-    add_subdirectory(plugins)
-endif()
-
 install(
     FILES
         uhttpd.h
