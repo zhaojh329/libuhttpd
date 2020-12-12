@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UH_SSL_H
-#define _UH_SSL_H
+#ifndef LIBUHTTPD_SSL_H
+#define LIBUHTTPD_SSL_H
 
 #include "config.h"
 #include "log.h"

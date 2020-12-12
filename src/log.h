@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UH_LOG_H
-#define _UH_LOG_H
+#ifndef LIBUHTTPD_LOG_H
+#define LIBUHTTPD_LOG_H
 
 #include <syslog.h>
 #include <string.h>

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UHTTPD_H
-#define _UHTTPD_H
+#ifndef LIBUHTTPD_UHTTPD_H
+#define LIBUHTTPD_UHTTPD_H
 
 #include <ev.h>
 

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UH_MIMETYPES_H
-#define _UH_MIMETYPES_H
+#ifndef LIBUHTTPD_MIMETYPES_H
+#define LIBUHTTPD_MIMETYPES_H
 
 struct mimetype {
     const char *extn;

@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UH_CONNECTION_H
-#define _UH_CONNECTION_H
+#ifndef LIBUHTTPD_CONNECTION_H
+#define LIBUHTTPD_CONNECTION_H
 
 #include <ev.h>
 #include <stdarg.h>

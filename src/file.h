@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef _UH_FILE_H
-#define _UH_FILE_H
+#ifndef LIBUHTTPD_FILE_H
+#define LIBUHTTPD_FILE_H
 
 #include "connection.h"
 
