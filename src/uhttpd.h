@@ -31,9 +31,11 @@
 #include "config.h"
 #include "log.h"
 
+typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event);
+
 struct uh_plugin_handler {
     const char *path;
-    void (*handler)(struct uh_connection *conn);
+    uh_path_handler_prototype handler;
 };
 
 struct uh_plugin {
@@ -43,19 +45,33 @@ struct uh_plugin {
     struct uh_plugin *next;
 };
 
+enum {
+    UH_EV_BODY,
+    UH_EV_COMPLETE
+};
+
+struct uh_path_handler {
+    uh_path_handler_prototype handler;
+    struct uh_path_handler *prev;
+    struct uh_path_handler *next;
+    char path[0];
+};
+
 struct uh_server {
     int sock;
     struct ev_loop *loop;
     struct ev_io ior;
     struct uh_connection *conns;
     void (*free)(struct uh_server *srv);
-    void (*on_request)(struct uh_connection *conn);
+    void (*default_handler)(struct uh_connection *conn, int event);
 #if UHTTPD_SSL_SUPPORT
     void *ssl_ctx;
     int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
 #endif
     struct uh_plugin *plugins;
     int (*load_plugin)(struct uh_server *srv, const char *path);
+    struct uh_path_handler *handlers;
+    int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
 };
 
 /*

@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "uhttpd.h"
 
@@ -33,8 +35,11 @@ static bool serve_file = false;
 static const char *docroot = ".";
 static const char *index_page = "index.html";
 
-static void on_request(struct uh_connection *conn)
+static void default_handler(struct uh_connection *conn, int event)
 {
+    if (event != UH_EV_COMPLETE)
+        return;
+
     if (!serve_file) {
         struct uh_str path = conn->get_path(conn);
         struct uh_str query = conn->get_query(conn);
@@ -52,6 +57,46 @@ static void on_request(struct uh_connection *conn)
         conn->done(conn);
     } else {
         conn->serve_file(conn, docroot, index_page);
+    }
+}
+
+static void upload_handler(struct uh_connection *conn, int event)
+{
+    static int fd = -1;
+
+    if (event == UH_EV_BODY) {
+        struct uh_str body = conn->extract_body(conn);
+
+        if (fd < 0) {
+            fd = open("upload.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
+            if (fd < 0) {
+                conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
+                return;
+            }
+        }
+
+        if (write(fd, body.p, body.len) < 0) {
+            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
+            close(fd);
+            return;
+        }
+    } else {
+        struct stat st;
+        size_t size = 0;
+
+        conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
+
+        if (fd > 0) {
+            fstat(fd, &st);
+            close(fd);
+
+            fd = -1;
+            size = st.st_size;
+        }
+
+        conn->chunk_printf(conn, "Upload size: %zd\n", size);
+        conn->chunk_end(conn);
+        conn->done(conn);
     }
 }
 
@@ -119,9 +164,11 @@ int main(int argc, char **argv)
         goto err;
 #endif
 
-    srv->on_request = on_request;
+    srv->default_handler = default_handler;
 
-    srv->load_plugin(srv, "/usr/local/lib/uhttpd/test_plugin.so");
+    srv->add_path_handler(srv, "/upload", upload_handler);
+
+    srv->load_plugin(srv, "test_plugin.so");
 
     uh_log_info("Listen on: *:%d\n", port);
 

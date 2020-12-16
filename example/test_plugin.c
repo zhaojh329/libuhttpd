@@ -24,9 +24,14 @@
 
 #include "uhttpd.h"
 
-static void test_handler(struct uh_connection *conn)
+static void test_handler(struct uh_connection *conn, int event)
 {
-    struct uh_str path = conn->get_path(conn);
+    struct uh_str path;
+
+    if (event != UH_EV_COMPLETE)
+        return;
+
+    path = conn->get_path(conn);
 
     conn->send_head(conn, 200, -1, NULL);
     conn->chunk_printf(conn, "Path: %.*s\n", path.len, path.p);

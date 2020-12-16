@@ -94,6 +94,7 @@ struct uh_connection {
     struct http_parser_url url_parser;
     struct uh_connection *prev;
     struct uh_connection *next;
+    void (*handler)(struct uh_connection *conn, int event);
     void (*done)(struct uh_connection *conn);   /* Must be called at last, if not call 'error', 'redirect' and 'serve_file' */
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
     void (*send_file)(struct uh_connection *conn, const char *path);
@@ -115,6 +116,8 @@ struct uh_connection {
     struct uh_str (*get_query)(struct uh_connection *conn);
     struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
     struct uh_str (*get_body)(struct uh_connection *conn);
+    /* The remain body data will be discurd after this function called */
+    struct uh_str (*extract_body)(struct uh_connection *conn);
 };
 
 struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr);

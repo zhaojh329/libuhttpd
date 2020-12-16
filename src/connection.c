@@ -42,6 +42,10 @@ static void conn_done(struct uh_connection *conn)
 
     if (!http_should_keep_alive(&conn->parser))
         conn->flags |= CONN_F_SEND_AND_CLOSE;
+
+    if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        ev_io_stop(conn->srv->loop, &conn->ior);
+
     ev_io_start(conn->srv->loop, &conn->iow);
 }
 
@@ -257,6 +261,21 @@ static struct uh_str conn_get_body(struct uh_connection *conn)
     return body;
 }
 
+static struct uh_str conn_extract_body(struct uh_connection *conn)
+{
+    struct uh_request *req = &conn->req;
+    struct uh_str body;
+
+    body.p = O2D(conn, req->body.offset);
+    body.len = req->body.length;
+
+    req->body.length = 0;
+
+    buffer_discard(&conn->rb, body.len);
+
+    return body;
+}
+
 static int on_message_begin_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
@@ -322,49 +341,74 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
     return 0;
 }
 
+static int on_headers_complete(struct http_parser *parser)
+{
+    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_server *srv = conn->srv;
+    struct uh_request *req = &conn->req;
+    struct uh_path_handler *h = srv->handlers;
+    struct uh_plugin *p = srv->plugins;
+    struct uh_str path;
+
+    http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
+
+    if (conn->handler)
+        return 0;
+
+    path = conn->get_path(conn);
+
+    while (h) {
+        if (strlen(h->path) == path.len && !strncmp(path.p, h->path, path.len)) {
+            conn->handler = h->handler;
+            return 0;
+        }
+        h = h->next;
+    }
+
+    while (p) {
+        if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
+            conn->handler = p->h->handler;
+            return 0;
+        }
+        p = p->next;
+    }
+
+    return 0;
+}
+
 static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
+    struct uh_server *srv = conn->srv;
+    int event = UH_EV_BODY;
 
     if (req->body.offset == 0)
         req->body.offset = ROF(conn, at);
     req->body.length += length;
 
+    if (conn->handler)
+        conn->handler(conn, event);
+    else if (srv->default_handler)
+        srv->default_handler(conn, event);
+
     return 0;
-}
-
-static bool run_plugins(struct uh_connection *conn)
-{
-    struct uh_plugin *p = conn->srv->plugins;
-    struct uh_str path = conn->get_path(conn);
-
-    while (p) {
-        if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
-            p->h->handler(conn);
-            return true;
-        }
-        p = p->next;
-    }
-    return false;
 }
 
 static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_server *srv = conn->srv;
-    struct uh_request *req = &conn->req;
+    int event = UH_EV_COMPLETE;
 
     ev_timer_stop(srv->loop, &conn->timer);
 
-    http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
-
-    if (!run_plugins(conn)) {
-        if (srv->on_request)
-            srv->on_request(conn);
-        else
-            conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
-    }
+    if (conn->handler)
+        conn->handler(conn, event);
+    else if (srv->default_handler)
+        srv->default_handler(conn, event);
+    else
+        conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
 
     return 0;
 }
@@ -374,6 +418,7 @@ static struct http_parser_settings settings = {
     .on_url = on_url_cb,
     .on_header_field = on_header_field_cb,
     .on_header_value = on_header_value_cb,
+    .on_headers_complete = on_headers_complete,
     .on_body = on_body_cb,
     .on_message_complete = on_message_complete_cb
 };
@@ -617,6 +662,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
     conn->get_body = conn_get_body;
+    conn->extract_body = conn_extract_body;
 
     return conn;
 }

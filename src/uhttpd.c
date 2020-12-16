@@ -42,6 +42,7 @@ void conn_free(struct uh_connection *conn);
 static void uh_server_free(struct uh_server *srv)
 {
     struct uh_connection *conn = srv->conns;
+    struct uh_path_handler *h = srv->handlers;
 #ifdef HAVE_DLOPEN
     struct uh_plugin *p = srv->plugins;
 #endif
@@ -55,6 +56,12 @@ static void uh_server_free(struct uh_server *srv)
         struct uh_connection *next = conn->next;
         conn_free(conn);
         conn = next;
+    }
+
+    while (h) {
+        struct uh_path_handler *temp = h;
+        h = h->next;
+        free(temp);
     }
 
 #ifdef HAVE_DLOPEN
@@ -178,6 +185,31 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 #endif
 }
 
+static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
+{
+    struct uh_path_handler *h;
+
+    h = calloc(1, sizeof(struct uh_path_handler) + strlen(path) + 1);
+    if (!h) {
+        uh_log_err("calloc: %s\n", strerror(errno));
+        return -1;
+    }
+
+    h->handler = handler;
+    strcpy(h->path, path);
+
+    if (!srv->handlers) {
+        srv->handlers = h;
+        return 0;
+    }
+
+    h->next = srv->handlers;
+    srv->handlers->prev = h;
+    srv->handlers = h;
+
+    return 0;
+}
+
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
     struct sockaddr_in addr = {
@@ -218,6 +250,8 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 #endif
 
     srv->load_plugin = uh_load_plugin;
+
+    srv->add_path_handler = uh_add_path_handler;
 
     ev_io_init(&srv->ior, uh_accept_cb, sock, EV_READ);
     ev_io_start(srv->loop, &srv->ior);
