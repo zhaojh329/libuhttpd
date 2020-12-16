@@ -63,7 +63,6 @@ static void uh_server_free(struct uh_server *srv)
         dlclose(p->dlh);
         p = p->next;
         free(temp);
-        break;
     }
 #endif
 
