@@ -30,6 +30,7 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 * Use [libev] as its event backend
 * Support HTTPS - OpenSSL, mbedtls and CyaSSl(wolfssl)
 * Support plugin
+* Support upload large file
 * Flexible - you can easily extend your application to have HTTP/HTTPS services
 * Code structure is concise and understandable, also suitable for learning
 
