@@ -124,6 +124,7 @@ int main(int argc, char **argv)
     struct ev_loop *loop = EV_DEFAULT;
     struct ev_signal signal_watcher;
     struct uh_server *srv = NULL;
+    char plugin_path[128];
     bool verbose = false;
     bool ssl = false;
     int port = 8080;
@@ -168,7 +169,9 @@ int main(int argc, char **argv)
 
     srv->add_path_handler(srv, "/upload", upload_handler);
 
-    srv->load_plugin(srv, "test_plugin.so");
+    getcwd(plugin_path, sizeof(plugin_path));
+    strcat(plugin_path, "/example/test_plugin.so");
+    srv->load_plugin(srv, plugin_path);
 
     uh_log_info("Listen on: *:%d\n", port);
 
