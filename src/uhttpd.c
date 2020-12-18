@@ -175,7 +175,6 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
     }
 
     p->next = srv->plugins;
-    srv->plugins->prev = p;
     srv->plugins = p;
 
     return 0;
@@ -204,7 +203,6 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     }
 
     h->next = srv->handlers;
-    srv->handlers->prev = h;
     srv->handlers = h;
 
     return 0;

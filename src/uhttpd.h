@@ -41,7 +41,6 @@ struct uh_plugin_handler {
 struct uh_plugin {
     struct uh_plugin_handler *h;
     void *dlh;
-    struct uh_plugin *prev;
     struct uh_plugin *next;
 };
 
@@ -52,7 +51,6 @@ enum {
 
 struct uh_path_handler {
     uh_path_handler_prototype handler;
-    struct uh_path_handler *prev;
     struct uh_path_handler *next;
     char path[0];
 };
