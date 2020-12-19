@@ -112,9 +112,11 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 static void usage(const char *prog)
 {
     fprintf(stderr, "Usage: %s [option]\n"
+            "          -a addr  # Default addr is localhost\n"
             "          -p port  # Default port is 8080\n"
             "          -s       # SSl on\n"
             "          -f       # Serve file\n"
+            "          -P       # plugin path\n"
             "          -v       # verbose\n", prog);
     exit(1);
 }
@@ -124,14 +126,18 @@ int main(int argc, char **argv)
     struct ev_loop *loop = EV_DEFAULT;
     struct ev_signal signal_watcher;
     struct uh_server *srv = NULL;
-    char plugin_path[128];
+    const char *plugin_path = NULL;
     bool verbose = false;
     bool ssl = false;
+    const char *addr = "localhost";
     int port = 8080;
     int opt;
 
-    while ((opt = getopt(argc, argv, "p:sfv")) != -1) {
+    while ((opt = getopt(argc, argv, "a:p:sfP:v")) != -1) {
         switch (opt) {
+        case 'a':
+            addr = optarg;
+            break;
         case 'p':
             port = atoi(optarg);
             break;
@@ -140,6 +146,9 @@ int main(int argc, char **argv)
             break;
         case 'f':
             serve_file = true;
+            break;
+        case 'P':
+            plugin_path = optarg;
             break;
         case 'v':
             verbose = true;
@@ -156,7 +165,7 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    srv = uh_server_new(loop, "0.0.0.0", port);
+    srv = uh_server_new(loop, addr, port);
     if (!srv)
         return -1;
 
@@ -169,11 +178,8 @@ int main(int argc, char **argv)
 
     srv->add_path_handler(srv, "/upload", upload_handler);
 
-    getcwd(plugin_path, sizeof(plugin_path));
-    strcat(plugin_path, "/example/test_plugin.so");
-    srv->load_plugin(srv, plugin_path);
-
-    uh_log_info("Listen on: *:%d\n", port);
+    if (plugin_path)
+        srv->load_plugin(srv, plugin_path);
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);
     ev_signal_start(loop, &signal_watcher);

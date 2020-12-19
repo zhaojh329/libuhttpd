@@ -26,6 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #ifdef HAVE_DLOPEN
@@ -82,19 +83,28 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
     struct uh_server *srv = container_of(w, struct uh_server, ior);
     struct uh_connection *conn;
-    struct sockaddr_in addr;
+    union {
+        struct sockaddr     sa;
+        struct sockaddr_in  sin;
+        struct sockaddr_in6 sin6;
+    } addr;
     socklen_t addr_len = sizeof(addr);
+    char addr_str[INET6_ADDRSTRLEN];
+    int port;
     int sock;
 
-    sock = accept4(srv->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK);
+    sock = accept4(srv->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (sock < 0) {
         uh_log_err("accept: %s\n", strerror(errno));
         return;
     }
 
-    uh_log_debug("New connection: %s:%d\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+    if (uh_log_get_threshold() == LOG_DEBUG) {
+        saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
+        uh_log_debug("New Connection from: %s %d\n", addr_str, port);
+    }
 
-    conn = uh_new_connection(srv, sock, &addr);
+    conn = uh_new_connection(srv, sock, &addr.sa);
     if (!conn)
         return;
 
@@ -210,34 +220,79 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
 
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
-    struct sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_addr.s_addr = htonl(INADDR_ANY),
-        .sin_port = htons(port)
-    };
+    union {
+        struct sockaddr     sa;
+        struct sockaddr_in  sin;
+        struct sockaddr_in6 sin6;
+    } addr;
+    char addr_str[INET6_ADDRSTRLEN];
+    socklen_t addrlen;
     int sock = -1;
     int opt = 1;
 
-    memset(srv, 0, sizeof(struct uh_server));
+    if (!host || *host == '\0') {
+        addr.sin.sin_family = AF_INET;
+        addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
 
-    if (host)
-        addr.sin_addr.s_addr = inet_addr(host);
+    if (inet_pton(AF_INET, host, &addr.sin.sin_addr) == 1) {
+        addr.sa.sa_family = AF_INET;
+    } else if (inet_pton(AF_INET6, host, &addr.sin6.sin6_addr) == 1) {
+        addr.sa.sa_family = AF_INET6;
+    } else {
+        static struct addrinfo hints = {
+            .ai_family = AF_UNSPEC,
+            .ai_socktype = SOCK_STREAM,
+            .ai_flags = AI_PASSIVE
+        };
+        struct addrinfo *ais;
+        int status;
 
-    sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        status = getaddrinfo(host, NULL, &hints, &ais);
+        if (status != 0) {
+            uh_log_err("getaddrinfo(): %s\n", gai_strerror(status));
+            return -1;
+        }
+
+        memcpy(&addr, ais->ai_addr, ais->ai_addrlen);
+        freeaddrinfo(ais);
+    }
+
+    if (addr.sa.sa_family == AF_INET) {
+        addr.sin.sin_port = ntohs(port);
+        addrlen = sizeof(addr.sin);
+        inet_ntop(AF_INET, &addr.sin.sin_addr, addr_str, sizeof(addr_str));
+    } else {
+        addr.sin6.sin6_port = ntohs(port);
+        addrlen = sizeof(addr.sin6);
+        inet_ntop(AF_INET6, &addr.sin6.sin6_addr, addr_str, sizeof(addr_str));
+    }
+
+    sock = socket(addr.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
     if (sock < 0) {
         uh_log_err("socket: %s\n", strerror(errno));
         return -1;
     }
 
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int));
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) < 0) {
+        uh_log_err("setsockopt: %s\n", strerror(errno));
+        goto err;
+    }
 
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(sock, &addr.sa, addrlen) < 0) {
         close(sock);
         uh_log_err("bind: %s\n", strerror(errno));
-        return -1;
+        goto err;
     }
 
     listen(sock, SOMAXCONN);
+
+    if (uh_log_get_threshold() == LOG_DEBUG) {
+        saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
+        uh_log_debug("Listen on: %s %d\n", addr_str, port);
+    }
+
+    memset(srv, 0, sizeof(struct uh_server));
 
     srv->loop = loop ? loop : EV_DEFAULT;
     srv->sock = sock;
@@ -255,5 +310,8 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     ev_io_start(srv->loop, &srv->ior);
 
     return 0;
-}
 
+err:
+    close(sock);
+    return -1;
+}

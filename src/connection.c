@@ -179,9 +179,9 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
     conn_done(conn);
 }
 
-static uint32_t conn_get_addr(struct uh_connection *conn)
+static const struct sockaddr *conn_get_addr(struct uh_connection *conn)
 {
-    return ntohl(conn->addr.sin_addr.s_addr);
+    return &conn->addr.sa;
 }
 
 static enum http_method conn_get_method(struct uh_connection *conn)
@@ -426,7 +426,8 @@ static struct http_parser_settings settings = {
 void conn_free(struct uh_connection *conn)
 {
     struct ev_loop *loop = conn->srv->loop;
-    struct sockaddr_in *addr = &conn->addr;
+    char addr_str[INET6_ADDRSTRLEN];
+    int port;
 
     ev_timer_stop(loop, &conn->timer);
     ev_io_stop(loop, &conn->ior);
@@ -453,7 +454,10 @@ void conn_free(struct uh_connection *conn)
     if (conn->sock > 0)
         close(conn->sock);
 
-    uh_log_debug("Connection(%s:%d) closed\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+    if (uh_log_get_threshold() == LOG_DEBUG) {
+        saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port);
+        uh_log_debug("Connection(%s %d) closed\n", addr_str, port);
+    }
 
     free(conn);
 }
@@ -606,7 +610,7 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
     conn_error(conn, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
-struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr)
+struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr *addr)
 {
     struct uh_connection *conn;
 
@@ -620,7 +624,10 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
     conn->sock = sock;
     conn->activity = ev_now(srv->loop);
 
-    memcpy(&conn->addr, addr, sizeof(struct sockaddr_in));
+    if (addr->sa_family == AF_INET)
+        memcpy(&conn->addr, addr, sizeof(struct sockaddr_in));
+    else
+        memcpy(&conn->addr, addr, sizeof(struct sockaddr_in6));
 
     ev_io_init(&conn->iow, conn_write_cb, sock, EV_WRITE);
 

@@ -89,7 +89,11 @@ struct uh_connection {
     struct ev_timer timer;
     struct uh_request req;
     struct uh_server *srv;
-    struct sockaddr_in addr;
+    union {
+        struct sockaddr     sa;
+        struct sockaddr_in  sin;
+        struct sockaddr_in6 sin6;
+    } addr; /* peer address */
     struct http_parser parser;
     struct http_parser_url url_parser;
     struct uh_connection *prev;
@@ -109,7 +113,7 @@ struct uh_connection {
     void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
     void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*chunk_end)(struct uh_connection *conn);
-    uint32_t (*get_addr)(struct uh_connection *conn);
+    const struct sockaddr *(*get_addr)(struct uh_connection *conn);   /* peer address */
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
     struct uh_str (*get_path)(struct uh_connection *conn);
@@ -120,6 +124,6 @@ struct uh_connection {
     struct uh_str (*extract_body)(struct uh_connection *conn);
 };
 
-struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr_in *addr);
+struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr *addr);
 
 #endif

@@ -102,6 +102,11 @@ void uh_log_threshold(int threshold)
     log_threshold = threshold;
 }
 
+int uh_log_get_threshold()
+{
+    return log_threshold;
+}
+
 void uh_log_close()
 {
     if (!log_initialized)

@@ -29,6 +29,7 @@
 #include <string.h>
 
 void uh_log_threshold(int threshold);
+int uh_log_get_threshold();
 void uh_log_close();
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)

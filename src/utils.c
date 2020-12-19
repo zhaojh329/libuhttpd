@@ -22,23 +22,25 @@
  * SOFTWARE.
  */
 
-#ifndef LIBUHTTPD_UTILS_H
-#define LIBUHTTPD_UTILS_H
-
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
-#include "config.h"
+#include "utils.h"
 
-#ifndef container_of
-#define container_of(ptr, type, member)                 \
-    ({                              \
-        const __typeof__(((type *) NULL)->member) *__mptr = (ptr);  \
-        (type *) ((char *) __mptr - offsetof(type, member));    \
-    })
-#endif
+const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port)
+{
+    if (addr->sa_family == AF_INET) {
+        struct sockaddr_in *sin = (struct sockaddr_in *)addr;
+        *port = ntohs(sin->sin_port);
+        inet_ntop(AF_INET, &sin->sin_addr, buf, len);
+    } else {
+        struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
+        *port = ntohs(sin6->sin6_port);
+        inet_ntop(AF_INET6, &sin6->sin6_addr, buf, len);
+    }
 
-const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port);
-
-#endif
+    return buf;
+}
