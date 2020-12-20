@@ -29,6 +29,7 @@
 * 轻量、全异步
 * 使用[libev]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
+* 支持 IPv6
 * 支持插件
 * 支持上传大文件
 * 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
