@@ -38,15 +38,19 @@
 
 static void conn_done(struct uh_connection *conn)
 {
+    struct ev_loop *loop = conn->srv->loop;
+
     buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
 
     if (!http_should_keep_alive(&conn->parser))
         conn->flags |= CONN_F_SEND_AND_CLOSE;
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE)
-        ev_io_stop(conn->srv->loop, &conn->ior);
+        ev_io_stop(loop, &conn->ior);
 
-    ev_io_start(conn->srv->loop, &conn->iow);
+    ev_io_start(loop, &conn->iow);
+
+    ev_timer_stop(loop, &conn->timer);
 }
 
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
@@ -148,6 +152,9 @@ static void conn_send_head(struct uh_connection *conn, int code, int content_len
 
 static void conn_error(struct uh_connection *conn, int code, const char *reason)
 {
+    if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        return;
+
     if (!reason)
         reason = http_status_str(code);
     conn_send_head(conn, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
@@ -360,7 +367,7 @@ static int on_headers_complete(struct http_parser *parser)
     while (h) {
         if (strlen(h->path) == path.len && !strncmp(path.p, h->path, path.len)) {
             conn->handler = h->handler;
-            return 0;
+            goto done;
         }
         h = h->next;
     }
@@ -368,9 +375,18 @@ static int on_headers_complete(struct http_parser *parser)
     while (p) {
         if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
             conn->handler = p->h->handler;
-            return 0;
+            goto done;
         }
         p = p->next;
+    }
+
+done:
+    if (!conn->handler)
+        conn->handler = srv->default_handler;
+
+    if (!conn->handler) {
+        conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
+        return -1;
     }
 
     return 0;
@@ -380,17 +396,15 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_request *req = &conn->req;
-    struct uh_server *srv = conn->srv;
-    int event = UH_EV_BODY;
 
     if (req->body.offset == 0)
         req->body.offset = ROF(conn, at);
     req->body.length += length;
 
-    if (conn->handler)
-        conn->handler(conn, event);
-    else if (srv->default_handler)
-        srv->default_handler(conn, event);
+    conn->handler(conn, UH_EV_BODY);
+
+    if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        return -1;
 
     return 0;
 }
@@ -399,16 +413,10 @@ static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection *conn = (struct uh_connection *)parser->data;
     struct uh_server *srv = conn->srv;
-    int event = UH_EV_COMPLETE;
 
     ev_timer_stop(srv->loop, &conn->timer);
 
-    if (conn->handler)
-        conn->handler(conn, event);
-    else if (srv->default_handler)
-        srv->default_handler(conn, event);
-    else
-        conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
+    conn->handler(conn, UH_EV_COMPLETE);
 
     return 0;
 }
