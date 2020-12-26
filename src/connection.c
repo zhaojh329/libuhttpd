@@ -389,6 +389,11 @@ done:
         return -1;
     }
 
+    conn->handler(conn, UH_EV_HEAD_COMPLETE);
+
+    if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        return -1;
+
     return 0;
 }
 

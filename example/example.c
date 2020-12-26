@@ -64,7 +64,21 @@ static void upload_handler(struct uh_connection *conn, int event)
 {
     static int fd = -1;
 
-    if (event == UH_EV_BODY) {
+    if (event == UH_EV_HEAD_COMPLETE) {
+        struct uh_str str = conn->get_header(conn, "Content-Length");
+        int content_length;
+        char buf[128];
+
+        sprintf(buf, "%.*s\n", (int)str.len, str.p);
+
+        content_length = atoi(buf);
+
+        if (content_length > 1024 * 1024 * 1024) {
+            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "Too big");
+            return;
+        }
+
+    } if (event == UH_EV_BODY) {
         struct uh_str body = conn->extract_body(conn);
 
         if (fd < 0) {
@@ -80,7 +94,7 @@ static void upload_handler(struct uh_connection *conn, int event)
             close(fd);
             return;
         }
-    } else {
+    } else if (event == UH_EV_COMPLETE) {
         struct stat st;
         size_t size = 0;
 

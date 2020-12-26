@@ -45,6 +45,7 @@ struct uh_plugin {
 };
 
 enum {
+    UH_EV_HEAD_COMPLETE,
     UH_EV_BODY,
     UH_EV_COMPLETE
 };
