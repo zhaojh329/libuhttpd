@@ -51,6 +51,9 @@ static void conn_done(struct uh_connection *conn)
     ev_io_start(loop, &conn->iow);
 
     ev_timer_stop(loop, &conn->timer);
+
+    /* This is needed for a connection requested multiple times  */
+    conn->handler = NULL;
 }
 
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
@@ -358,9 +361,6 @@ static int on_headers_complete(struct http_parser *parser)
     struct uh_str path;
 
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
-
-    if (conn->handler)
-        return 0;
 
     path = conn->get_path(conn);
 
