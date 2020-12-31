@@ -47,6 +47,7 @@ struct uh_str {
 };
 
 struct uh_request {
+    size_t length;  /* The total length of the request which still remain in buffer */
     struct {
         ssize_t offset;
         size_t length;
@@ -66,6 +67,7 @@ struct uh_request {
     } headers[UHTTPD_MAX_HEADER_NUM];
 
     struct {
+        bool consumed;  /* Indicates whether the extract_body is called */
         ssize_t offset;
         size_t length;
     } body;

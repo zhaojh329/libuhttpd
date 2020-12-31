@@ -40,8 +40,6 @@ static void conn_done(struct uh_connection *conn)
 {
     struct ev_loop *loop = conn->srv->loop;
 
-    buffer_pull(&conn->rb, NULL, buffer_length(&conn->rb));
-
     if (!http_should_keep_alive(&conn->parser))
         conn->flags |= CONN_F_SEND_AND_CLOSE;
 
@@ -273,15 +271,9 @@ static struct uh_str conn_get_body(struct uh_connection *conn)
 
 static struct uh_str conn_extract_body(struct uh_connection *conn)
 {
-    struct uh_request *req = &conn->req;
-    struct uh_str body;
+    struct uh_str body = conn_get_body(conn);
 
-    body.p = O2D(conn, req->body.offset);
-    body.len = req->body.length;
-
-    req->body.length = 0;
-
-    buffer_discard(&conn->rb, body.len);
+    conn->req.body.consumed = true;
 
     return body;
 }
@@ -411,6 +403,13 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
     if (conn->flags & CONN_F_SEND_AND_CLOSE)
         return -1;
 
+    if (req->body.consumed) {
+        req->body.consumed = false;
+        buffer_discard(&conn->rb, req->body.length);
+        req->length -= req->body.length;
+        req->body.length = 0;
+    }
+
     return 0;
 }
 
@@ -422,6 +421,8 @@ static int on_message_complete_cb(struct http_parser *parser)
     ev_timer_stop(srv->loop, &conn->timer);
 
     conn->handler(conn, UH_EV_COMPLETE);
+
+    http_parser_pause(parser, true);
 
     return 0;
 }
@@ -473,6 +474,43 @@ void conn_free(struct uh_connection *conn)
     }
 
     free(conn);
+}
+
+static void conn_http_parse(struct uh_connection *conn)
+{
+    struct http_parser *parser = &conn->parser;
+    struct uh_request *req = &conn->req;
+    struct buffer *rb = &conn->rb;
+    uint8_t *data = buffer_data(rb) + req->length;
+    size_t length = buffer_length(rb) - req->length;
+    size_t nparsed;
+
+    if (parser->http_errno == HPE_PAUSED)
+        return;
+
+    nparsed = http_parser_execute(parser, &settings, (const char *)data, length);
+
+    switch (parser->http_errno) {
+    case HPE_PAUSED:
+    case HPE_OK:
+        if (parser->upgrade) {
+            conn_error(conn, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
+            return;
+        }
+
+        req->length += nparsed;
+
+        /* paused in on_message_complete */
+        if (parser->http_errno == HPE_PAUSED) {
+            buffer_pull(rb, NULL, req->length);
+            req->length = 0;
+        }
+        return;
+
+    default:
+        conn_error(conn, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
+        return;
+    }
 }
 
 #if UHTTPD_SSL_SUPPORT
@@ -527,10 +565,16 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
             conn->file.fd = -1;
         }
 
-        if (conn->flags & CONN_F_SEND_AND_CLOSE)
+        if (conn->flags & CONN_F_SEND_AND_CLOSE) {
             conn_free(conn);
-        else
+        } else {
             ev_io_stop(loop, w);
+
+            http_parser_pause(&conn->parser, false);
+
+            if (buffer_length(&conn->rb) > 0)
+                conn_http_parse(conn);
+        }
     }
 }
 
@@ -550,10 +594,9 @@ static int conn_ssl_read(int fd, void *buf, size_t count, void *ssl)
 static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
     struct uh_connection *conn = container_of(w, struct uh_connection, ior);
-    struct http_parser *parser = &conn->parser;
     struct buffer *rb = &conn->rb;
-    int ret, nread, length, nparsed;
     bool eof;
+    int ret;
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE) {
         ev_io_stop(loop, w);
@@ -575,8 +618,6 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
     conn->activity = ev_now(loop);
 
-    length = buffer_length(rb);
-
 #if UHTTPD_SSL_SUPPORT
     if (conn->ssl)
         ret = buffer_put_fd_ex(rb, w->fd, -1, &eof, conn_ssl_read, conn->ssl);
@@ -585,23 +626,19 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         ret = buffer_put_fd(rb, w->fd, -1, &eof);
 
     if (ret < 0) {
-        conn_error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, NULL);
         uh_log_err("read error: %s\n", strerror(errno));
-        return;
+        goto done;
     }
 
-    if (eof) {
-        conn_free(conn);
-        return;
-    }
+    if (eof)
+        goto done;
 
-    nread = buffer_length(rb) - length;
+    conn_http_parse(conn);
 
-    nparsed = http_parser_execute(parser, &settings, (const char *)rb->data + length, nread);
-    if (parser->upgrade)
-        conn_error(conn, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
-    else if (nparsed != nread)
-        conn_error(conn, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
+    return;
+
+done:
+    conn_free(conn);
 }
 
 static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
