@@ -99,7 +99,11 @@ struct uh_connection {
     struct uh_connection *prev;
     struct uh_connection *next;
     void (*handler)(struct uh_connection *conn, int event);
-    void (*done)(struct uh_connection *conn);   /* Must be called at last, if not call 'error', 'redirect' and 'serve_file' */
+    /*
+    ** Indicates the end of request processing
+    ** Must be called at last, if not call 'error', 'redirect' and 'serve_file'
+    */
+    void (*done)(struct uh_connection *conn);
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
     void (*send_file)(struct uh_connection *conn, const char *path);
     void (*printf)(struct uh_connection *conn, const char *format, ...);

@@ -52,7 +52,7 @@ static void conn_done(struct uh_connection *conn)
 
     ev_timer_stop(loop, &conn->timer);
 
-    /* This is needed for a connection requested multiple times  */
+    /* This is needed for a connection requested multiple times on different path */
     conn->handler = NULL;
 }
 
