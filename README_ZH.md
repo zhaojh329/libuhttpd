@@ -37,7 +37,7 @@
 
 # 依赖
 * [libev]
-* [http-parser] - 已经集成到源码里面
+* [http-parser] - 一个用 C 语言编写的高性能的 HTTP 消息解析器
 * [mbedtls] - 如果你选择mbedtls作为你的SSL后端
 * [wolfssl] - 如果你选择wolfssl作为你的SSL后端
 * [openssl] - 如果你选择openssl作为你的SSL后端
