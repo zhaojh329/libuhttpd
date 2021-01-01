@@ -25,13 +25,10 @@
 #ifndef LIBUHTTPD_CONNECTION_H
 #define LIBUHTTPD_CONNECTION_H
 
-#include <ev.h>
-#include <stdarg.h>
 #include <arpa/inet.h>
 
-#include "http_parser.h"
 #include "buffer.h"
-#include "config.h"
+#include "uhttpd.h"
 
 #define UHTTPD_CONNECTION_TIMEOUT   30.0
 #define UHTTPD_MAX_HEADER_NUM       50
@@ -39,12 +36,7 @@
 #define CONN_F_SEND_AND_CLOSE       (1 << 0)    /* Push remaining data and close  */
 #define CONN_F_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */
 
-struct uh_server;
-
-struct uh_str {
-    const char *p;
-    size_t len;
-};
+struct uh_server_internal;
 
 struct uh_request {
     size_t length;  /* The total length of the request which still remain in buffer */
@@ -73,7 +65,8 @@ struct uh_request {
     } body;
 };
 
-struct uh_connection {
+struct uh_connection_internal {
+    struct uh_connection com;
     int sock;
 #if UHTTPD_SSL_SUPPORT
     void *ssl;
@@ -90,7 +83,7 @@ struct uh_connection {
     ev_tstamp activity;
     struct ev_timer timer;
     struct uh_request req;
-    struct uh_server *srv;
+    struct uh_server_internal *srv;
     union {
         struct sockaddr     sa;
         struct sockaddr_in  sin;
@@ -98,38 +91,13 @@ struct uh_connection {
     } addr; /* peer address */
     struct http_parser parser;
     struct http_parser_url url_parser;
-    struct uh_connection *prev;
-    struct uh_connection *next;
+    struct uh_connection_internal *prev;
+    struct uh_connection_internal *next;
     void (*handler)(struct uh_connection *conn, int event);
-    /*
-    ** Indicates the end of request processing
-    ** Must be called at last, if not call 'error', 'redirect' and 'serve_file'
-    */
-    void (*done)(struct uh_connection *conn);
-    void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*send_file)(struct uh_connection *conn, const char *path);
-    void (*printf)(struct uh_connection *conn, const char *format, ...);
-    void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
-    void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
-    void (*send_head)(struct uh_connection *conn, int code, int content_length, const char *extra_headers);
-    void (*error)(struct uh_connection *conn, int code, const char *reason);
-    void (*redirect)(struct uh_connection *conn, int code, const char *location, ...);
-    void (*serve_file)(struct uh_connection *conn);
-    void (*chunk_send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
-    void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
-    void (*chunk_end)(struct uh_connection *conn);
-    const struct sockaddr *(*get_addr)(struct uh_connection *conn);   /* peer address */
-    enum http_method (*get_method)(struct uh_connection *conn);
-    const char *(*get_method_str)(struct uh_connection *conn);
-    struct uh_str (*get_path)(struct uh_connection *conn);
-    struct uh_str (*get_query)(struct uh_connection *conn);
-    struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
-    struct uh_str (*get_body)(struct uh_connection *conn);
-    /* The remain body data will be discurd after this function called */
-    struct uh_str (*extract_body)(struct uh_connection *conn);
 };
 
-struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr *addr);
+struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv, int sock, struct sockaddr *addr);
+
+void conn_free(struct uh_connection_internal *conn);
 
 #endif

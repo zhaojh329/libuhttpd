@@ -33,34 +33,33 @@
 #include <dlfcn.h>
 #endif
 
-#include "uhttpd.h"
+#include "uhttpd_internal.h"
+#include "connection.h"
 #include "utils.h"
 #include "ssl.h"
-#include "log.h"
-
-void conn_free(struct uh_connection *conn);
 
 static void uh_server_free(struct uh_server *srv)
 {
-    struct uh_connection *conn = srv->conns;
-    struct uh_path_handler *h = srv->handlers;
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+    struct uh_connection_internal *conn = srvi->conns;
+    struct uh_path_handler *h = srvi->handlers;
 #ifdef HAVE_DLOPEN
-    struct uh_plugin *p = srv->plugins;
+    struct uh_plugin *p = srvi->plugins;
 #endif
 
-    ev_io_stop(srv->loop, &srv->ior);
+    ev_io_stop(srvi->loop, &srvi->ior);
 
-    if (srv->sock > 0)
-        close(srv->sock);
+    if (srvi->sock > 0)
+        close(srvi->sock);
 
-    if (srv->docroot)
-        free(srv->docroot);
+    if (srvi->docroot)
+        free(srvi->docroot);
 
-    if (srv->index_page)
-        free(srv->index_page);
+    if (srvi->index_page)
+        free(srvi->index_page);
 
     while (conn) {
-        struct uh_connection *next = conn->next;
+        struct uh_connection_internal *next = conn->next;
         conn_free(conn);
         conn = next;
     }
@@ -81,14 +80,14 @@ static void uh_server_free(struct uh_server *srv)
 #endif
 
 #if UHTTPD_SSL_SUPPORT
-    uh_ssl_ctx_free(srv->ssl_ctx);
+    uh_ssl_ctx_free(srvi->ssl_ctx);
 #endif
 }
 
 static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
-    struct uh_server *srv = container_of(w, struct uh_server, ior);
-    struct uh_connection *conn;
+    struct uh_server_internal *srv = container_of(w, struct uh_server_internal, ior);
+    struct uh_connection_internal *conn;
     union {
         struct sockaddr     sa;
         struct sockaddr_in  sin;
@@ -128,7 +127,7 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port
 {
     struct uh_server *srv;
 
-    srv = malloc(sizeof(struct uh_server));
+    srv = malloc(sizeof(struct uh_server_internal));
     if (!srv) {
         uh_log_err("malloc: %s\n", strerror(errno));
         return NULL;
@@ -145,13 +144,15 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port
 #if UHTTPD_SSL_SUPPORT
 static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const char *key)
 {
-    srv->ssl_ctx = uh_ssl_ctx_init(cert, key);
-    return srv->ssl_ctx ? 0 : -1;
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+    srvi->ssl_ctx = uh_ssl_ctx_init(cert, key);
+    return srvi->ssl_ctx ? 0 : -1;
 }
 #endif
 
 static int uh_load_plugin(struct uh_server *srv, const char *path)
 {
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 #ifdef HAVE_DLOPEN
     struct uh_plugin_handler *h;
     struct uh_plugin *p;
@@ -185,13 +186,13 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
     p->h = h;
     p->dlh = dlh;
 
-    if (!srv->plugins) {
-        srv->plugins = p;
+    if (!srvi->plugins) {
+        srvi->plugins = p;
         return 0;
     }
 
-    p->next = srv->plugins;
-    srv->plugins = p;
+    p->next = srvi->plugins;
+    srvi->plugins = p;
 
     return 0;
 #else
@@ -202,6 +203,7 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 
 static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
 {
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
     struct uh_path_handler *h;
 
     h = calloc(1, sizeof(struct uh_path_handler) + strlen(path) + 1);
@@ -213,24 +215,33 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     h->handler = handler;
     strcpy(h->path, path);
 
-    if (!srv->handlers) {
-        srv->handlers = h;
+    if (!srvi->handlers) {
+        srvi->handlers = h;
         return 0;
     }
 
-    h->next = srv->handlers;
-    srv->handlers = h;
+    h->next = srvi->handlers;
+    srvi->handlers = h;
 
     return 0;
 }
 
+static void uh_set_default_handler(struct uh_server *srv, uh_path_handler_prototype handler)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    srvi->default_handler = handler;
+}
+
 static int uh_set_docroot(struct uh_server *srv, const char *path)
 {
-    if (srv->docroot)
-        free(srv->docroot);
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 
-    srv->docroot = strdup(path);
-    if (!srv->docroot) {
+    if (srvi->docroot)
+        free(srvi->docroot);
+
+    srvi->docroot = strdup(path);
+    if (!srvi->docroot) {
         uh_log_err("strdup: %s\n", strerror(errno));
         return -1;
     }
@@ -240,11 +251,13 @@ static int uh_set_docroot(struct uh_server *srv, const char *path)
 
 static int uh_set_index_page(struct uh_server *srv, const char *name)
 {
-    if (srv->index_page)
-        free(srv->index_page);
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 
-    srv->index_page = strdup(name);
-    if (!srv->index_page) {
+    if (srvi->index_page)
+        free(srvi->index_page);
+
+    srvi->index_page = strdup(name);
+    if (!srvi->index_page) {
         uh_log_err("strdup: %s\n", strerror(errno));
         return -1;
     }
@@ -254,6 +267,7 @@ static int uh_set_index_page(struct uh_server *srv, const char *name)
 
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
     union {
         struct sockaddr     sa;
         struct sockaddr_in  sin;
@@ -326,10 +340,10 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
         uh_log_debug("Listen on: %s %d\n", addr_str, port);
     }
 
-    memset(srv, 0, sizeof(struct uh_server));
+    memset(srvi, 0, sizeof(struct uh_server_internal));
 
-    srv->loop = loop ? loop : EV_DEFAULT;
-    srv->sock = sock;
+    srvi->loop = loop ? loop : EV_DEFAULT;
+    srvi->sock = sock;
     srv->free = uh_server_free;
 
 #if UHTTPD_SSL_SUPPORT
@@ -338,13 +352,14 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     srv->load_plugin = uh_load_plugin;
 
+    srv->set_default_handler = uh_set_default_handler;
     srv->add_path_handler = uh_add_path_handler;
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
 
-    ev_io_init(&srv->ior, uh_accept_cb, sock, EV_READ);
-    ev_io_start(srv->loop, &srv->ior);
+    ev_io_init(&srvi->ior, uh_accept_cb, sock, EV_READ);
+    ev_io_start(srvi->loop, &srvi->ior);
 
     return 0;
 

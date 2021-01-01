@@ -141,7 +141,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 install(
     FILES
         uhttpd.h
-        connection.h
         log.h
         buffer/buffer.h
         http-parser/http_parser.h

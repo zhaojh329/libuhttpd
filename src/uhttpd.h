@@ -25,13 +25,69 @@
 #ifndef LIBUHTTPD_UHTTPD_H
 #define LIBUHTTPD_UHTTPD_H
 
+#include <sys/types.h>
+#include <stdbool.h>
+#include <stdarg.h>
 #include <ev.h>
 
-#include "connection.h"
+#include "http_parser.h"
 #include "config.h"
 #include "log.h"
 
+struct uh_str {
+    const char *p;
+    size_t len;
+};
+
+enum {
+    UH_EV_HEAD_COMPLETE,
+    UH_EV_BODY,
+    UH_EV_COMPLETE
+};
+
+struct uh_connection {
+    /*
+    ** Indicates the end of request processing
+    ** Must be called at last, if not call 'error', 'redirect' and 'serve_file'
+    */
+    void (*done)(struct uh_connection *conn);
+    void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
+    void (*send_file)(struct uh_connection *conn, const char *path);
+    void (*printf)(struct uh_connection *conn, const char *format, ...);
+    void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
+    void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
+    void (*send_head)(struct uh_connection *conn, int code, int content_length, const char *extra_headers);
+    void (*error)(struct uh_connection *conn, int code, const char *reason);
+    void (*redirect)(struct uh_connection *conn, int code, const char *location, ...);
+    void (*serve_file)(struct uh_connection *conn);
+    void (*chunk_send)(struct uh_connection *conn, const void *data, ssize_t len);
+    void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
+    void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
+    void (*chunk_end)(struct uh_connection *conn);
+    const struct sockaddr *(*get_addr)(struct uh_connection *conn);   /* peer address */
+    enum http_method (*get_method)(struct uh_connection *conn);
+    const char *(*get_method_str)(struct uh_connection *conn);
+    struct uh_str (*get_path)(struct uh_connection *conn);
+    struct uh_str (*get_query)(struct uh_connection *conn);
+    struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
+    struct uh_str (*get_body)(struct uh_connection *conn);
+    /* The remain body data will be discurd after this function called */
+    struct uh_str (*extract_body)(struct uh_connection *conn);
+};
+
 typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event);
+
+struct uh_server {
+    void (*free)(struct uh_server *srv);
+#if UHTTPD_SSL_SUPPORT
+    int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
+#endif
+    int (*load_plugin)(struct uh_server *srv, const char *path);
+    void (*set_default_handler)(struct uh_server *srv, uh_path_handler_prototype handler);
+    int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
+    int (*set_docroot)(struct uh_server *srv, const char *path);
+    int (*set_index_page)(struct uh_server *srv, const char *name);
+};
 
 struct uh_plugin_handler {
     const char *path;
@@ -44,38 +100,12 @@ struct uh_plugin {
     struct uh_plugin *next;
 };
 
-enum {
-    UH_EV_HEAD_COMPLETE,
-    UH_EV_BODY,
-    UH_EV_COMPLETE
-};
-
 struct uh_path_handler {
     uh_path_handler_prototype handler;
     struct uh_path_handler *next;
     char path[0];
 };
 
-struct uh_server {
-    int sock;
-    char *docroot;
-    char *index_page;
-    struct ev_loop *loop;
-    struct ev_io ior;
-    struct uh_connection *conns;
-    void (*free)(struct uh_server *srv);
-    void (*default_handler)(struct uh_connection *conn, int event);
-#if UHTTPD_SSL_SUPPORT
-    void *ssl_ctx;
-    int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
-#endif
-    struct uh_plugin *plugins;
-    int (*load_plugin)(struct uh_server *srv, const char *path);
-    struct uh_path_handler *handlers;
-    int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
-    int (*set_docroot)(struct uh_server *srv, const char *path);
-    int (*set_index_page)(struct uh_server *srv, const char *name);
-};
 
 /*
  *  uh_server_new - creat an uh_server struct and init it

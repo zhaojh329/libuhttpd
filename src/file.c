@@ -35,9 +35,9 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
+#include "uhttpd_internal.h"
 #include "mimetypes.h"
-#include "uhttpd.h"
-#include "log.h"
+#include "file.h"
 
 static const char *file_mktag(struct stat *s, char *buf, int len)
 {
@@ -154,8 +154,9 @@ static void file_if_gzip(struct uh_connection *conn, const char *path, const cha
 
 void serve_file(struct uh_connection *conn)
 {
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     const struct uh_str path = conn->get_path(conn);
-    struct uh_server *srv = conn->srv;
+    struct uh_server_internal *srv = conni->srv;
     const char *docroot = srv->docroot;
     const char *index_page = srv->index_page;
     static char fullpath[512];

@@ -30,65 +30,71 @@
 #include <assert.h>
 #include <sys/sendfile.h>
 
-#include "connection.h"
-#include "uhttpd.h"
+#include "uhttpd_internal.h"
 #include "utils.h"
 #include "file.h"
 #include "ssl.h"
 
 static void conn_done(struct uh_connection *conn)
 {
-    struct ev_loop *loop = conn->srv->loop;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct ev_loop *loop = conni->srv->loop;
 
-    if (!http_should_keep_alive(&conn->parser))
-        conn->flags |= CONN_F_SEND_AND_CLOSE;
+    if (!http_should_keep_alive(&conni->parser))
+        conni->flags |= CONN_F_SEND_AND_CLOSE;
 
-    if (conn->flags & CONN_F_SEND_AND_CLOSE)
-        ev_io_stop(loop, &conn->ior);
+    if (conni->flags & CONN_F_SEND_AND_CLOSE)
+        ev_io_stop(loop, &conni->ior);
 
-    ev_io_start(loop, &conn->iow);
+    ev_io_start(loop, &conni->iow);
 
-    ev_timer_stop(loop, &conn->timer);
+    ev_timer_stop(loop, &conni->timer);
 
     /* This is needed for a connection requested multiple times on different path */
-    conn->handler = NULL;
+    conni->handler = NULL;
 }
 
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
-    buffer_put_data(&conn->wb, data, len);
-    ev_io_start(conn->srv->loop, &conn->iow);
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    buffer_put_data(&conni->wb, data, len);
+    ev_io_start(conni->srv->loop, &conni->iow);
 }
 
 static void conn_send_file(struct uh_connection *conn, const char *path)
 {
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     struct stat st;
 
-    conn->file.fd = open(path, O_RDONLY);
+    conni->file.fd = open(path, O_RDONLY);
 
-    fstat(conn->file.fd, &st);
+    fstat(conni->file.fd, &st);
 
-    conn->file.size = st.st_size;
+    conni->file.size = st.st_size;
 
-    ev_io_start(conn->srv->loop, &conn->iow);
+    ev_io_start(conni->srv->loop, &conni->iow);
 }
 
 static void conn_printf(struct uh_connection *conn, const char *format, ...)
 {
-    struct buffer *wb = &conn->wb;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
     va_list arg;
 
     va_start(arg, format);
     buffer_put_vprintf(wb, format, arg);
     va_end(arg);
 
-    ev_io_start(conn->srv->loop, &conn->iow);
+    ev_io_start(conni->srv->loop, &conni->iow);
 }
 
 static void conn_vprintf(struct uh_connection *conn, const char *format, va_list arg)
 {
-    buffer_put_vprintf(&conn->wb, format, arg);
-    ev_io_start(conn->srv->loop, &conn->iow);
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    buffer_put_vprintf(&conni->wb, format, arg);
+    ev_io_start(conni->srv->loop, &conni->iow);
 }
 
 static void conn_chunk_send(struct uh_connection *conn, const void *data, ssize_t len)
@@ -139,13 +145,15 @@ static void conn_send_status_line(struct uh_connection *conn, int code, const ch
 
 static void conn_send_head(struct uh_connection *conn, int code, int content_length, const char *extra_headers)
 {
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
     conn_send_status_line(conn, code, extra_headers);
     if (content_length < 0)
         conn_printf(conn, "%s", "Transfer-Encoding: chunked\r\n");
     else
         conn_printf(conn, "Content-Length: %d\r\n", content_length);
 
-    if (!http_should_keep_alive(&conn->parser))
+    if (!http_should_keep_alive(&conni->parser))
         conn_printf(conn, "%s", "Connection: close\r\n");
 
     conn_send(conn, "\r\n", 2);
@@ -153,7 +161,9 @@ static void conn_send_head(struct uh_connection *conn, int code, int content_len
 
 static void conn_error(struct uh_connection *conn, int code, const char *reason)
 {
-    if (conn->flags & CONN_F_SEND_AND_CLOSE)
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    if (conni->flags & CONN_F_SEND_AND_CLOSE)
         return;
 
     if (!reason)
@@ -161,14 +171,15 @@ static void conn_error(struct uh_connection *conn, int code, const char *reason)
     conn_send_head(conn, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
     conn_send(conn, reason, strlen(reason));
 
-    conn->flags |= CONN_F_SEND_AND_CLOSE;
+    conni->flags |= CONN_F_SEND_AND_CLOSE;
 
     conn_done(conn);
 }
 
 static void conn_redirect(struct uh_connection *conn, int code, const char *location, ...)
 {
-    struct buffer *wb = &conn->wb;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
     va_list arg;
 
     assert((code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_FOUND) && location);
@@ -189,17 +200,23 @@ static void conn_redirect(struct uh_connection *conn, int code, const char *loca
 
 static const struct sockaddr *conn_get_addr(struct uh_connection *conn)
 {
-    return &conn->addr.sa;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return &conni->addr.sa;
 }
 
 static enum http_method conn_get_method(struct uh_connection *conn)
 {
-    return conn->parser.method;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return conni->parser.method;
 }
 
 static const char *conn_get_method_str(struct uh_connection *conn)
 {
-    return http_method_str(conn->parser.method);
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return http_method_str(conni->parser.method);
 }
 
 /* offset of the request field */
@@ -210,11 +227,12 @@ static const char *conn_get_method_str(struct uh_connection *conn)
 
 static struct uh_str conn_get_path(struct uh_connection *conn)
 {
-    struct http_parser_url *u = &conn->url_parser;
-    struct uh_request *req = &conn->req;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct http_parser_url *u = &conni->url_parser;
+    struct uh_request *req = &conni->req;
     struct uh_str path;
 
-    path.p = O2D(conn, u->field_data[UF_PATH].off) + req->url.offset;
+    path.p = O2D(conni, u->field_data[UF_PATH].off) + req->url.offset;
     path.len = u->field_data[UF_PATH].len;
 
     return path;
@@ -222,14 +240,15 @@ static struct uh_str conn_get_path(struct uh_connection *conn)
 
 static struct uh_str conn_get_query(struct uh_connection *conn)
 {
-    struct http_parser_url *u = &conn->url_parser;
-    struct uh_request *req = &conn->req;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct http_parser_url *u = &conni->url_parser;
+    struct uh_request *req = &conni->req;
     struct uh_str query = {};
 
     if (!(u->field_set & (1 << UF_QUERY)))
         return query;
 
-    query.p = O2D(conn, u->field_data[UF_QUERY].off) + req->url.offset;
+    query.p = O2D(conni, u->field_data[UF_QUERY].off) + req->url.offset;
     query.len = u->field_data[UF_QUERY].len;
 
     return query;
@@ -237,7 +256,8 @@ static struct uh_str conn_get_query(struct uh_connection *conn)
 
 static struct uh_str conn_get_header(struct uh_connection *conn, const char *name)
 {
-    struct uh_request *req = &conn->req;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct uh_request *req = &conni->req;
     int name_len = strlen(name);
     struct uh_str value = {};
     int i;
@@ -249,8 +269,8 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
         if (req->headers[i].field.length != name_len)
             continue;
 
-        if (!strncasecmp(O2D(conn, req->headers[i].field.offset), name, name_len)) {
-            value.p = O2D(conn, req->headers[i].value.offset);
+        if (!strncasecmp(O2D(conni, req->headers[i].field.offset), name, name_len)) {
+            value.p = O2D(conni, req->headers[i].value.offset);
             value.len = req->headers[i].value.length;
         }
     }
@@ -260,10 +280,11 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
 
 static struct uh_str conn_get_body(struct uh_connection *conn)
 {
-    struct uh_request *req = &conn->req;
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct uh_request *req = &conni->req;
     struct uh_str body;
 
-    body.p = O2D(conn, req->body.offset);
+    body.p = O2D(conni, req->body.offset);
     body.len = req->body.length;
 
     return body;
@@ -271,16 +292,17 @@ static struct uh_str conn_get_body(struct uh_connection *conn)
 
 static struct uh_str conn_extract_body(struct uh_connection *conn)
 {
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     struct uh_str body = conn_get_body(conn);
 
-    conn->req.body.consumed = true;
+    conni->req.body.consumed = true;
 
     return body;
 }
 
 static int on_message_begin_cb(struct http_parser *parser)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_request *req = &conn->req;
 
     memset(req, 0, sizeof(struct uh_request));
@@ -296,7 +318,7 @@ static int on_message_begin_cb(struct http_parser *parser)
 
 static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_request *req = &conn->req;
 
     if (req->url.offset == 0)
@@ -308,7 +330,7 @@ static int on_url_cb(struct http_parser *parser, const char *at, size_t length)
 
 static int on_header_field_cb(struct http_parser *parser, const char *at, size_t length)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_request *req = &conn->req;
 
     if (req->last_was_header_value) {
@@ -330,7 +352,7 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
 
 static int on_header_value_cb(struct http_parser *parser, const char *at, size_t length)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_request *req = &conn->req;
 
     if (!req->last_was_header_value) {
@@ -345,8 +367,8 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
 
 static int on_headers_complete(struct http_parser *parser)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
-    struct uh_server *srv = conn->srv;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
+    struct uh_server_internal *srv = conn->srv;
     struct uh_request *req = &conn->req;
     struct uh_path_handler *h = srv->handlers;
     struct uh_plugin *p = srv->plugins;
@@ -354,7 +376,7 @@ static int on_headers_complete(struct http_parser *parser)
 
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
 
-    path = conn->get_path(conn);
+    path = conn->com.get_path(&conn->com);
 
     while (h) {
         if (strlen(h->path) == path.len && !strncmp(path.p, h->path, path.len)) {
@@ -377,11 +399,11 @@ done:
         conn->handler = srv->default_handler;
 
     if (!conn->handler) {
-        conn_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
+        conn_error(&conn->com, HTTP_STATUS_NOT_FOUND, NULL);
         return -1;
     }
 
-    conn->handler(conn, UH_EV_HEAD_COMPLETE);
+    conn->handler(&conn->com, UH_EV_HEAD_COMPLETE);
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE)
         return -1;
@@ -391,14 +413,14 @@ done:
 
 static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_request *req = &conn->req;
 
     if (req->body.offset == 0)
         req->body.offset = ROF(conn, at);
     req->body.length += length;
 
-    conn->handler(conn, UH_EV_BODY);
+    conn->handler(&conn->com, UH_EV_BODY);
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE)
         return -1;
@@ -415,12 +437,12 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 
 static int on_message_complete_cb(struct http_parser *parser)
 {
-    struct uh_connection *conn = (struct uh_connection *)parser->data;
-    struct uh_server *srv = conn->srv;
+    struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
+    struct uh_server_internal *srv = conn->srv;
 
     ev_timer_stop(srv->loop, &conn->timer);
 
-    conn->handler(conn, UH_EV_COMPLETE);
+    conn->handler(&conn->com, UH_EV_COMPLETE);
 
     http_parser_pause(parser, true);
 
@@ -437,7 +459,7 @@ static struct http_parser_settings settings = {
     .on_message_complete = on_message_complete_cb
 };
 
-void conn_free(struct uh_connection *conn)
+void conn_free(struct uh_connection_internal *conn)
 {
     struct ev_loop *loop = conn->srv->loop;
     char addr_str[INET6_ADDRSTRLEN];
@@ -476,7 +498,7 @@ void conn_free(struct uh_connection *conn)
     free(conn);
 }
 
-static void conn_http_parse(struct uh_connection *conn)
+static void conn_http_parse(struct uh_connection_internal *conn)
 {
     struct http_parser *parser = &conn->parser;
     struct uh_request *req = &conn->req;
@@ -494,7 +516,7 @@ static void conn_http_parse(struct uh_connection *conn)
     case HPE_PAUSED:
     case HPE_OK:
         if (parser->upgrade) {
-            conn_error(conn, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
+            conn_error(&conn->com, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
             return;
         }
 
@@ -508,7 +530,7 @@ static void conn_http_parse(struct uh_connection *conn)
         return;
 
     default:
-        conn_error(conn, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
+        conn_error(&conn->com, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
         return;
     }
 }
@@ -529,7 +551,7 @@ static int conn_ssl_write(int fd, void *buf, size_t count, void *ssl)
 
 static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
-    struct uh_connection *conn = container_of(w, struct uh_connection, iow);
+    struct uh_connection_internal *conn = container_of(w, struct uh_connection_internal, iow);
     int ret;
 
 #if UHTTPD_SSL_SUPPORT
@@ -593,7 +615,7 @@ static int conn_ssl_read(int fd, void *buf, size_t count, void *ssl)
 
 static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
-    struct uh_connection *conn = container_of(w, struct uh_connection, ior);
+    struct uh_connection_internal *conn = container_of(w, struct uh_connection_internal, ior);
     struct buffer *rb = &conn->rb;
     bool eof;
     int ret;
@@ -643,7 +665,7 @@ done:
 
 static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
 {
-    struct uh_connection *conn = container_of(w, struct uh_connection, timer);
+    struct uh_connection_internal *conn = container_of(w, struct uh_connection_internal, timer);
     ev_tstamp after = conn->activity + UHTTPD_CONNECTION_TIMEOUT - ev_now(loop);
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE) {
@@ -657,14 +679,42 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
         return;
     }
 
-    conn_error(conn, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
+    conn_error(&conn->com, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
-struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct sockaddr *addr)
+static void conn_init_cb(struct uh_connection *conn)
 {
-    struct uh_connection *conn;
+    conn->done = conn_done;
+    conn->send = conn_send;
+    conn->send_file = conn_send_file;
+    conn->printf = conn_printf;
+    conn->vprintf = conn_vprintf;
+    conn->send_status_line = conn_send_status_line;
+    conn->send_head = conn_send_head;
+    conn->error = conn_error;
+    conn->redirect = conn_redirect;
+    conn->serve_file = serve_file;
 
-    conn = calloc(1, sizeof(struct uh_connection));
+    conn->chunk_send = conn_chunk_send;
+    conn->chunk_printf = conn_chunk_printf;
+    conn->chunk_vprintf = conn_chunk_vprintf;
+    conn->chunk_end = conn_chunk_end;
+
+    conn->get_addr = conn_get_addr;
+    conn->get_method = conn_get_method;
+    conn->get_method_str = conn_get_method_str;
+    conn->get_path = conn_get_path;
+    conn->get_query = conn_get_query;
+    conn->get_header = conn_get_header;
+    conn->get_body = conn_get_body;
+    conn->extract_body = conn_extract_body;
+}
+
+struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv, int sock, struct sockaddr *addr)
+{
+    struct uh_connection_internal *conn;
+
+    conn = calloc(1, sizeof(struct uh_connection_internal));
     if (!conn) {
         uh_log_err("malloc: %s\n", strerror(errno));
         return NULL;
@@ -696,30 +746,7 @@ struct uh_connection *uh_new_connection(struct uh_server *srv, int sock, struct 
 
     conn->parser.data = conn;
 
-    conn->done = conn_done;
-    conn->send = conn_send;
-    conn->send_file = conn_send_file;
-    conn->printf = conn_printf;
-    conn->vprintf = conn_vprintf;
-    conn->send_status_line = conn_send_status_line;
-    conn->send_head = conn_send_head;
-    conn->error = conn_error;
-    conn->redirect = conn_redirect;
-    conn->serve_file = serve_file;
-
-    conn->chunk_send = conn_chunk_send;
-    conn->chunk_printf = conn_chunk_printf;
-    conn->chunk_vprintf = conn_chunk_vprintf;
-    conn->chunk_end = conn_chunk_end;
-
-    conn->get_addr = conn_get_addr;
-    conn->get_method = conn_get_method;
-    conn->get_method_str = conn_get_method_str;
-    conn->get_path = conn_get_path;
-    conn->get_query = conn_get_query;
-    conn->get_header = conn_get_header;
-    conn->get_body = conn_get_body;
-    conn->extract_body = conn_extract_body;
+    conn_init_cb(&conn->com);
 
     return conn;
 }

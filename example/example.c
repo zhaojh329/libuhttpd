@@ -199,7 +199,7 @@ int main(int argc, char **argv)
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 
-    srv->default_handler = default_handler;
+    srv->set_default_handler(srv, default_handler);
 
     srv->add_path_handler(srv, "/upload", upload_handler);
 
