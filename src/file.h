@@ -27,6 +27,6 @@
 
 #include "connection.h"
 
-void serve_file(struct uh_connection *conn, const char *docroot, const char *index_page);
+void serve_file(struct uh_connection *conn);
 
 #endif

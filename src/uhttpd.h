@@ -58,6 +58,8 @@ struct uh_path_handler {
 
 struct uh_server {
     int sock;
+    char *docroot;
+    char *index_page;
     struct ev_loop *loop;
     struct ev_io ior;
     struct uh_connection *conns;
@@ -71,6 +73,8 @@ struct uh_server {
     int (*load_plugin)(struct uh_server *srv, const char *path);
     struct uh_path_handler *handlers;
     int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
+    int (*set_docroot)(struct uh_server *srv, const char *path);
+    int (*set_index_page)(struct uh_server *srv, const char *name);
 };
 
 /*

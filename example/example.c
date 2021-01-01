@@ -32,8 +32,6 @@
 #include "uhttpd.h"
 
 static bool serve_file = false;
-static const char *docroot = ".";
-static const char *index_page = "index.html";
 
 static void default_handler(struct uh_connection *conn, int event)
 {
@@ -56,7 +54,7 @@ static void default_handler(struct uh_connection *conn, int event)
         conn->chunk_end(conn);
         conn->done(conn);
     } else {
-        conn->serve_file(conn, docroot, index_page);
+        conn->serve_file(conn);
     }
 }
 
@@ -126,12 +124,14 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 static void usage(const char *prog)
 {
     fprintf(stderr, "Usage: %s [option]\n"
-            "          -a addr  # Default addr is localhost\n"
-            "          -p port  # Default port is 8080\n"
-            "          -s       # SSl on\n"
-            "          -f       # Serve file\n"
-            "          -P       # plugin path\n"
-            "          -v       # verbose\n", prog);
+            "          -h docroot     # Document root, default is .\n"
+            "          -i index_page  # Index page, default is index.html\n"
+            "          -a addr        # Default addr is localhost\n"
+            "          -p port        # Default port is 8080\n"
+            "          -s             # SSl on\n"
+            "          -f             # Serve file\n"
+            "          -P             # plugin path\n"
+            "          -v             # verbose\n", prog);
     exit(1);
 }
 
@@ -143,12 +143,20 @@ int main(int argc, char **argv)
     const char *plugin_path = NULL;
     bool verbose = false;
     bool ssl = false;
+    const char *docroot = ".";
+    const char *index_page = "index.html";
     const char *addr = "localhost";
     int port = 8080;
     int opt;
 
-    while ((opt = getopt(argc, argv, "a:p:sfP:v")) != -1) {
+    while ((opt = getopt(argc, argv, "h:i:a:p:sfP:v")) != -1) {
         switch (opt) {
+        case 'h':
+            docroot = optarg;
+            break;
+        case 'i':
+            index_page = optarg;
+            break;
         case 'a':
             addr = optarg;
             break;
@@ -187,6 +195,9 @@ int main(int argc, char **argv)
     if (ssl && srv->ssl_init(srv, "server-cert.pem", "server-key.pem") < 0)
         goto err;
 #endif
+
+    srv->set_docroot(srv, docroot);
+    srv->set_index_page(srv, index_page);
 
     srv->default_handler = default_handler;
 

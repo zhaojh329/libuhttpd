@@ -53,6 +53,12 @@ static void uh_server_free(struct uh_server *srv)
     if (srv->sock > 0)
         close(srv->sock);
 
+    if (srv->docroot)
+        free(srv->docroot);
+
+    if (srv->index_page)
+        free(srv->index_page);
+
     while (conn) {
         struct uh_connection *next = conn->next;
         conn_free(conn);
@@ -218,6 +224,34 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     return 0;
 }
 
+static int uh_set_docroot(struct uh_server *srv, const char *path)
+{
+    if (srv->docroot)
+        free(srv->docroot);
+
+    srv->docroot = strdup(path);
+    if (!srv->docroot) {
+        uh_log_err("strdup: %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int uh_set_index_page(struct uh_server *srv, const char *name)
+{
+    if (srv->index_page)
+        free(srv->index_page);
+
+    srv->index_page = strdup(name);
+    if (!srv->index_page) {
+        uh_log_err("strdup: %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
     union {
@@ -305,6 +339,9 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     srv->load_plugin = uh_load_plugin;
 
     srv->add_path_handler = uh_add_path_handler;
+
+    srv->set_docroot = uh_set_docroot;
+    srv->set_index_page = uh_set_index_page;
 
     ev_io_init(&srv->ior, uh_accept_cb, sock, EV_READ);
     ev_io_start(srv->loop, &srv->ior);
