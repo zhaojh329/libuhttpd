@@ -29,6 +29,7 @@
 * 轻量、全异步
 * 使用[libev]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
+* 支持 HTTP 流水线
 * 支持 IPv6
 * 支持插件
 * 支持上传大文件
@@ -36,7 +37,7 @@
 * 代码结构简洁通俗易懂，亦适合学习
 
 # 依赖
-* [libev]
+* [libev] - 一个全功能和高性能的事件循环库
 * [http-parser] - 一个用 C 语言编写的高性能的 HTTP 消息解析器
 * [mbedtls] - 如果你选择mbedtls作为你的SSL后端
 * [wolfssl] - 如果你选择wolfssl作为你的SSL后端

@@ -29,6 +29,7 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 * Lightweight and fully asynchronous
 * Use [libev] as its event backend
 * Support HTTPS - OpenSSL, mbedtls and CyaSSl(wolfssl)
+* Support HTTP pipelining
 * Support IPv6
 * Support plugin
 * Support upload large file
@@ -36,7 +37,7 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 * Code structure is concise and understandable, also suitable for learning
 
 # Dependencies
-* [libev]
+* [libev] - A full-featured and high-performance event loop
 * [http-parser] - A high performance parser for HTTP messages written in C
 * [mbedtls] - If you choose mbedtls as your SSL backend
 * [wolfssl] - If you choose wolfssl as your SSL backend
