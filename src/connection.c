@@ -66,17 +66,24 @@ static void conn_send_file(struct uh_connection *conn, const char *path)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     struct stat st;
-    int ret;
+    int fd;
 
-    conni->file.fd = open(path, O_RDONLY);
+    fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        uh_log_err("open: %s\n", strerror(errno));
+        return;
+    }
 
-    fstat(conni->file.fd, &st);
-
-    conni->file.size = st.st_size;
+    fstat(fd, &st);
 
     /* If the file is not greater than 8K, then append it to the HTTP head, send once */
-    ret = buffer_put_fd(&conni->wb, conni->file.fd, 8192, NULL);
-    conni->file.size -= ret;
+    st.st_size -= buffer_put_fd(&conni->wb, fd, 8192, NULL);
+    if (st.st_size > 0) {
+        conni->file.size = st.st_size;
+        conni->file.fd = fd;
+    } else {
+        close(fd);
+    }
 
     ev_io_start(conni->srv->loop, &conni->iow);
 }
