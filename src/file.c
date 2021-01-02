@@ -34,6 +34,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 #include "uhttpd_internal.h"
 #include "mimetypes.h"
@@ -152,6 +153,102 @@ static void file_if_gzip(struct uh_connection *conn, const char *path, const cha
     conn->printf(conn, "Content-Encoding: gzip\r\n");
 }
 
+static bool file_range(struct uh_connection *conn, size_t size, size_t *start, size_t *end, bool *ranged)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    const struct uh_str hdr = conn->get_header(conn, "Range");
+    int content_length;
+    const char *reason;
+    const char *p, *e;
+    char buf[32];
+    int i;
+
+    *start = 0;
+    *end = size - 1;
+
+    if (!hdr.p) {
+        *ranged = false;
+        return true;
+    }
+
+    if (hdr.len < 8)
+        goto err;
+
+    p = hdr.p;
+    e = hdr.p + hdr.len;
+
+    if (strncmp(p, "bytes=", 6))
+        goto err;
+
+    p += 6;
+    i = 0;
+
+    while (p < e) {
+        if (i >= sizeof(buf) - 1)
+            goto err;
+
+        if (isdigit(*p)) {
+            buf[i++] = *p++;
+            continue;
+        }
+
+        if (*p != '-')
+            goto err;
+
+        p++;
+        buf[i] = '\0';
+
+        break;
+    }
+
+    *start = strtoul(buf, NULL, 0);
+
+    i = 0;
+
+    while (p < e) {
+        if (i >= (sizeof(buf) - 1) || !isdigit(*p))
+            goto err;
+        buf[i++] = *p++;
+    }
+
+    buf[i] = '\0';
+    *end = strtoul(buf, NULL, 0);
+
+    if (*start >= size)
+        goto err;
+
+    if (*end == 0)
+        *end = size - 1;
+
+    if (*end < *start)
+        goto err;
+
+    if (*end > size - 1)
+        *end = size - 1;
+
+    *ranged = true;
+
+    return true;
+
+err:
+    reason = http_status_str(HTTP_STATUS_RANGE_NOT_SATISFIABLE);
+    content_length = strlen(reason);
+
+    conn->send_status_line(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, "Content-Type: text/plain\r\nConnection: close\r\n");
+    conn->printf(conn, "Content-Length: %d\r\n", content_length);
+    conn->printf(conn, "Content-Range: bytes */%" PRIu64 "\r\n", size);
+
+    conn->send(conn, "\r\n", 2);
+
+    conn->send(conn, reason, content_length);
+
+    conni->flags |= CONN_F_SEND_AND_CLOSE;
+
+    conn->done(conn);
+
+    return false;
+}
+
 void serve_file(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -160,8 +257,10 @@ void serve_file(struct uh_connection *conn)
     const char *docroot = srv->docroot;
     const char *index_page = srv->index_page;
     static char fullpath[512];
+    size_t start, end;
     const char *mime;
     struct stat st;
+    bool ranged;
 
     if (!docroot || !docroot[0])
         docroot = ".";
@@ -210,6 +309,9 @@ void serve_file(struct uh_connection *conn)
         return;
     }
 
+    if (!file_range(conn, st.st_size, &start, &end, &ranged))
+        return;
+
     if (!file_if_modified_since(conn, &st) ||
         !file_if_range(conn, &st) ||
         !file_if_unmodified_since(conn, &st)) {
@@ -217,21 +319,29 @@ void serve_file(struct uh_connection *conn)
         return;
     }
 
-    conn->send_status_line(conn, HTTP_STATUS_OK, NULL);
+    if (ranged)
+        conn->send_status_line(conn, HTTP_STATUS_PARTIAL_CONTENT, NULL);
+    else
+        conn->send_status_line(conn, HTTP_STATUS_OK, NULL);
+
     file_response_ok_hdrs(conn, &st);
 
     mime = file_mime_lookup(fullpath);
 
     conn->printf(conn, "Content-Type: %s\r\n", mime);
-    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", st.st_size);
+    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", end - start + 1);
 
-    file_if_gzip(conn, fullpath, mime);
+    if (ranged)
+        conn->printf(conn, "Content-Range: bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64 "\r\n", start, end, st.st_size);
+    else
+        file_if_gzip(conn, fullpath, mime);
 
     conn->printf(conn, "\r\n");
 
     if (conn->get_method(conn) == HTTP_HEAD)
         return;
 
-    conn->send_file(conn, fullpath);
+    conn->send_file(conn, fullpath, start, end - start + 1);
+
     conn->done(conn);
 }

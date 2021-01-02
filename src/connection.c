@@ -62,9 +62,10 @@ static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
     ev_io_start(conni->srv->loop, &conni->iow);
 }
 
-static void conn_send_file(struct uh_connection *conn, const char *path)
+static void conn_send_file(struct uh_connection *conn, const char *path, size_t offset, size_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    size_t min = 8192;
     struct stat st;
     int fd;
 
@@ -76,13 +77,24 @@ static void conn_send_file(struct uh_connection *conn, const char *path)
 
     fstat(fd, &st);
 
-    /* If the file is not greater than 8K, then append it to the HTTP head, send once */
-    st.st_size -= buffer_put_fd(&conni->wb, fd, 8192, NULL);
-    if (st.st_size > 0) {
-        conni->file.size = st.st_size;
-        conni->file.fd = fd;
-    } else {
+    if (offset >= st.st_size) {
         close(fd);
+        return;
+    }
+
+    lseek(fd, offset, SEEK_SET);
+    st.st_size -= offset;
+
+    if (len == 0 || len > st.st_size)
+        len = st.st_size;
+
+    /* If the file is not greater than 8K, then append it to the HTTP head, send once */
+    if (len <= min) {
+        buffer_put_fd(&conni->wb, fd, len, NULL);
+        close(fd);
+    } else {
+        conni->file.size = len;
+        conni->file.fd = fd;
     }
 
     ev_io_start(conni->srv->loop, &conni->iow);
