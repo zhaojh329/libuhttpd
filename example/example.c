@@ -131,6 +131,7 @@ static void usage(const char *prog)
             "          -s             # SSl on\n"
             "          -f             # Serve file\n"
             "          -P             # plugin path\n"
+            "          -w             # worker process number, default is equal to available CPUs\n"
             "          -v             # verbose\n", prog);
     exit(1);
 }
@@ -146,10 +147,11 @@ int main(int argc, char **argv)
     const char *docroot = ".";
     const char *index_page = "index.html";
     const char *addr = "localhost";
+    int nworker = -1;
     int port = 8080;
     int opt;
 
-    while ((opt = getopt(argc, argv, "h:i:a:p:sfP:v")) != -1) {
+    while ((opt = getopt(argc, argv, "h:i:a:p:sfP:w:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
@@ -172,6 +174,8 @@ int main(int argc, char **argv)
         case 'P':
             plugin_path = optarg;
             break;
+        case 'w':
+            nworker = atoi(optarg);
         case 'v':
             verbose = true;
             break;
@@ -210,7 +214,7 @@ int main(int argc, char **argv)
     ** -1 means automatically to available CPUs
     ** This function must be called after the Server has been initialized
     */
-    srv->start_worker(srv, -1);
+    srv->start_worker(srv, nworker);
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);
     ev_signal_start(loop, &signal_watcher);
