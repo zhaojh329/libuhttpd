@@ -196,6 +196,8 @@ int main(int argc, char **argv)
         goto err;
 #endif
 
+    srv->start_worker(srv, -1); /* -1 means automatically to available CPUs */
+
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 

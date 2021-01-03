@@ -32,6 +32,7 @@
 #ifdef HAVE_DLOPEN
 #include <dlfcn.h>
 #endif
+#include <sys/sysinfo.h>
 
 #include "uhttpd_internal.h"
 #include "connection.h"
@@ -100,7 +101,8 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
     sock = accept4(srv->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (sock < 0) {
-        uh_log_err("accept: %s\n", strerror(errno));
+        if (errno != EAGAIN)
+            uh_log_err("accept: %s\n", strerror(errno));
         return;
     }
 
@@ -121,6 +123,43 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     conn->next = srv->conns;
     srv->conns->prev = conn;
     srv->conns = conn;
+}
+
+static void uh_start_accept(struct uh_server_internal *srv)
+{
+    ev_io_init(&srv->ior, uh_accept_cb, srv->sock, EV_READ);
+    ev_io_start(srv->loop, &srv->ior);
+}
+
+static void uh_stop_accept(struct uh_server_internal *srv)
+{
+    ev_io_stop(srv->loop, &srv->ior);
+}
+
+static void uh_start_worker(struct uh_server *srv, int n)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+    pid_t pid;
+    int i;
+
+    if (n < 0)
+        n = get_nprocs();
+
+    if (n > 0)
+        uh_stop_accept(srvi);
+
+    for (i = 0; i < n; i++) {
+        pid = fork();
+        switch (pid) {
+        case -1:
+            uh_log_err("fork: %s\n", strerror(errno));
+            return;
+        case 0:
+            ev_loop_fork(srvi->loop);
+            uh_start_accept(srvi);
+            return;
+        }
+    }
 }
 
 struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port)
@@ -345,6 +384,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     srvi->loop = loop ? loop : EV_DEFAULT;
     srvi->sock = sock;
     srv->free = uh_server_free;
+    srv->start_worker = uh_start_worker;
 
 #if UHTTPD_SSL_SUPPORT
     srv->ssl_init = uh_server_ssl_init;
@@ -358,8 +398,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
 
-    ev_io_init(&srvi->ior, uh_accept_cb, sock, EV_READ);
-    ev_io_start(srvi->loop, &srvi->ior);
+    uh_start_accept(srvi);
 
     return 0;
 

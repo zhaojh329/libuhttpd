@@ -79,6 +79,11 @@ typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event)
 
 struct uh_server {
     void (*free)(struct uh_server *srv);
+    /*
+    ** Start n worker processes to process the requests
+    ** If n is -1, automatically to available CPUs
+    */
+    void (*start_worker)(struct uh_server *srv, int n);
 #if UHTTPD_SSL_SUPPORT
     int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
 #endif
