@@ -196,8 +196,6 @@ int main(int argc, char **argv)
         goto err;
 #endif
 
-    srv->start_worker(srv, -1); /* -1 means automatically to available CPUs */
-
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 
@@ -207,6 +205,12 @@ int main(int argc, char **argv)
 
     if (plugin_path)
         srv->load_plugin(srv, plugin_path);
+
+    /*
+    ** -1 means automatically to available CPUs
+    ** This function must be called after the Server has been initialized
+    */
+    srv->start_worker(srv, -1);
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);
     ev_signal_start(loop, &signal_watcher);

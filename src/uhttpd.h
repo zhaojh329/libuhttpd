@@ -81,6 +81,7 @@ struct uh_server {
     void (*free)(struct uh_server *srv);
     /*
     ** Start n worker processes to process the requests
+    ** Must be called after the Server has been initialized
     ** If n is -1, automatically to available CPUs
     */
     void (*start_worker)(struct uh_server *srv, int n);

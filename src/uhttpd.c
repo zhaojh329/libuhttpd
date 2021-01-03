@@ -159,6 +159,7 @@ static void uh_start_worker(struct uh_server *srv, int n)
         case 0:
             ev_loop_fork(srvi->loop);
             uh_start_accept(srvi);
+            ev_run(srvi->loop, 0);
             return;
         }
     }
