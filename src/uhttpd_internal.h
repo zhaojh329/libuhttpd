@@ -45,4 +45,9 @@ struct uh_server_internal {
     struct uh_path_handler *handlers;
 };
 
+struct worker {
+    struct ev_child w;
+    int i;
+};
+
 #endif

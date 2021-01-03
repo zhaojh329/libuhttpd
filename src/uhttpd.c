@@ -136,10 +136,19 @@ static void uh_stop_accept(struct uh_server_internal *srv)
     ev_io_stop(srv->loop, &srv->ior);
 }
 
+static void uh_worker_exit(struct ev_loop *loop, struct ev_child *w, int revents)
+{
+    struct worker *wk = container_of(w, struct worker, w);
+
+    uh_log_info("worker %d exit\n", wk->i);
+
+    free(wk);
+}
+
 static void uh_start_worker(struct uh_server *srv, int n)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
-    pid_t pid;
+    pid_t pids[20];
     int i;
 
     if (n < 0)
@@ -151,17 +160,27 @@ static void uh_start_worker(struct uh_server *srv, int n)
     uh_stop_accept(srvi);
 
     for (i = 0; i < n; i++) {
-        pid = fork();
-        switch (pid) {
+        pids[i] = fork();
+        switch (pids[i]) {
         case -1:
             uh_log_err("fork: %s\n", strerror(errno));
             return;
         case 0:
             ev_loop_fork(srvi->loop);
             uh_start_accept(srvi);
+
+            uh_log_info("worker %d started\n", i);
+
             ev_run(srvi->loop, 0);
             return;
         }
+    }
+
+    while (i-- > 0) {
+        struct worker *w = calloc(1, sizeof(struct worker));
+        w->i = i;
+        ev_child_init(&w->w, uh_worker_exit, pids[i], 0);
+        ev_child_start(srvi->loop, &w->w);
     }
 }
 
