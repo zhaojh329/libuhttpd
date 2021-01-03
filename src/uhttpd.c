@@ -337,7 +337,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     char addr_str[INET6_ADDRSTRLEN];
     socklen_t addrlen;
     int sock = -1;
-    int opt = 1;
+    int on = 1;
 
     if (!host || *host == '\0') {
         addr.sin.sin_family = AF_INET;
@@ -383,7 +383,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
         return -1;
     }
 
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
         uh_log_err("setsockopt: %s\n", strerror(errno));
         goto err;
     }
