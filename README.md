@@ -33,6 +33,7 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 * Support IPv6
 * Support plugin
 * Support upload large file
+* Support HTTP range requests
 * Support multi-process model - The same multi-process model as Nginx
 * Flexible - you can easily extend your application to have HTTP/HTTPS services
 * Code structure is concise and understandable, also suitable for learning
