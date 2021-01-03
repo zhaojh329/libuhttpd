@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <netdb.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
 #ifdef HAVE_DLOPEN
 #include <dlfcn.h>
@@ -145,6 +144,40 @@ static void uh_worker_exit(struct ev_loop *loop, struct ev_child *w, int revents
     free(wk);
 }
 
+static int uh_socket(int family)
+{
+    int on = 1;
+    int sock;
+
+    sock = socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    if (sock < 0) {
+        uh_log_err("socket: %s\n", strerror(errno));
+        return -1;
+    }
+
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+        uh_log_err("setsockopt: %s\n", strerror(errno));
+        close(sock);
+        return -1;
+    }
+
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
+
+    return sock;
+}
+
+static int uh_listen(int sock, struct sockaddr *addr, socklen_t addrlen)
+{
+    if (bind(sock, addr, addrlen) < 0) {
+        uh_log_err("bind: %s\n", strerror(errno));
+        return -1;
+    }
+
+    listen(sock, SOMAXCONN);
+
+    return 0;
+}
+
 static void uh_start_worker(struct uh_server *srv, int n)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
@@ -159,6 +192,9 @@ static void uh_start_worker(struct uh_server *srv, int n)
 
     uh_stop_accept(srvi);
 
+    if (srvi->reuseport)
+        close(srvi->sock);
+
     for (i = 0; i < n; i++) {
         pids[i] = fork();
         switch (pids[i]) {
@@ -167,6 +203,12 @@ static void uh_start_worker(struct uh_server *srv, int n)
             return;
         case 0:
             ev_loop_fork(srvi->loop);
+
+            if (srvi->reuseport) {
+                srvi->sock = uh_socket(srvi->addr.sa.sa_family);
+                uh_listen(srvi->sock, &srvi->addr.sa, srvi->addrlen);
+            }
+
             uh_start_accept(srvi);
 
             uh_log_info("worker %d started\n", i);
@@ -337,7 +379,6 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     char addr_str[INET6_ADDRSTRLEN];
     socklen_t addrlen;
     int sock = -1;
-    int on = 1;
 
     if (!host || *host == '\0') {
         addr.sin.sin_family = AF_INET;
@@ -377,34 +418,31 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
         inet_ntop(AF_INET6, &addr.sin6.sin6_addr, addr_str, sizeof(addr_str));
     }
 
-    sock = socket(addr.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
-    if (sock < 0) {
-        uh_log_err("socket: %s\n", strerror(errno));
+    memset(srvi, 0, sizeof(struct uh_server_internal));
+
+    srvi->loop = loop ? loop : EV_DEFAULT;
+
+    srvi->reuseport = support_so_reuseport();
+
+    sock = uh_socket(addr.sa.sa_family);
+    if (sock < 0)
         return -1;
-    }
 
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
-        uh_log_err("setsockopt: %s\n", strerror(errno));
+    if (uh_listen(sock, &addr.sa, addrlen) < 0)
         goto err;
-    }
 
-    if (bind(sock, &addr.sa, addrlen) < 0) {
-        close(sock);
-        uh_log_err("bind: %s\n", strerror(errno));
-        goto err;
-    }
+    srvi->sock = sock;
 
-    listen(sock, SOMAXCONN);
+    uh_start_accept(srvi);
+
+    srvi->addrlen = addrlen;
+    memcpy(&srvi->addr, &addr, sizeof(addr));
 
     if (uh_log_get_threshold() == LOG_DEBUG) {
         saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
         uh_log_debug("Listen on: %s %d\n", addr_str, port);
     }
 
-    memset(srvi, 0, sizeof(struct uh_server_internal));
-
-    srvi->loop = loop ? loop : EV_DEFAULT;
-    srvi->sock = sock;
     srv->free = uh_server_free;
     srv->start_worker = uh_start_worker;
 
@@ -419,8 +457,6 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
-
-    uh_start_accept(srvi);
 
     return 0;
 

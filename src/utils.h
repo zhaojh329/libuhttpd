@@ -41,4 +41,6 @@
 
 const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port);
 
+bool support_so_reuseport();
+
 #endif

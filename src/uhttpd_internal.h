@@ -25,6 +25,8 @@
 #ifndef LIBUHTTPD_UHTTPD_INTERNAL_H
 #define LIBUHTTPD_UHTTPD_INTERNAL_H
 
+#include <arpa/inet.h>
+
 #include "uhttpd.h"
 
 struct uh_connection_internal;
@@ -32,6 +34,13 @@ struct uh_connection_internal;
 struct uh_server_internal {
     struct uh_server com;
     int sock;
+    bool reuseport;
+    union {
+        struct sockaddr     sa;
+        struct sockaddr_in  sin;
+        struct sockaddr_in6 sin6;
+    } addr;
+    socklen_t addrlen;
     char *docroot;
     char *index_page;
     struct ev_loop *loop;

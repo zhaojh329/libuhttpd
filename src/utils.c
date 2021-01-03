@@ -27,6 +27,7 @@
 #include <inttypes.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 #include "utils.h"
 
@@ -43,4 +44,20 @@ const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port)
     }
 
     return buf;
+}
+
+bool support_so_reuseport()
+{
+    bool ok = false;
+    int on = 1;
+    int sock;
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (!setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int)))
+        ok = true;
+
+    close(sock);
+
+    return ok;
 }
