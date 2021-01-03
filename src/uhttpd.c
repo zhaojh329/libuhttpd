@@ -145,8 +145,10 @@ static void uh_start_worker(struct uh_server *srv, int n)
     if (n < 0)
         n = get_nprocs();
 
-    if (n > 0)
-        uh_stop_accept(srvi);
+    if (n < 2)
+        return;
+
+    uh_stop_accept(srvi);
 
     for (i = 0; i < n; i++) {
         pid = fork();
