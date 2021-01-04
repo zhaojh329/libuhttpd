@@ -32,6 +32,7 @@
 #include <dlfcn.h>
 #endif
 #include <sys/sysinfo.h>
+#include <sys/prctl.h>
 
 #include "uhttpd_internal.h"
 #include "connection.h"
@@ -202,6 +203,8 @@ static void uh_start_worker(struct uh_server *srv, int n)
             uh_log_err("fork: %s\n", strerror(errno));
             return;
         case 0:
+            prctl(PR_SET_PDEATHSIG, SIGKILL);
+
             ev_loop_fork(srvi->loop);
 
             if (srvi->reuseport) {
