@@ -43,7 +43,7 @@
 static const char *file_mktag(struct stat *s, char *buf, int len)
 {
     snprintf(buf, len, "\"%" PRIx64 "-%" PRIx64 "-%" PRIx64 "\"",
-             (uint64_t)s->st_ino, s->st_size, (uint64_t)s->st_mtime);
+             (uint64_t)s->st_ino, (uint64_t)s->st_size, (uint64_t)s->st_mtime);
 
     return buf;
 }
@@ -166,6 +166,8 @@ static bool file_range(struct uh_connection *conn, size_t size, size_t *start, s
     *start = 0;
     *end = size - 1;
 
+    uh_log_info("%lu - %lu\n", *start, *end);
+
     if (!hdr.p) {
         *ranged = false;
         return true;
@@ -236,7 +238,7 @@ err:
 
     conn->send_status_line(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, "Content-Type: text/plain\r\nConnection: close\r\n");
     conn->printf(conn, "Content-Length: %d\r\n", content_length);
-    conn->printf(conn, "Content-Range: bytes */%" PRIu64 "\r\n", size);
+    conn->printf(conn, "Content-Range: bytes */%zu\r\n", size);
 
     conn->send(conn, "\r\n", 2);
 
@@ -329,10 +331,10 @@ void serve_file(struct uh_connection *conn)
     mime = file_mime_lookup(fullpath);
 
     conn->printf(conn, "Content-Type: %s\r\n", mime);
-    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", end - start + 1);
+    conn->printf(conn, "Content-Length: %zu\r\n", end - start + 1);
 
     if (ranged)
-        conn->printf(conn, "Content-Range: bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64 "\r\n", start, end, st.st_size);
+        conn->printf(conn, "Content-Range: bytes %zu-%zu/%zu\r\n", start, end, st.st_size);
     else
         file_if_gzip(conn, fullpath, mime);
 
