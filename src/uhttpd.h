@@ -45,7 +45,11 @@ enum {
     UH_EV_COMPLETE
 };
 
+struct uh_server;
+
 struct uh_connection {
+    struct uh_server *(*get_server)(struct uh_connection *conn);
+    struct ev_loop *(*get_loop)(struct uh_connection *conn);
     /*
     ** Indicates the end of request processing
     ** Must be called at last, if not call 'error', 'redirect' and 'serve_file'
@@ -78,6 +82,7 @@ struct uh_connection {
 typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event);
 
 struct uh_server {
+    struct ev_loop *(*get_loop)(struct uh_server *srv);
     void (*free)(struct uh_server *srv);
     /*
     ** Start n worker processes to process the requests

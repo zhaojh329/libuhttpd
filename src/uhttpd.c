@@ -371,6 +371,13 @@ static int uh_set_index_page(struct uh_server *srv, const char *name)
     return 0;
 }
 
+static struct ev_loop *uh_get_loop(struct uh_server *srv)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    return srvi->loop;
+}
+
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
@@ -446,6 +453,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
         uh_log_debug("Listen on: %s %d\n", addr_str, port);
     }
 
+    srv->get_loop = uh_get_loop;
     srv->free = uh_server_free;
     srv->start_worker = uh_start_worker;
 

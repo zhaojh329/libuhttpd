@@ -706,8 +706,24 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
     conn_error(&conn->com, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
+static struct uh_server *conn_get_server(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return &conni->srv->com;
+}
+
+static struct ev_loop *conn_get_loop(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return conni->srv->loop;
+}
+
 static void conn_init_cb(struct uh_connection *conn)
 {
+    conn->get_server = conn_get_server;
+    conn->get_loop = conn_get_loop;
     conn->done = conn_done;
     conn->send = conn_send;
     conn->send_file = conn_send_file;
