@@ -56,7 +56,7 @@ struct uh_connection {
     */
     void (*done)(struct uh_connection *conn);
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*send_file)(struct uh_connection *conn, const char *path, size_t offset, size_t len);
+    void (*send_file)(struct uh_connection *conn, const char *path, size_t offset, ssize_t len);
     void (*printf)(struct uh_connection *conn, const char *format, ...);
     void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
