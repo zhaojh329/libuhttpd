@@ -57,18 +57,18 @@ struct uh_connection {
     void (*done)(struct uh_connection *conn);
     void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
     void (*send_file)(struct uh_connection *conn, const char *path, size_t offset, ssize_t len);
-    void (*printf)(struct uh_connection *conn, const char *format, ...);
+    void (*printf)(struct uh_connection *conn, const char *format, ...) __attribute__((format(printf, 2, 3)));
     void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
     void (*send_head)(struct uh_connection *conn, int code, int content_length, const char *extra_headers);
     void (*error)(struct uh_connection *conn, int code, const char *reason);
-    void (*redirect)(struct uh_connection *conn, int code, const char *location, ...);
+    void (*redirect)(struct uh_connection *conn, int code, const char *location, ...) __attribute__((format(printf, 3, 4)));
     void (*serve_file)(struct uh_connection *conn);
     void (*chunk_send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*chunk_printf)(struct uh_connection *conn, const char *format, ...);
+    void (*chunk_printf)(struct uh_connection *conn, const char *format, ...) __attribute__((format(printf, 2, 3)));
     void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
     void (*chunk_end)(struct uh_connection *conn);
-    const struct sockaddr *(*get_addr)(struct uh_connection *conn);   /* peer address */
+    const struct sockaddr *(*get_addr)(struct uh_connection *conn); /* peer address */
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
     struct uh_str (*get_path)(struct uh_connection *conn);
@@ -117,7 +117,6 @@ struct uh_path_handler {
     char path[0];
 };
 
-
 /*
  *  uh_server_new - creat an uh_server struct and init it
  *  @loop: If NULL will use EV_DEFAULT
@@ -129,4 +128,3 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port
 int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port);
 
 #endif
-
