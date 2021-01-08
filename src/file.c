@@ -166,8 +166,6 @@ static bool file_range(struct uh_connection *conn, size_t size, size_t *start, s
     *start = 0;
     *end = size - 1;
 
-    uh_log_info("%lu - %lu\n", *start, *end);
-
     if (!hdr.p) {
         *ranged = false;
         return true;
