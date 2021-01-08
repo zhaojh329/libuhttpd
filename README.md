@@ -84,7 +84,7 @@ See which configuration are supported
 # Run Example	
 Run
 
-	~/libuhttpd/build$ ./example/example
+	~/libuhttpd/build$ ./example/simple_server -v
 	
 Then use the command curl or browser to test
 

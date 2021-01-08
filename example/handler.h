@@ -22,34 +22,13 @@
  * SOFTWARE.
  */
 
-#ifndef LIBUHTTPD_UHTTPD_INTERNAL_H
-#define LIBUHTTPD_UHTTPD_INTERNAL_H
-
-#include <arpa/inet.h>
+#ifndef _EXAMPLE_HANDLER_H
+#define _EXAMPLE_HANDLER_H
 
 #include "uhttpd.h"
 
-struct uh_connection_internal;
-
-struct uh_server_internal {
-    struct uh_server com;
-    int sock;
-    char *docroot;
-    char *index_page;
-    struct ev_loop *loop;
-    struct ev_io ior;
-    struct uh_connection_internal *conns;
-    void (*default_handler)(struct uh_connection *conn, int event);
-#if UHTTPD_SSL_SUPPORT
-    void *ssl_ctx;
-#endif
-    struct uh_plugin *plugins;
-    struct uh_path_handler *handlers;
-};
-
-struct worker {
-    struct ev_child w;
-    int i;
-};
+void default_handler(struct uh_connection *conn, int event);
+void echo_handler(struct uh_connection *conn, int event);
+void upload_handler(struct uh_connection *conn, int event);
 
 #endif

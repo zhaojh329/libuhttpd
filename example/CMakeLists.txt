@@ -5,13 +5,22 @@ include_directories(
 	${CMAKE_BINARY_DIR}/src
 	${LIBEV_INCLUDE_DIR})
 
-add_executable(example example.c)
+set(LIBS ${LIBEV_LIBRARY})
 
 if(BUILD_SHARED_LIBS)
-    target_link_libraries(example uhttpd ${LIBEV_LIBRARY})
+	list(APPEND LIBS uhttpd)
 else()
-    target_link_libraries(example uhttpd_s ${LIBEV_LIBRARY})
+	list(APPEND LIBS uhttpd_s)
 endif()
+
+add_executable(simple_server simple_server.c handler.c)
+target_link_libraries(simple_server ${LIBS})
+
+add_executable(multi_process_server_reuseport multi_process_server_reuseport.c handler.c)
+target_link_libraries(multi_process_server_reuseport ${LIBS})
+
+add_executable(multi_process_server multi_process_server.c handler.c)
+target_link_libraries(multi_process_server ${LIBS})
 
 if(HAVE_DLOPEN)
 	add_library(test_plugin MODULE  test_plugin.c)

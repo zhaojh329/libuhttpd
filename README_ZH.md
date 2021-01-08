@@ -84,7 +84,7 @@
 # 运行示例程序
 运行
 
-	~/libuhttpd/build$ ./example/example -v
+	~/libuhttpd/build$ ./example/simple_server -v
 	
 然后使用命令curl或者浏览器进行测试
 

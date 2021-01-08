@@ -29,88 +29,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "uhttpd.h"
-
-static bool serve_file = false;
-
-static void default_handler(struct uh_connection *conn, int event)
-{
-    if (event != UH_EV_COMPLETE)
-        return;
-
-    if (!serve_file) {
-        struct uh_str path = conn->get_path(conn);
-        struct uh_str query = conn->get_query(conn);
-        struct uh_str ua = conn->get_header(conn, "User-Agent");
-        struct uh_str body = conn->get_body(conn);
-
-        conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
-        conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
-        conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
-        conn->chunk_printf(conn, "Path: %.*s\n", (int)path.len ,path.p);
-        conn->chunk_printf(conn, "Query: %.*s\n", (int)query.len, query.p);
-        conn->chunk_printf(conn, "User-Agent: %.*s\n", (int)ua.len, ua.p);
-        conn->chunk_printf(conn, "Body: %.*s\n", (int)body.len, body.p);
-        conn->chunk_end(conn);
-        conn->done(conn);
-    } else {
-        conn->serve_file(conn);
-    }
-}
-
-static void upload_handler(struct uh_connection *conn, int event)
-{
-    static int fd = -1;
-
-    if (event == UH_EV_HEAD_COMPLETE) {
-        struct uh_str str = conn->get_header(conn, "Content-Length");
-        int content_length;
-        char buf[128];
-
-        sprintf(buf, "%.*s\n", (int)str.len, str.p);
-
-        content_length = atoi(buf);
-
-        if (content_length > 1024 * 1024 * 1024) {
-            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "Too big");
-            return;
-        }
-
-    } if (event == UH_EV_BODY) {
-        struct uh_str body = conn->extract_body(conn);
-
-        if (fd < 0) {
-            fd = open("upload.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
-            if (fd < 0) {
-                conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
-                return;
-            }
-        }
-
-        if (write(fd, body.p, body.len) < 0) {
-            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
-            close(fd);
-            return;
-        }
-    } else if (event == UH_EV_COMPLETE) {
-        struct stat st;
-        size_t size = 0;
-
-        conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
-
-        if (fd > 0) {
-            fstat(fd, &st);
-            close(fd);
-
-            fd = -1;
-            size = st.st_size;
-        }
-
-        conn->chunk_printf(conn, "Upload size: %zd\n", size);
-        conn->chunk_end(conn);
-        conn->done(conn);
-    }
-}
+#include "handler.h"
 
 static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
@@ -120,7 +39,6 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
     }
 }
 
-
 static void usage(const char *prog)
 {
     fprintf(stderr, "Usage: %s [option]\n"
@@ -129,9 +47,7 @@ static void usage(const char *prog)
             "          -a addr        # Default addr is localhost\n"
             "          -p port        # Default port is 8080\n"
             "          -s             # SSl on\n"
-            "          -f             # Serve file\n"
             "          -P             # plugin path\n"
-            "          -w             # worker process number, default is equal to available CPUs\n"
             "          -v             # verbose\n", prog);
     exit(1);
 }
@@ -147,11 +63,10 @@ int main(int argc, char **argv)
     const char *docroot = ".";
     const char *index_page = "index.html";
     const char *addr = "localhost";
-    int nworker = -1;
     int port = 8080;
     int opt;
 
-    while ((opt = getopt(argc, argv, "h:i:a:p:sfP:w:v")) != -1) {
+    while ((opt = getopt(argc, argv, "h:i:a:p:sP:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
@@ -168,14 +83,9 @@ int main(int argc, char **argv)
         case 's':
             ssl = true;
             break;
-        case 'f':
-            serve_file = true;
-            break;
         case 'P':
             plugin_path = optarg;
             break;
-        case 'w':
-            nworker = atoi(optarg);
         case 'v':
             verbose = true;
             break;
@@ -204,17 +114,11 @@ int main(int argc, char **argv)
     srv->set_index_page(srv, index_page);
 
     srv->set_default_handler(srv, default_handler);
-
+    srv->add_path_handler(srv, "/echo", echo_handler);
     srv->add_path_handler(srv, "/upload", upload_handler);
 
     if (plugin_path)
         srv->load_plugin(srv, plugin_path);
-
-    /*
-    ** -1 means automatically to available CPUs
-    ** This function must be called after the Server has been initialized
-    */
-    srv->start_worker(srv, nworker);
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);
     ev_signal_start(loop, &signal_watcher);

@@ -31,8 +31,6 @@
 #ifdef HAVE_DLOPEN
 #include <dlfcn.h>
 #endif
-#include <sys/sysinfo.h>
-#include <sys/prctl.h>
 
 #include "uhttpd_internal.h"
 #include "connection.h"
@@ -123,110 +121,6 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     conn->next = srv->conns;
     srv->conns->prev = conn;
     srv->conns = conn;
-}
-
-static void uh_start_accept(struct uh_server_internal *srv)
-{
-    ev_io_init(&srv->ior, uh_accept_cb, srv->sock, EV_READ);
-    ev_io_start(srv->loop, &srv->ior);
-}
-
-static void uh_stop_accept(struct uh_server_internal *srv)
-{
-    ev_io_stop(srv->loop, &srv->ior);
-}
-
-static void uh_worker_exit(struct ev_loop *loop, struct ev_child *w, int revents)
-{
-    struct worker *wk = container_of(w, struct worker, w);
-
-    uh_log_info("worker %d exit\n", wk->i);
-
-    free(wk);
-}
-
-static int uh_socket(int family)
-{
-    int on = 1;
-    int sock;
-
-    sock = socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
-    if (sock < 0) {
-        uh_log_err("socket: %s\n", strerror(errno));
-        return -1;
-    }
-
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
-        uh_log_err("setsockopt: %s\n", strerror(errno));
-        close(sock);
-        return -1;
-    }
-
-    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
-
-    return sock;
-}
-
-static int uh_listen(int sock, struct sockaddr *addr, socklen_t addrlen)
-{
-    if (bind(sock, addr, addrlen) < 0) {
-        uh_log_err("bind: %s\n", strerror(errno));
-        return -1;
-    }
-
-    listen(sock, SOMAXCONN);
-
-    return 0;
-}
-
-static void uh_start_worker(struct uh_server *srv, int n)
-{
-    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
-    pid_t pids[20];
-    int i;
-
-    if (n < 0)
-        n = get_nprocs();
-
-    if (n < 2)
-        return;
-
-    uh_stop_accept(srvi);
-
-    if (srvi->reuseport)
-        close(srvi->sock);
-
-    for (i = 0; i < n; i++) {
-        pids[i] = fork();
-        switch (pids[i]) {
-        case -1:
-            uh_log_err("fork: %s\n", strerror(errno));
-            return;
-        case 0:
-            prctl(PR_SET_PDEATHSIG, SIGKILL);
-
-            ev_loop_fork(srvi->loop);
-
-            if (srvi->reuseport) {
-                srvi->sock = uh_socket(srvi->addr.sa.sa_family);
-                uh_listen(srvi->sock, &srvi->addr.sa, srvi->addrlen);
-            }
-
-            uh_start_accept(srvi);
-
-            uh_log_info("worker %d started\n", i);
-
-            ev_run(srvi->loop, 0);
-            return;
-        }
-    }
-
-    while (i-- > 0) {
-        struct worker *w = calloc(1, sizeof(struct worker));
-        w->i = i;
-        ev_child_init(&w->w, uh_worker_exit, pids[i], 0);
-        ev_child_start(srvi->loop, &w->w);
-    }
 }
 
 struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port)
@@ -389,6 +283,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
     char addr_str[INET6_ADDRSTRLEN];
     socklen_t addrlen;
     int sock = -1;
+    int on = 1;
 
     if (!host || *host == '\0') {
         addr.sin.sin_family = AF_INET;
@@ -428,34 +323,41 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
         inet_ntop(AF_INET6, &addr.sin6.sin6_addr, addr_str, sizeof(addr_str));
     }
 
-    memset(srvi, 0, sizeof(struct uh_server_internal));
-
-    srvi->loop = loop ? loop : EV_DEFAULT;
-
-    srvi->reuseport = support_so_reuseport();
-
-    sock = uh_socket(addr.sa.sa_family);
-    if (sock < 0)
+    sock = socket(addr.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    if (sock < 0) {
+        uh_log_err("socket: %s\n", strerror(errno));
         return -1;
+    }
 
-    if (uh_listen(sock, &addr.sa, addrlen) < 0)
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+        uh_log_err("setsockopt: %s\n", strerror(errno));
         goto err;
+    }
 
-    srvi->sock = sock;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
 
-    uh_start_accept(srvi);
+    if (bind(sock, &addr.sa, addrlen) < 0) {
+        uh_log_err("bind: %s\n", strerror(errno));
+        goto err;
+    }
 
-    srvi->addrlen = addrlen;
-    memcpy(&srvi->addr, &addr, sizeof(addr));
+    if (listen(sock, SOMAXCONN) < 0) {
+        uh_log_err("bind: %s\n", strerror(errno));
+        goto err;
+    }
 
     if (uh_log_get_threshold() == LOG_DEBUG) {
         saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
         uh_log_debug("Listen on: %s %d\n", addr_str, port);
     }
 
+    memset(srvi, 0, sizeof(struct uh_server_internal));
+
+    srvi->loop = loop ? loop : EV_DEFAULT;
+    srvi->sock = sock;
+
     srv->get_loop = uh_get_loop;
     srv->free = uh_server_free;
-    srv->start_worker = uh_start_worker;
 
 #if UHTTPD_SSL_SUPPORT
     srv->ssl_init = uh_server_ssl_init;
@@ -468,6 +370,9 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
+
+    ev_io_init(&srvi->ior, uh_accept_cb, sock, EV_READ);
+    ev_io_start(srvi->loop, &srvi->ior);
 
     return 0;
 
