@@ -28,8 +28,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
-
-#include "config.h"
+#include <sys/socket.h>
 
 #ifndef container_of
 #define container_of(ptr, type, member)                 \

@@ -26,7 +26,6 @@
 #define LIBUHTTPD_SSL_H
 
 #include "config.h"
-#include "log.h"
 
 #if UHTTPD_SSL_SUPPORT
 

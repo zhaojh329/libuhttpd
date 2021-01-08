@@ -26,6 +26,7 @@
 #include <errno.h>
 
 #include "ssl.h"
+#include "log.h"
 
 #if UHTTPD_SSL_SUPPORT
 
