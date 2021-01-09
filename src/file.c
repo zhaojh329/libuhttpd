@@ -332,7 +332,7 @@ void serve_file(struct uh_connection *conn)
     conn->printf(conn, "Content-Length: %zu\r\n", end - start + 1);
 
     if (ranged)
-        conn->printf(conn, "Content-Range: bytes %zu-%zu/%zu\r\n", start, end, st.st_size);
+        conn->printf(conn, "Content-Range: bytes %zu-%zu/%"PRIx64"\r\n", start, end, (uint64_t)st.st_size);
     else
         file_if_gzip(conn, fullpath, mime);
 
