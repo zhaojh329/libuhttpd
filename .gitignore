@@ -50,14 +50,3 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-server-cert.pem
-server-key.pem
-
-build/
-
-CMakeFiles
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-helloworld
