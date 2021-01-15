@@ -305,6 +305,13 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
     return value;
 }
 
+static uint64_t conn_get_content_length(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return conni->parser.content_length;
+}
+
 static struct uh_str conn_get_body(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -752,6 +759,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->get_path = conn_get_path;
     conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
+    conn->get_content_length = conn_get_content_length;
     conn->get_body = conn_get_body;
     conn->extract_body = conn_extract_body;
 }

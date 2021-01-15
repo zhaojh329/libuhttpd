@@ -75,6 +75,7 @@ struct uh_connection {
     struct uh_str (*get_path)(struct uh_connection *conn);
     struct uh_str (*get_query)(struct uh_connection *conn);
     struct uh_str (*get_header)(struct uh_connection *conn, const char *name);
+    uint64_t (*get_content_length)(struct uh_connection *conn);
     struct uh_str (*get_body)(struct uh_connection *conn);
     /* The remain body data will be discurd after this function called */
     struct uh_str (*extract_body)(struct uh_connection *conn);

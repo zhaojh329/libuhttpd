@@ -62,13 +62,7 @@ void echo_handler(struct uh_connection *conn, int event)
 void upload_handler(struct uh_connection *conn, int event)
 {
     if (event == UH_EV_HEAD_COMPLETE) {
-        struct uh_str str = conn->get_header(conn, "Content-Length");
-        int content_length;
-        char buf[128];
-
-        sprintf(buf, "%.*s\n", (int)str.len, str.p);
-
-        content_length = atoi(buf);
+        uint64_t content_length = conn->get_content_length(conn);
 
         if (content_length > 1024 * 1024 * 1024) {
             conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "Too big");
