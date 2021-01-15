@@ -81,6 +81,7 @@ struct uh_connection {
     void *userdata;
 };
 
+typedef void (*uh_con_closed_cb_prototype)(struct uh_connection *conn);
 typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event);
 
 struct uh_server {
@@ -90,6 +91,7 @@ struct uh_server {
     int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
 #endif
     int (*load_plugin)(struct uh_server *srv, const char *path);
+    void (*set_conn_closed_cb)(struct uh_server *srv, uh_con_closed_cb_prototype cb);
     void (*set_default_handler)(struct uh_server *srv, uh_path_handler_prototype handler);
     int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     int (*set_docroot)(struct uh_server *srv, const char *path);

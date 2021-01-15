@@ -514,6 +514,9 @@ void conn_free(struct uh_connection_internal *conn)
     uh_ssl_free(conn->ssl);
 #endif
 
+  if (conn->srv->conn_closed_cb)
+        conn->srv->conn_closed_cb(&conn->com);
+
     if (conn->sock > 0)
         close(conn->sock);
 

@@ -39,6 +39,7 @@ struct uh_server_internal {
     struct ev_loop *loop;
     struct ev_io ior;
     struct uh_connection_internal *conns;
+    void (*conn_closed_cb)(struct uh_connection *conn);
     void (*default_handler)(struct uh_connection *conn, int event);
 #if UHTTPD_SSL_SUPPORT
     void *ssl_ctx;

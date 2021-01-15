@@ -226,6 +226,13 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     return 0;
 }
 
+static void uh_set_conn_abort_cb(struct uh_server *srv, uh_con_closed_cb_prototype cb)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    srvi->conn_closed_cb = cb;
+}
+
 static void uh_set_default_handler(struct uh_server *srv, uh_path_handler_prototype handler)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
@@ -365,6 +372,7 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     srv->load_plugin = uh_load_plugin;
 
+    srv->set_conn_closed_cb = uh_set_conn_abort_cb;
     srv->set_default_handler = uh_set_default_handler;
     srv->add_path_handler = uh_add_path_handler;
 

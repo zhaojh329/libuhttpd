@@ -31,6 +31,10 @@
 
 #include "handler.h"
 
+static void conn_closed_cb(struct uh_connection *conn)
+{
+}
+
 static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
     if (w->signum == SIGINT) {
@@ -113,6 +117,7 @@ int main(int argc, char **argv)
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 
+    srv->set_conn_closed_cb(srv, conn_closed_cb);
     srv->set_default_handler(srv, default_handler);
     srv->add_path_handler(srv, "/echo", echo_handler);
     srv->add_path_handler(srv, "/upload", upload_handler);
