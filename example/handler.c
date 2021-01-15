@@ -61,8 +61,6 @@ void echo_handler(struct uh_connection *conn, int event)
 
 void upload_handler(struct uh_connection *conn, int event)
 {
-    static int fd = -1;
-
     if (event == UH_EV_HEAD_COMPLETE) {
         struct uh_str str = conn->get_header(conn, "Content-Length");
         int content_length;
@@ -77,8 +75,11 @@ void upload_handler(struct uh_connection *conn, int event)
             return;
         }
 
+        conn->userdata = (void *)(intptr_t)-1;
+
     } if (event == UH_EV_BODY) {
         struct uh_str body = conn->extract_body(conn);
+        int fd = (intptr_t)conn->userdata;
 
         if (fd < 0) {
             fd = open("upload.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
@@ -93,7 +94,10 @@ void upload_handler(struct uh_connection *conn, int event)
             close(fd);
             return;
         }
+
+        conn->userdata = (void *)(intptr_t)fd;
     } else if (event == UH_EV_COMPLETE) {
+        int fd = (intptr_t)conn->userdata;
         struct stat st;
         size_t size = 0;
 
