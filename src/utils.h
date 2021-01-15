@@ -42,4 +42,11 @@ const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port);
 
 bool support_so_reuseport();
 
+/*
+** blen is the size of buf; slen is the length of src.  The input-string need
+** not be, and the output string will not be, null-terminated.  Returns the
+** length of the decoded string, -1 on buffer overflow, -2 on malformed string.
+*/
+int urldecode(char *buf, int blen, const char *src, int slen);
+
 #endif

@@ -28,6 +28,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "utils.h"
 
@@ -60,4 +61,31 @@ bool support_so_reuseport()
     close(sock);
 
     return ok;
+}
+
+int urldecode(char *buf, int blen, const char *src, int slen)
+{
+    int i;
+    int len = 0;
+
+#define hex(x) \
+    (((x) <= '9') ? ((x) - '0') : \
+        (((x) <= 'F') ? ((x) - 'A' + 10) : \
+            ((x) - 'a' + 10)))
+
+    for (i = 0; (i < slen) && (len < blen); i++) {
+        if (src[i] != '%') {
+            buf[len++] = src[i];
+            continue;
+        }
+
+        if (i + 2 >= slen || !isxdigit(src[i + 1]) || !isxdigit(src[i + 2]))
+            return -2;
+
+        buf[len++] = (char)(16 * hex(src[i+1]) + hex(src[i+2]));
+        i += 2;
+    }
+    buf[len] = 0;
+
+    return (i == slen) ? len : -1;
 }

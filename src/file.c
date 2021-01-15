@@ -38,6 +38,7 @@
 
 #include "uhttpd_internal.h"
 #include "mimetypes.h"
+#include "utils.h"
 #include "file.h"
 
 static const char *file_mktag(struct stat *s, char *buf, int len)
@@ -256,7 +257,8 @@ void serve_file(struct uh_connection *conn)
     struct uh_server_internal *srv = conni->srv;
     const char *docroot = srv->docroot;
     const char *index_page = srv->index_page;
-    static char fullpath[512];
+    static char fullpath[PATH_MAX];
+    int docroot_len;
     size_t start, end;
     const char *mime;
     struct stat st;
@@ -268,13 +270,16 @@ void serve_file(struct uh_connection *conn)
     if (!index_page || !index_page[0])
         index_page = "index.html";
 
-    strcpy(fullpath, docroot);
+    docroot_len = strlen(docroot);
+
+    memcpy(fullpath, docroot, docroot_len);
 
     if (!strncmp(path.p, "/", path.len)) {
-        strcat(fullpath, "/");
-        strcat(fullpath, index_page);
-    } else {
-        strncat(fullpath, path.p, path.len);
+        fullpath[docroot_len] = '/';
+        strcpy(fullpath + docroot_len + 1, index_page);
+    } else if (urldecode(fullpath + docroot_len, PATH_MAX - docroot_len, path.p, path.len) < 0) {
+        conn->error(conn, HTTP_STATUS_NOT_FOUND, NULL);
+        return;
     }
 
     if (stat(fullpath, &st) < 0) {
