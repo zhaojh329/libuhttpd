@@ -78,6 +78,7 @@ struct uh_connection {
     struct uh_str (*get_body)(struct uh_connection *conn);
     /* The remain body data will be discurd after this function called */
     struct uh_str (*extract_body)(struct uh_connection *conn);
+    void *userdata;
 };
 
 typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event);
