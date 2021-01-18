@@ -152,8 +152,8 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
 
 static int uh_load_plugin(struct uh_server *srv, const char *path)
 {
-    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 #ifdef HAVE_DLOPEN
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
     struct uh_plugin_handler *h;
     struct uh_plugin *p;
     void *dlh;
