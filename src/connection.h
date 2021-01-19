@@ -74,7 +74,7 @@ struct uh_connection_internal {
     uint8_t flags;
     struct {
         int fd;
-        size_t size;
+        uint64_t size;
     } file;
     struct ev_io ior;
     struct ev_io iow;

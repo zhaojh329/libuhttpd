@@ -1,5 +1,5 @@
 
-add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE)
+add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64)
 
 # The version number.
 set(UHTTPD_VERSION_MAJOR 3)

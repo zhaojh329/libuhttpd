@@ -154,7 +154,7 @@ static void file_if_gzip(struct uh_connection *conn, const char *path, const cha
     conn->printf(conn, "Content-Encoding: gzip\r\n");
 }
 
-static bool file_range(struct uh_connection *conn, size_t size, size_t *start, size_t *end, bool *ranged)
+static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *start, uint64_t *end, bool *ranged)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     const struct uh_str hdr = conn->get_header(conn, "Range");
@@ -202,7 +202,7 @@ static bool file_range(struct uh_connection *conn, size_t size, size_t *start, s
         break;
     }
 
-    *start = strtoul(buf, NULL, 0);
+    *start = strtoull(buf, NULL, 0);
 
     i = 0;
 
@@ -213,7 +213,7 @@ static bool file_range(struct uh_connection *conn, size_t size, size_t *start, s
     }
 
     buf[i] = '\0';
-    *end = strtoul(buf, NULL, 0);
+    *end = strtoull(buf, NULL, 0);
 
     if (*start >= size)
         goto err;
@@ -237,7 +237,7 @@ err:
 
     conn->send_status_line(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, "Content-Type: text/plain\r\nConnection: close\r\n");
     conn->printf(conn, "Content-Length: %d\r\n", content_length);
-    conn->printf(conn, "Content-Range: bytes */%zu\r\n", size);
+    conn->printf(conn, "Content-Range: bytes */%" PRIu64 "\r\n", size);
 
     conn->send(conn, "\r\n", 2);
 
@@ -258,8 +258,8 @@ void serve_file(struct uh_connection *conn)
     const char *docroot = srv->docroot;
     const char *index_page = srv->index_page;
     static char fullpath[PATH_MAX];
+    uint64_t start, end;
     int docroot_len;
-    size_t start, end;
     const char *mime;
     struct stat st;
     bool ranged;
@@ -334,10 +334,10 @@ void serve_file(struct uh_connection *conn)
     mime = file_mime_lookup(fullpath);
 
     conn->printf(conn, "Content-Type: %s\r\n", mime);
-    conn->printf(conn, "Content-Length: %zu\r\n", end - start + 1);
+    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", end - start + 1);
 
     if (ranged)
-        conn->printf(conn, "Content-Range: bytes %zu-%zu/%" PRIu64 "\r\n", start, end, (uint64_t)st.st_size);
+        conn->printf(conn, "Content-Range: bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64 "\r\n", start, end, (uint64_t)st.st_size);
     else
         file_if_gzip(conn, fullpath, mime);
 
