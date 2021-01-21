@@ -170,7 +170,7 @@ static void conn_send_status_line(struct uh_connection *conn, int code, const ch
         conn_send(conn, extra_headers, strlen(extra_headers));
 }
 
-static void conn_send_head(struct uh_connection *conn, int code, int content_length, const char *extra_headers)
+static void conn_send_head(struct uh_connection *conn, int code, int64_t content_length, const char *extra_headers)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
@@ -178,7 +178,7 @@ static void conn_send_head(struct uh_connection *conn, int code, int content_len
     if (content_length < 0)
         conn_printf(conn, "%s", "Transfer-Encoding: chunked\r\n");
     else
-        conn_printf(conn, "Content-Length: %d\r\n", content_length);
+        conn_printf(conn, "Content-Length: %" PRIu64 "\r\n", content_length);
 
     if (!http_should_keep_alive(&conni->parser))
         conn_printf(conn, "%s", "Connection: close\r\n");
