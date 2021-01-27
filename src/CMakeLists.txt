@@ -3,7 +3,7 @@ add_definitions(-O -Wall -Werror --std=gnu99 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=6
 
 # The version number.
 set(UHTTPD_VERSION_MAJOR 3)
-set(UHTTPD_VERSION_MINOR 8)
+set(UHTTPD_VERSION_MINOR 9)
 set(UHTTPD_VERSION_PATCH 0)
 
 # Check the third party Libraries
