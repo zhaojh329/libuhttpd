@@ -40,6 +40,9 @@ static void conn_done(struct uh_connection *conn)
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     struct ev_loop *loop = conni->srv->loop;
 
+    if (conni->flags & CONN_F_CLOSED)
+        return;
+
     if (!http_should_keep_alive(&conni->parser))
         conni->flags |= CONN_F_SEND_AND_CLOSE;
 
@@ -58,6 +61,9 @@ static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
+    if (conni->flags & CONN_F_CLOSED)
+        return;
+
     buffer_put_data(&conni->wb, data, len);
     ev_io_start(conni->srv->loop, &conni->iow);
 }
@@ -68,6 +74,9 @@ static void conn_send_file(struct uh_connection *conn, const char *path, off_t o
     size_t min = 8192;
     struct stat st;
     int fd;
+
+    if (conni->flags & CONN_F_CLOSED)
+        return;
 
     if (len == 0)
         return;
@@ -109,6 +118,9 @@ static void conn_printf(struct uh_connection *conn, const char *format, ...)
     struct buffer *wb = &conni->wb;
     va_list arg;
 
+    if (conni->flags & CONN_F_CLOSED)
+        return;
+
     va_start(arg, format);
     buffer_put_vprintf(wb, format, arg);
     va_end(arg);
@@ -119,6 +131,9 @@ static void conn_printf(struct uh_connection *conn, const char *format, ...)
 static void conn_vprintf(struct uh_connection *conn, const char *format, va_list arg)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    if (conni->flags & CONN_F_CLOSED)
+        return;
 
     buffer_put_vprintf(&conni->wb, format, arg);
     ev_io_start(conni->srv->loop, &conni->iow);
@@ -332,6 +347,15 @@ static struct uh_str conn_extract_body(struct uh_connection *conn)
     conni->req.body.consumed = true;
 
     return body;
+}
+
+static void conn_close(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    http_parser_pause(&conni->parser, true);
+
+    conni->flags |= CONN_F_CLOSED;
 }
 
 static int on_message_begin_cb(struct http_parser *parser)
@@ -548,6 +572,10 @@ static void conn_http_parse(struct uh_connection_internal *conn)
         return;
 
     nparsed = http_parser_execute(parser, &settings, (const char *)data, length);
+    if (conn->flags & CONN_F_CLOSED) {
+        conn_free(conn);
+        return;
+    }
 
     switch (parser->http_errno) {
     case HPE_PAUSED:
@@ -762,6 +790,8 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->get_content_length = conn_get_content_length;
     conn->get_body = conn_get_body;
     conn->extract_body = conn_extract_body;
+
+    conn->close = conn_close;
 }
 
 struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv, int sock, struct sockaddr *addr)

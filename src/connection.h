@@ -34,7 +34,8 @@
 #define UHTTPD_MAX_HEADER_NUM       50
 
 #define CONN_F_SEND_AND_CLOSE       (1 << 0)    /* Push remaining data and close  */
-#define CONN_F_SSL_HANDSHAKE_DONE   (1 << 1)    /* SSL hanshake has completed */
+#define CONN_F_CLOSED               (1 << 1)    /* closed  */
+#define CONN_F_SSL_HANDSHAKE_DONE   (1 << 2)    /* SSL hanshake has completed */
 
 struct uh_server_internal;
 
