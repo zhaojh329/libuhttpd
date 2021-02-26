@@ -794,8 +794,9 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->close = conn_close;
 }
 
-struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv, int sock, struct sockaddr *addr)
+struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr)
 {
+    struct uh_server_internal *srv = l->srv;
     struct uh_connection_internal *conn;
 
     conn = calloc(1, sizeof(struct uh_connection_internal));
@@ -822,7 +823,7 @@ struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv,
     ev_timer_start(srv->loop, &conn->timer);
 
 #if UHTTPD_SSL_SUPPORT
-    if (srv->ssl_ctx)
+    if (l->ssl)
         conn->ssl = uh_ssl_new(srv->ssl_ctx, sock);
 #endif
 

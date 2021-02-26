@@ -29,15 +29,23 @@
 
 #include "uhttpd.h"
 
+struct uh_server_internal;
 struct uh_connection_internal;
+
+struct uh_listener {
+    int sock;
+    bool ssl;
+    struct ev_io ior;
+    struct uh_server_internal *srv;
+    struct uh_listener *next;
+};
 
 struct uh_server_internal {
     struct uh_server com;
-    int sock;
     char *docroot;
     char *index_page;
     struct ev_loop *loop;
-    struct ev_io ior;
+    struct uh_listener *listeners;
     struct uh_connection_internal *conns;
     void (*conn_closed_cb)(struct uh_connection *conn);
     void (*default_handler)(struct uh_connection *conn, int event);
@@ -46,11 +54,6 @@ struct uh_server_internal {
 #endif
     struct uh_plugin *plugins;
     struct uh_path_handler *handlers;
-};
-
-struct worker {
-    struct ev_child w;
-    int i;
 };
 
 #endif

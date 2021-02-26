@@ -58,28 +58,37 @@ static void usage(const char *prog)
     fprintf(stderr, "Usage: %s [option]\n"
             "          -h docroot     # Document root, default is .\n"
             "          -i index_page  # Index page, default is index.html\n"
-            "          -a addr        # Default addr is localhost\n"
-            "          -p port        # Default port is 8080\n"
-            "          -s             # SSl on\n"
+            "          -a addr        # address to listen\n"
+            "          -s addr        # address to listen with ssl\n"
             "          -P             # plugin path\n"
             "          -w             # worker process number, default is equal to available CPUs\n"
             "          -v             # verbose\n", prog);
     exit(1);
 }
 
-static void start_server(const char *addr, int port, const char *docroot, const char *index_page, const char *plugin, bool ssl)
+static void start_server(const char *addr, const char *addrs, const char *docroot, const char *index_page, const char *plugin, bool ssl)
 {
     struct ev_loop *loop = ev_loop_new(0);
     struct uh_server *srv = NULL;
 
     signal(SIGPIPE, SIG_IGN);
 
-    srv = uh_server_new(loop, addr, port);
+    srv = uh_server_new(loop);
     if (!srv)
         return;
 
+    if (addr) {
+        if (srv->listen(srv, addrs, false) < 0)
+            return;
+    } else if (addrs) {
+        if (srv->listen(srv, addrs, true) < 0)
+            return;
+    } else {
+        return;
+    }
+
 #if UHTTPD_SSL_SUPPORT
-    if (ssl && srv->ssl_init(srv, "server-cert.pem", "server-key.pem") < 0)
+    if (ssl && srv->ssl_init(srv, "cert.pem", "key.pem") < 0)
         return;
 #endif
 
@@ -105,13 +114,13 @@ int main(int argc, char **argv)
     bool ssl = false;
     const char *docroot = ".";
     const char *index_page = "index.html";
-    const char *addr = "localhost";
+    const char *addr = NULL;
+    const char *addrs = NULL;
     pid_t workers[MAX_WORKER] = {};
     int nworker = get_nprocs();
-    int port = 8080;
     int opt, i;
 
-    while ((opt = getopt(argc, argv, "h:i:a:p:sP:w:v")) != -1) {
+    while ((opt = getopt(argc, argv, "h:i:a:s:P:w:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
@@ -122,11 +131,8 @@ int main(int argc, char **argv)
         case 'a':
             addr = optarg;
             break;
-        case 'p':
-            port = atoi(optarg);
-            break;
         case 's':
-            ssl = true;
+            addrs = optarg;
             break;
         case 'P':
             plugin_path = optarg;
@@ -164,7 +170,7 @@ int main(int argc, char **argv)
 
         if (pid == 0) {
             prctl(PR_SET_PDEATHSIG, SIGKILL);
-            start_server(addr, port, docroot, index_page, plugin_path, ssl);
+            start_server(addr, addrs, docroot, index_page, plugin_path, ssl);
             return 0;
         }
 

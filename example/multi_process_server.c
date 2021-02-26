@@ -59,9 +59,8 @@ static void usage(const char *prog)
     fprintf(stderr, "Usage: %s [option]\n"
             "          -h docroot     # Document root, default is .\n"
             "          -i index_page  # Index page, default is index.html\n"
-            "          -a addr        # Default addr is localhost\n"
-            "          -p port        # Default port is 8080\n"
-            "          -s             # SSl on\n"
+            "          -a addr        # address to listen\n"
+            "          -s addr        # address to listen with ssl\n"
             "          -P             # plugin path\n"
             "          -w             # worker process number, default is equal to available CPUs\n"
             "          -v             # verbose\n", prog);
@@ -75,16 +74,17 @@ int main(int argc, char **argv)
     struct uh_server *srv = NULL;
     const char *plugin_path = NULL;
     bool verbose = false;
-    bool ssl = false;
     const char *docroot = ".";
     const char *index_page = "index.html";
-    const char *addr = "localhost";
     pid_t workers[MAX_WORKER] = {};
     int nworker = get_nprocs();
-    int port = 8080;
     int opt, i;
 
-    while ((opt = getopt(argc, argv, "h:i:a:p:sfP:w:v")) != -1) {
+    srv = uh_server_new(loop);
+    if (!srv)
+        return -1;
+
+    while ((opt = getopt(argc, argv, "h:i:a:s:P:w:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
@@ -93,13 +93,12 @@ int main(int argc, char **argv)
             index_page = optarg;
             break;
         case 'a':
-            addr = optarg;
+            if (srv->listen(srv, optarg, false) < 1)
+                goto err;
             break;
-        case 'p':
-            port = atoi(optarg);
-            break;
-        case 's':
-            ssl = true;
+         case 's':
+            if (srv->listen(srv, optarg, true) < 1)
+                goto err;
             break;
         case 'P':
             plugin_path = optarg;
@@ -124,13 +123,8 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    srv = uh_server_new(loop, addr, port);
-    if (!srv)
-        return -1;
-
 #if UHTTPD_SSL_SUPPORT
-    if (ssl && srv->ssl_init(srv, "server-cert.pem", "server-key.pem") < 0)
-        goto err;
+    srv->ssl_init(srv, "cert.pem", "key.pem");
 #endif
 
     srv->set_docroot(srv, docroot);

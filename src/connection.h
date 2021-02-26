@@ -97,7 +97,7 @@ struct uh_connection_internal {
     void (*handler)(struct uh_connection *conn, int event);
 };
 
-struct uh_connection_internal *uh_new_connection(struct uh_server_internal *srv, int sock, struct sockaddr *addr);
+struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr);
 
 void conn_free(struct uh_connection_internal *conn);
 

@@ -42,14 +42,10 @@ static void uh_server_free(struct uh_server *srv)
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
     struct uh_connection_internal *conn = srvi->conns;
     struct uh_path_handler *h = srvi->handlers;
+    struct uh_listener *l = srvi->listeners;
 #ifdef HAVE_DLOPEN
     struct uh_plugin *p = srvi->plugins;
 #endif
-
-    ev_io_stop(srvi->loop, &srvi->ior);
-
-    if (srvi->sock > 0)
-        close(srvi->sock);
 
     if (srvi->docroot)
         free(srvi->docroot);
@@ -69,6 +65,18 @@ static void uh_server_free(struct uh_server *srv)
         free(temp);
     }
 
+    while (l) {
+        struct uh_listener *temp = l;
+
+        ev_io_stop(srvi->loop, &l->ior);
+
+        if (l->sock > 0)
+            close(l->sock);
+
+        l = l->next;
+        free(temp);
+    }
+
 #ifdef HAVE_DLOPEN
     while (p) {
         struct uh_plugin *temp = p;
@@ -85,7 +93,8 @@ static void uh_server_free(struct uh_server *srv)
 
 static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
-    struct uh_server_internal *srv = container_of(w, struct uh_server_internal, ior);
+    struct uh_listener *l = container_of(w, struct uh_listener, ior);
+    struct uh_server_internal *srv = l->srv;
     struct uh_connection_internal *conn;
     union {
         struct sockaddr     sa;
@@ -97,7 +106,7 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     int port;
     int sock;
 
-    sock = accept4(srv->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    sock = accept4(l->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (sock < 0) {
         if (errno != EAGAIN)
             uh_log_err("accept: %s\n", strerror(errno));
@@ -109,7 +118,21 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         uh_log_debug("New Connection from: %s %d\n", addr_str, port);
     }
 
-    conn = uh_new_connection(srv, sock, &addr.sa);
+    if (l->ssl) {
+#if UHTTPD_SSL_SUPPORT
+        if (!srv->ssl_ctx) {
+            uh_log_err("SSL not initialized\n");
+            close(sock);
+            return;
+        }
+#else
+        close(sock);
+        uh_log_err("SSL not enabled when build\n");
+        return;
+#endif
+    }
+
+    conn = uh_new_connection(l, sock, &addr.sa);
     if (!conn)
         return;
 
@@ -123,7 +146,7 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     srv->conns = conn;
 }
 
-struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port)
+struct uh_server *uh_server_new(struct ev_loop *loop)
 {
     struct uh_server *srv;
 
@@ -133,10 +156,7 @@ struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port
         return NULL;
     }
 
-    if (uh_server_init(srv, loop, host, port) < 0) {
-        free(srv);
-        return NULL;
-    }
+    uh_server_init(srv, loop);
 
     return srv;
 }
@@ -279,92 +299,154 @@ static struct ev_loop *uh_get_loop(struct uh_server *srv)
     return srvi->loop;
 }
 
-int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port)
+static int parse_address(const char *addr, char **host, char **port)
+{
+    static char buf[256];
+    char *s;
+    int l;
+
+    strcpy(buf, addr);
+
+    *host = NULL;
+    *port = buf;
+
+    s = strrchr(buf, ':');
+    if (!s)
+        return -1;
+
+    *host = buf;
+    *port = s + 1;
+    *s = 0;
+
+    if (*host && **host == '[') {
+        l = strlen(*host);
+        if (l >= 2) {
+            (*host)[l - 1] = 0;
+            (*host)++;
+        }
+    }
+
+    if ((*host)[0] == '\0')
+        *host = "0";
+
+    return 0;
+}
+
+static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
-    union {
-        struct sockaddr     sa;
-        struct sockaddr_in  sin;
-        struct sockaddr_in6 sin6;
-    } addr;
+    struct uh_listener *l;
+    char *host, *port;
+    struct addrinfo *addrs = NULL, *p = NULL;
+    static struct addrinfo hints = {
+        .ai_family = AF_UNSPEC,
+        .ai_socktype = SOCK_STREAM,
+        .ai_flags = AI_PASSIVE,
+    };
     char addr_str[INET6_ADDRSTRLEN];
-    socklen_t addrlen;
-    int sock = -1;
+    int bound = 0;
     int on = 1;
+    int status;
+    int sock;
 
-    if (!host || *host == '\0') {
-        addr.sin.sin_family = AF_INET;
-        addr.sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    }
-
-    if (inet_pton(AF_INET, host, &addr.sin.sin_addr) == 1) {
-        addr.sa.sa_family = AF_INET;
-    } else if (inet_pton(AF_INET6, host, &addr.sin6.sin6_addr) == 1) {
-        addr.sa.sa_family = AF_INET6;
-    } else {
-        static struct addrinfo hints = {
-            .ai_family = AF_UNSPEC,
-            .ai_socktype = SOCK_STREAM,
-            .ai_flags = AI_PASSIVE
-        };
-        struct addrinfo *ais;
-        int status;
-
-        status = getaddrinfo(host, NULL, &hints, &ais);
-        if (status != 0) {
-            uh_log_err("getaddrinfo(): %s\n", gai_strerror(status));
-            return -1;
-        }
-
-        memcpy(&addr, ais->ai_addr, ais->ai_addrlen);
-        freeaddrinfo(ais);
-    }
-
-    if (addr.sa.sa_family == AF_INET) {
-        addr.sin.sin_port = ntohs(port);
-        addrlen = sizeof(addr.sin);
-        inet_ntop(AF_INET, &addr.sin.sin_addr, addr_str, sizeof(addr_str));
-    } else {
-        addr.sin6.sin6_port = ntohs(port);
-        addrlen = sizeof(addr.sin6);
-        inet_ntop(AF_INET6, &addr.sin6.sin6_addr, addr_str, sizeof(addr_str));
-    }
-
-    sock = socket(addr.sa.sa_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
-    if (sock < 0) {
-        uh_log_err("socket: %s\n", strerror(errno));
+    if (parse_address(addr, &host, &port) < 0) {
+        uh_log_err("invalid address\n");
         return -1;
     }
 
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
-        uh_log_err("setsockopt: %s\n", strerror(errno));
-        goto err;
+    status = getaddrinfo(host, port, &hints, &addrs);
+    if (status != 0) {
+        uh_log_err("getaddrinfo(): %s\n", gai_strerror(status));
+        return -1;
     }
 
-    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
+    /* try to bind a new socket to each found address */
+    for (p = addrs; p; p = p->ai_next) {
+        sock = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, p->ai_protocol);
+        if (sock < 0) {
+            uh_log_err("socket: %s\n", strerror(errno));
+            continue;
+        }
 
-    if (bind(sock, &addr.sa, addrlen) < 0) {
-        uh_log_err("bind: %s\n", strerror(errno));
-        goto err;
+        if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+            uh_log_err("setsockopt: %s\n", strerror(errno));
+            goto err;
+        }
+
+        /* required to get parallel v4 + v6 working */
+        if (p->ai_family == AF_INET6 && setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int)) < 0) {
+            uh_log_err("setsockopt: %s\n", strerror(errno));
+            goto err;
+        }
+
+        setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
+
+        if (bind(sock, p->ai_addr, p->ai_addrlen) < 0) {
+            uh_log_err("bind: %s\n", strerror(errno));
+            goto err;
+        }
+
+        if (listen(sock, SOMAXCONN) < 0) {
+            uh_log_err("bind: %s\n", strerror(errno));
+            goto err;
+        }
+
+        l = calloc(1, sizeof(struct uh_listener));
+        if (!l) {
+            uh_log_err("calloc: %s\n", strerror(errno));
+            goto err;
+        }
+
+        l->sock = sock;
+        l->ssl = ssl;
+        l->srv = srvi;
+
+        ev_io_init(&l->ior, uh_accept_cb, sock, EV_READ);
+        ev_io_start(srvi->loop, &l->ior);
+
+        if (!srvi->listeners) {
+            srvi->listeners = l;
+        } else {
+            l->next = srvi->listeners;
+            srvi->listeners = l;
+        }
+
+        if (p->ai_family == AF_INET) {
+            struct sockaddr_in *ina = (struct sockaddr_in *)p->ai_addr;
+            inet_ntop(p->ai_family, &ina->sin_addr, addr_str, sizeof(addr_str));
+            uh_log_debug("Listen on: %s:%d with ssl %s\n", addr_str, ntohs(ina->sin_port), ssl ? "on" : "off");
+        } else {
+            struct sockaddr_in6 *in6a = (struct sockaddr_in6 *)p->ai_addr;
+            inet_ntop(p->ai_family, &in6a->sin6_addr, addr_str, sizeof(addr_str));
+            uh_log_debug("Listen on: [%s]:%d with ssl %s\n", addr_str, ntohs(in6a->sin6_port), ssl ? "on" : "off");
+        }
+
+        bound++;
+
+        continue;
+
+err:
+        if (sock > -1)
+           close(sock);
     }
 
-    if (listen(sock, SOMAXCONN) < 0) {
-        uh_log_err("bind: %s\n", strerror(errno));
-        goto err;
-    }
+    freeaddrinfo(addrs);
 
-    if (uh_log_get_threshold() == LOG_DEBUG) {
-        saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
-        uh_log_debug("Listen on: %s %d\n", addr_str, port);
-    }
+    return bound;
+}
+
+void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 
     memset(srvi, 0, sizeof(struct uh_server_internal));
 
     srvi->loop = loop ? loop : EV_DEFAULT;
-    srvi->sock = sock;
 
     srv->get_loop = uh_get_loop;
     srv->free = uh_server_free;
+
+    srv->listen = uh_server_listen;
 
 #if UHTTPD_SSL_SUPPORT
     srv->ssl_init = uh_server_ssl_init;
@@ -378,13 +460,4 @@ int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
-
-    ev_io_init(&srvi->ior, uh_accept_cb, sock, EV_READ);
-    ev_io_start(srvi->loop, &srvi->ior);
-
-    return 0;
-
-err:
-    close(sock);
-    return -1;
 }

@@ -89,6 +89,14 @@ typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event)
 struct uh_server {
     struct ev_loop *(*get_loop)(struct uh_server *srv);
     void (*free)(struct uh_server *srv);
+    /*
+    ** listen an address, multiple call allowed
+    ** returns the number of successful listen
+    **
+    ** :80 0:80 0.0.0.0:80 [::]:80
+    ** localhost:80 [::1]:80
+    */
+    int (*listen)(struct uh_server *srv, const char *addr, bool ssl);
 #if UHTTPD_SSL_SUPPORT
     int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
 #endif
@@ -120,11 +128,9 @@ struct uh_path_handler {
 /*
  *  uh_server_new - creat an uh_server struct and init it
  *  @loop: If NULL will use EV_DEFAULT
- *  @host: If NULL will listen on "0.0.0.0"
- *  @port: port to listen on
  */
-struct uh_server *uh_server_new(struct ev_loop *loop, const char *host, int port);
+struct uh_server *uh_server_new(struct ev_loop *loop);
 
-int uh_server_init(struct uh_server *srv, struct ev_loop *loop, const char *host, int port);
+void uh_server_init(struct uh_server *srv, struct ev_loop *loop);
 
 #endif
