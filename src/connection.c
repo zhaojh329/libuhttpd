@@ -107,6 +107,10 @@ static void conn_send_file(struct uh_connection *conn, const char *path, off_t o
     } else {
         conni->file.size = len;
         conni->file.fd = fd;
+#if UHTTPD_SSL_SUPPORT
+        if (conni->ssl)
+            fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+#endif
     }
 
     ev_io_start(conni->srv->loop, &conni->iow);
@@ -634,22 +638,35 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
     if (buffer_length(&conn->wb) == 0) {
         if (conn->file.fd > 0) {
-            ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
-            if (ret < 0) {
-                if (errno != EAGAIN) {
-                    uh_log_err("write error: %s\n", strerror(errno));
-                    conn_free(conn);
+#if UHTTPD_SSL_SUPPORT
+            if (conn->ssl) {
+                bool eof;
+                if (buffer_put_fd(&conn->wb, conn->file.fd, 8192, &eof) < 0 || eof) {
+                    close(conn->file.fd);
+                    conn->file.fd = -1;
                 }
                 return;
-            }
+            } else {
+#endif
+                ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
+                if (ret < 0) {
+                    if (errno != EAGAIN) {
+                        uh_log_err("write error: %s\n", strerror(errno));
+                        conn_free(conn);
+                    }
+                    return;
+                }
 
-            if (ret < conn->file.size) {
-                conn->file.size -= ret;
-                return;
-            }
+                if (ret < conn->file.size) {
+                    conn->file.size -= ret;
+                    return;
+                }
 
-            close(conn->file.fd);
-            conn->file.fd = -1;
+                close(conn->file.fd);
+                conn->file.fd = -1;
+#if UHTTPD_SSL_SUPPORT
+            }
+#endif
         }
 
         if (conn->flags & CONN_F_SEND_AND_CLOSE) {
