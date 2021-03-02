@@ -324,6 +324,29 @@ static struct uh_str conn_get_header(struct uh_connection *conn, const char *nam
     return value;
 }
 
+static void conn_traverse_headers(struct uh_connection *conn,
+        bool (*cb)(const struct uh_str name, const struct uh_str value, void *arg), void *arg)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct uh_request *req = &conni->req;
+    struct uh_str name, value;
+    int i;
+
+    for (i = 0; i < UHTTPD_MAX_HEADER_NUM; i++) {
+        if (req->headers[i].field.offset == 0)
+            return;
+
+        name.p = O2D(conni, req->headers[i].field.offset);
+        name.len = req->headers[i].field.length;
+
+        value.p = O2D(conni, req->headers[i].value.offset);
+        value.len = req->headers[i].value.length;
+
+        if (!cb(name, value, arg))
+            return;
+    }
+}
+
 static uint64_t conn_get_content_length(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -804,6 +827,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->get_path = conn_get_path;
     conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
+    conn->traverse_headers = conn_traverse_headers;
     conn->get_content_length = conn_get_content_length;
     conn->get_body = conn_get_body;
     conn->extract_body = conn_extract_body;
