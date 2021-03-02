@@ -50,7 +50,7 @@ void echo_handler(struct uh_connection *conn, int event)
         conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
         conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
         conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
-        conn->chunk_printf(conn, "Path: %.*s\n", (int)path.len ,path.p);
+        conn->chunk_printf(conn, "Path: %.*s\n", (int)path.len, path.p);
         conn->chunk_printf(conn, "Query: %.*s\n", (int)query.len, query.p);
         conn->chunk_printf(conn, "User-Agent: %.*s\n", (int)ua.len, ua.p);
         conn->chunk_printf(conn, "Body: %.*s\n", (int)body.len, body.p);
