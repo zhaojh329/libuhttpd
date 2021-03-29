@@ -41,7 +41,7 @@ void (*log_write)(int priority, const char *fmt, va_list ap);
 static const char *log_ident()
 {
     FILE *self;
-    static char line[64];
+    char line[64];
     char *p = NULL;
     char *sbuf;
 
@@ -119,7 +119,7 @@ void uh_log_close()
 
 void __uh_log(const char *filename, int line, int priority, const char *fmt, ...)
 {
-    static char new_fmt[256];
+    char new_fmt[256];
     va_list ap;
 
     if (priority > log_threshold)
