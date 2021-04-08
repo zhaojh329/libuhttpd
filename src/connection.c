@@ -544,11 +544,38 @@ static struct http_parser_settings settings = {
     .on_message_complete = on_message_complete_cb
 };
 
+static void conn_incref(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    if (!conni)
+        return;
+
+    __sync_add_and_fetch(&conni->refcount, 1);
+}
+
+static void conn_decref(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    if (!conni)
+        return;
+
+    if (__sync_sub_and_fetch(&conni->refcount, 1))
+        return;
+
+    uh_log_debug("Free connection: %p\n", conn);
+
+    free(conn);
+}
+
 void conn_free(struct uh_connection_internal *conn)
 {
     struct ev_loop *loop = conn->srv->loop;
     char addr_str[INET6_ADDRSTRLEN];
     int port;
+
+    conn->flags |= CONN_F_CLOSED;
 
     ev_timer_stop(loop, &conn->timer);
     ev_io_stop(loop, &conn->ior);
@@ -583,7 +610,7 @@ void conn_free(struct uh_connection_internal *conn)
         uh_log_debug("Connection(%s %d) closed\n", addr_str, port);
     }
 
-    free(conn);
+    conn_decref((struct uh_connection *)conn);
 }
 
 static void conn_http_parse(struct uh_connection_internal *conn)
@@ -833,6 +860,9 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->extract_body = conn_extract_body;
 
     conn->close = conn_close;
+
+    conn->incref = conn_incref;
+    conn->decref = conn_decref;
 }
 
 struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr)
@@ -873,6 +903,10 @@ struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock
     conn->parser.data = conn;
 
     conn_init_cb(&conn->com);
+
+    conn_incref((struct uh_connection *)conn);
+
+    uh_log_debug("New connection: %p\n", conn);
 
     return conn;
 }

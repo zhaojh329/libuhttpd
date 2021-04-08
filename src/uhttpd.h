@@ -82,6 +82,8 @@ struct uh_connection {
     /* The remain body data will be discurd after this function called */
     struct uh_str (*extract_body)(struct uh_connection *conn);
     void (*close)(struct uh_connection *conn);  /* close low level TCP connection */
+    void (*incref)(struct uh_connection *conn);
+    void (*decref)(struct uh_connection *conn);
     void *userdata;
 };
 
