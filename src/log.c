@@ -133,7 +133,7 @@ void __uh_log(const char *filename, int line, int priority, const char *fmt, ...
     char new_fmt[256];
     va_list ap;
 
-	priority = LOG_PRI(priority);
+    priority = LOG_PRI(priority);
 
     if (priority > log_threshold)
         return;
