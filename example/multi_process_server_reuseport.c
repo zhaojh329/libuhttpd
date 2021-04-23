@@ -87,7 +87,7 @@ static void start_server(const char *addr, const char *addrs, const char *docroo
         return;
     }
 
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
     if (ssl && srv->ssl_init(srv, "cert.pem", "key.pem") < 0)
         return;
 #endif

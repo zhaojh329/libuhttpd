@@ -69,9 +69,7 @@ struct uh_request {
 struct uh_connection_internal {
     struct uh_connection com;
     int sock;
-#if UHTTPD_SSL_SUPPORT
     void *ssl;
-#endif
     uint8_t flags;
     struct {
         int fd;

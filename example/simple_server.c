@@ -82,7 +82,7 @@ int main(int argc, char **argv)
             if (srv->listen(srv, optarg, false) < 1)
                 goto err;
             break;
-         case 's':
+        case 's':
             if (srv->listen(srv, optarg, true) < 1)
                 goto err;
             break;
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
     srv->ssl_init(srv, "cert.pem", "key.pem");
 #endif
 

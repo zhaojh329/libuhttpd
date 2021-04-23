@@ -33,7 +33,7 @@
 #include "uhttpd_internal.h"
 #include "utils.h"
 #include "file.h"
-#include "ssl.h"
+
 
 static void conn_done(struct uh_connection *conn)
 {
@@ -107,7 +107,7 @@ static void conn_send_file(struct uh_connection *conn, const char *path, off_t o
     } else {
         conni->file.size = len;
         conni->file.fd = fd;
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
         if (conni->ssl)
             fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
 #endif
@@ -595,8 +595,8 @@ void conn_free(struct uh_connection_internal *conn)
     if (conn->next)
         conn->next->prev = conn->prev;
 
-#if UHTTPD_SSL_SUPPORT
-    uh_ssl_free(conn->ssl);
+#ifdef SSL_SUPPORT
+    ssl_session_free(conn->ssl);
 #endif
 
   if (conn->srv->conn_closed_cb)
@@ -654,17 +654,49 @@ static void conn_http_parse(struct uh_connection_internal *conn)
     }
 }
 
-#if UHTTPD_SSL_SUPPORT
-static int conn_ssl_write(int fd, void *buf, size_t count, void *ssl)
+#ifdef SSL_SUPPORT
+static void on_ssl_verify_error(int error, const char *str, void *arg)
 {
-    int ret = uh_ssl_write(ssl, buf, count);
-    if (ret < 0) {
-        if (ret == UH_SSL_ERROR_AGAIN)
-            return P_FD_PENDING;
+    uh_log_warn("SSL certificate error(%d): %s\n", error, str);
+}
+
+/* -1 error, 0 pending, 1 ok */
+static int ssl_negotiated(struct uh_connection_internal *conn)
+{
+    char err_buf[128];
+    int ret;
+
+    ret = ssl_connect(conn->ssl, true, on_ssl_verify_error, NULL);
+    if (ret == SSL_PENDING)
+        return 0;
+
+    if (ret == SSL_ERROR) {
+        uh_log_err("ssl connect error(%d): %s\n", ssl_err_code, ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+        return -1;
+    }
+
+    conn->flags &= CONN_F_SSL_HANDSHAKE_DONE;
+
+    return 1;
+}
+
+static int conn_ssl_read(int fd, void *buf, size_t count, void *arg)
+{
+    struct uh_connection_internal *conn = arg;
+    static char err_buf[128];
+    int ret;
+
+    ret = ssl_read(conn->ssl, buf, count);
+    if (ret == SSL_ERROR) {
+        uh_log_err("ssl_read(%d): %s\n", ssl_err_code,
+                ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
         return P_FD_ERR;
     }
-    return ret;
 
+    if (ret == SSL_PENDING)
+        return P_FD_PENDING;
+
+    return ret;
 }
 #endif
 
@@ -673,22 +705,42 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     struct uh_connection_internal *conn = container_of(w, struct uh_connection_internal, iow);
     int ret;
 
-#if UHTTPD_SSL_SUPPORT
-    if (conn->ssl)
-        ret = buffer_pull_to_fd_ex(&conn->wb, w->fd, buffer_length(&conn->wb), conn_ssl_write, conn->ssl);
-    else
-#endif
-        ret = buffer_pull_to_fd(&conn->wb, w->fd, buffer_length(&conn->wb));
+    if (conn->ssl) {
+#ifdef SSL_SUPPORT
+        static char err_buf[128];
+        struct buffer *b = &conn->wb;
 
-    if (ret < 0) {
-        uh_log_err("write error: %s\n", strerror(errno));
-        conn_free(conn);
-        return;
+        if (!likely((conn->flags & CONN_F_SSL_HANDSHAKE_DONE))) {
+            ret = ssl_negotiated(conn);
+            if (ret < 0)
+                goto err;
+            if (ret == 0)
+                return;
+        }
+
+        ret = ssl_write(conn->ssl, buffer_data(b), buffer_length(b));
+        if (ret == SSL_ERROR) {
+            uh_log_err("ssl_write(%d): %s\n", ssl_err_code,
+                    ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+            goto err;
+        }
+
+        if (ret == SSL_PENDING)
+            return;
+
+        buffer_pull(b, NULL, ret);
+#endif
+    } else {
+        ret = buffer_pull_to_fd(&conn->wb, w->fd, -1);
+        if (ret < 0) {
+            uh_log_err("write error: %s\n", strerror(errno));
+            goto err;
+        }
     }
 
     if (buffer_length(&conn->wb) == 0) {
         if (conn->file.fd > 0) {
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
             if (conn->ssl) {
                 bool eof;
                 if (buffer_put_fd(&conn->wb, conn->file.fd, 8192, &eof) < 0 || eof) {
@@ -702,7 +754,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
                 if (ret < 0) {
                     if (errno != EAGAIN) {
                         uh_log_err("write error: %s\n", strerror(errno));
-                        conn_free(conn);
+                        goto err;
                     }
                     return;
                 }
@@ -714,13 +766,13 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
                 close(conn->file.fd);
                 conn->file.fd = -1;
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
             }
 #endif
         }
 
         if (conn->flags & CONN_F_SEND_AND_CLOSE) {
-            conn_free(conn);
+            goto err;
         } else {
             ev_io_stop(loop, w);
 
@@ -730,20 +782,12 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
                 conn_http_parse(conn);
         }
     }
-}
 
-#if UHTTPD_SSL_SUPPORT
-static int conn_ssl_read(int fd, void *buf, size_t count, void *ssl)
-{
-    int ret = uh_ssl_read(ssl, buf, count);
-    if (ret < 0) {
-        if (ret == UH_SSL_ERROR_AGAIN)
-            return P_FD_PENDING;
-        return P_FD_ERR;
-    }
-    return ret;
+    return;
+
+err:
+    conn_free(conn);
 }
-#endif
 
 static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
@@ -757,41 +801,40 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         return;
     }
 
-#if UHTTPD_SSL_SUPPORT
-    if (conn->ssl && !(conn->flags & CONN_F_SSL_HANDSHAKE_DONE)) {
-        ret = uh_ssl_handshake(conn->ssl);
-        if (ret == UH_SSL_ERROR_AGAIN)
-            return;
-        if (ret == UH_SSL_ERROR_UNKNOWN) {
-            conn_free(conn);
-            return;
-        }
-        conn->flags |= CONN_F_SSL_HANDSHAKE_DONE;
-    }
-#endif
-
     conn->activity = ev_now(loop);
 
-#if UHTTPD_SSL_SUPPORT
-    if (conn->ssl)
-        ret = buffer_put_fd_ex(rb, w->fd, -1, &eof, conn_ssl_read, conn->ssl);
-    else
-#endif
-        ret = buffer_put_fd(rb, w->fd, -1, &eof);
+    if (conn->ssl) {
+#ifdef SSL_SUPPORT
+        if (!likely((conn->flags & CONN_F_SSL_HANDSHAKE_DONE))) {
+            ret = ssl_negotiated(conn);
+            if (ret < 0)
+                goto err;
+            if (ret == 0)
+                return;
+        }
 
-    if (ret < 0) {
-        uh_log_err("read error: %s\n", strerror(errno));
-        goto done;
+        ret = buffer_put_fd_ex(&conn->rb, w->fd, -1, &eof, conn_ssl_read, conn);
+        if (ret < 0) {
+            uh_log_err("socket read error: %s\n", strerror(errno));
+            goto err;
+        }
+#endif
+    } else {
+        ret = buffer_put_fd(rb, w->fd, -1, &eof);
+        if (ret < 0) {
+            uh_log_err("read error: %s\n", strerror(errno));
+            goto err;
+        }
     }
 
     if (eof)
-        goto done;
+        goto err;
 
     conn_http_parse(conn);
 
     return;
 
-done:
+err:
     conn_free(conn);
 }
 
@@ -893,9 +936,9 @@ struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock
     ev_timer_init(&conn->timer, keepalive_cb, UHTTPD_CONNECTION_TIMEOUT, 0.0);
     ev_timer_start(srv->loop, &conn->timer);
 
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
     if (l->ssl)
-        conn->ssl = uh_ssl_new(srv->ssl_ctx, sock);
+        conn->ssl = ssl_session_new(srv->ssl_ctx, sock);
 #endif
 
     http_parser_init(&conn->parser, HTTP_REQUEST);

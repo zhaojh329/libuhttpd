@@ -101,7 +101,7 @@ struct uh_server {
     ** localhost:80 [::1]:80
     */
     int (*listen)(struct uh_server *srv, const char *addr, bool ssl);
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
     int (*ssl_init)(struct uh_server *srv, const char *cert, const char *key);
 #endif
     int (*load_plugin)(struct uh_server *srv, const char *path);

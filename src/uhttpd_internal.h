@@ -29,6 +29,10 @@
 
 #include "uhttpd.h"
 
+#ifdef SSL_SUPPORT
+#include "ssl/ssl.h"
+#endif
+
 struct uh_server_internal;
 struct uh_connection_internal;
 
@@ -49,8 +53,8 @@ struct uh_server_internal {
     struct uh_connection_internal *conns;
     void (*conn_closed_cb)(struct uh_connection *conn);
     void (*default_handler)(struct uh_connection *conn, int event);
-#if UHTTPD_SSL_SUPPORT
-    void *ssl_ctx;
+#ifdef SSL_SUPPORT
+    struct ssl_context *ssl_ctx;
 #endif
     struct uh_plugin *plugins;
     struct uh_path_handler *handlers;

@@ -35,7 +35,7 @@
 #include "uhttpd_internal.h"
 #include "connection.h"
 #include "utils.h"
-#include "ssl.h"
+
 
 static void uh_server_free(struct uh_server *srv)
 {
@@ -86,8 +86,8 @@ static void uh_server_free(struct uh_server *srv)
     }
 #endif
 
-#if UHTTPD_SSL_SUPPORT
-    uh_ssl_ctx_free(srvi->ssl_ctx);
+#ifdef SSL_SUPPORT
+    ssl_context_free(srvi->ssl_ctx);
 #endif
 }
 
@@ -119,7 +119,7 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     }
 
     if (l->ssl) {
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
         if (!srv->ssl_ctx) {
             uh_log_err("SSL not initialized\n");
             close(sock);
@@ -161,12 +161,28 @@ struct uh_server *uh_server_new(struct ev_loop *loop)
     return srv;
 }
 
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
 static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const char *key)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
-    srvi->ssl_ctx = uh_ssl_ctx_init(cert, key);
-    return srvi->ssl_ctx ? 0 : -1;
+
+    srvi->ssl_ctx = ssl_context_new(true);
+    if (!srvi->ssl_ctx) {
+        uh_log_err("ssl context init fail\n");
+        return -1;
+    }
+
+    if (ssl_load_crt_file(srvi->ssl_ctx, cert)) {
+        uh_log_err("load certificate file fail\n");
+        return -1;
+    }
+
+    if (ssl_load_key_file(srvi->ssl_ctx, key)) {
+        uh_log_err("load private key file fail\n");
+        return -1;
+    }
+
+    return 0;
 }
 #endif
 
@@ -448,7 +464,7 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
 
     srv->listen = uh_server_listen;
 
-#if UHTTPD_SSL_SUPPORT
+#ifdef SSL_SUPPORT
     srv->ssl_init = uh_server_ssl_init;
 #endif
 

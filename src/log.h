@@ -38,6 +38,7 @@ void uh_log_close();
 
 #define uh_log_debug(fmt...)     uh_log(LOG_DEBUG, fmt)
 #define uh_log_info(fmt...)      uh_log(LOG_INFO, fmt)
+#define uh_log_warn(fmt...)      uh_log(LOG_WARNING, fmt)
 #define uh_log_err(fmt...)       uh_log(LOG_ERR, fmt)
 
 void  __uh_log(const char *filename, int line, int priority, const char *fmt, ...)
