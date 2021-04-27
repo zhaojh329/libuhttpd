@@ -30,7 +30,7 @@ jobs:
           version=${{ steps.get-version.outputs.version-without-v }}
           cd ..
           cp -r libuhttpd libuhttpd-$version
-          rm -rf libuhttpd-$version/.git* libuhttpd-$version/src/buffer/.git* libuhttpd-$version/src/http-parser/{.git*,.mailmap,.travis.yml}
+          rm -rf libuhttpd-$version/.git* libuhttpd-$version/src/buffer/.git* libuhttpd-$version/src/ssl/.git* libuhttpd-$version/src/http-parser/{.git*,.mailmap,.travis.yml}
           tar zcfv libuhttpd-$version.tar.gz libuhttpd-$version
           echo "::set-output name=asset-path::../libuhttpd-$version.tar.gz"
           echo "::set-output name=asset-name::libuhttpd-$version.tar.gz"
