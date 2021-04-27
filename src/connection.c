@@ -814,10 +814,8 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         }
 
         ret = buffer_put_fd_ex(&conn->rb, w->fd, -1, &eof, conn_ssl_read, conn);
-        if (ret < 0) {
-            uh_log_err("socket read error: %s\n", strerror(errno));
+        if (ret < 0)
             goto err;
-        }
 #endif
     } else {
         ret = buffer_put_fd(rb, w->fd, -1, &eof);
