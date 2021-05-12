@@ -83,7 +83,7 @@ static void conn_send_file(struct uh_connection *conn, const char *path, off_t o
 
     fd = open(path, O_RDONLY);
     if (fd < 0) {
-        uh_log_err("open: %s\n", strerror(errno));
+        log_err("open: %s\n", strerror(errno));
         return;
     }
 
@@ -423,7 +423,7 @@ static int on_header_field_cb(struct http_parser *parser, const char *at, size_t
         req->header_num++;
 
         if (req->header_num == UHTTPD_MAX_HEADER_NUM) {
-            uh_log_err("Header too more\n");
+            log_err("Header too more\n");
             return 1;
         }
 
@@ -564,7 +564,7 @@ static void conn_decref(struct uh_connection *conn)
     if (__sync_sub_and_fetch(&conni->refcount, 1))
         return;
 
-    uh_log_debug("Free connection: %p\n", conn);
+    log_debug("Free connection: %p\n", conn);
 
     free(conn);
 }
@@ -605,10 +605,8 @@ void conn_free(struct uh_connection_internal *conn)
     if (conn->sock > 0)
         close(conn->sock);
 
-    if (uh_log_get_threshold() == LOG_DEBUG) {
-        saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port);
-        uh_log_debug("Connection(%s %d) closed\n", addr_str, port);
-    }
+    log_debug("Connection(%s %d) closed\n",
+            saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port), port);
 
     conn_decref((struct uh_connection *)conn);
 }
@@ -657,7 +655,7 @@ static void conn_http_parse(struct uh_connection_internal *conn)
 #ifdef SSL_SUPPORT
 static void on_ssl_verify_error(int error, const char *str, void *arg)
 {
-    uh_log_warn("SSL certificate error(%d): %s\n", error, str);
+    log_warn("SSL certificate error(%d): %s\n", error, str);
 }
 
 /* -1 error, 0 pending, 1 ok */
@@ -671,7 +669,7 @@ static int ssl_negotiated(struct uh_connection_internal *conn)
         return 0;
 
     if (ret == SSL_ERROR) {
-        uh_log_err("ssl connect error(%d): %s\n", ssl_err_code, ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+        log_err("ssl connect error(%d): %s\n", ssl_err_code, ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
         return -1;
     }
 
@@ -688,7 +686,7 @@ static int conn_ssl_read(int fd, void *buf, size_t count, void *arg)
 
     ret = ssl_read(conn->ssl, buf, count);
     if (ret == SSL_ERROR) {
-        uh_log_err("ssl_read(%d): %s\n", ssl_err_code,
+        log_err("ssl_read(%d): %s\n", ssl_err_code,
                 ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
         return P_FD_ERR;
     }
@@ -720,7 +718,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
         ret = ssl_write(conn->ssl, buffer_data(b), buffer_length(b));
         if (ret == SSL_ERROR) {
-            uh_log_err("ssl_write(%d): %s\n", ssl_err_code,
+            log_err("ssl_write(%d): %s\n", ssl_err_code,
                     ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
             goto err;
         }
@@ -733,7 +731,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     } else {
         ret = buffer_pull_to_fd(&conn->wb, w->fd, -1);
         if (ret < 0) {
-            uh_log_err("write error: %s\n", strerror(errno));
+            log_err("write error: %s\n", strerror(errno));
             goto err;
         }
     }
@@ -753,7 +751,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
                 ret = sendfile(w->fd, conn->file.fd, NULL, conn->file.size);
                 if (ret < 0) {
                     if (errno != EAGAIN) {
-                        uh_log_err("write error: %s\n", strerror(errno));
+                        log_err("write error: %s\n", strerror(errno));
                         goto err;
                     }
                     return;
@@ -820,7 +818,7 @@ static void conn_read_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     } else {
         ret = buffer_put_fd(rb, w->fd, -1, &eof);
         if (ret < 0) {
-            uh_log_err("read error: %s\n", strerror(errno));
+            log_err("read error: %s\n", strerror(errno));
             goto err;
         }
     }
@@ -913,7 +911,7 @@ struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock
 
     conn = calloc(1, sizeof(struct uh_connection_internal));
     if (!conn) {
-        uh_log_err("malloc: %s\n", strerror(errno));
+        log_err("malloc: %s\n", strerror(errno));
         return NULL;
     }
 
@@ -947,7 +945,7 @@ struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock
 
     conn_incref((struct uh_connection *)conn);
 
-    uh_log_debug("New connection: %p\n", conn);
+    log_debug("New connection: %p\n", conn);
 
     return conn;
 }

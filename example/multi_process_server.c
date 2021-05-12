@@ -49,7 +49,7 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
         }
 
         ev_break(loop, EVBREAK_ALL);
-        uh_log_info("Normal quit\n");
+        log_info("Normal quit\n");
     }
 }
 
@@ -113,10 +113,10 @@ int main(int argc, char **argv)
         }
     }
 
-    if (!verbose)
-        uh_log_threshold(LOG_ERR);
+    if (verbose)
+        log_level(LOG_ERR);
 
-    uh_log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
+    log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
     if (nworker < 1)
         return 0;
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
     for (i = 0; i < nworker - 1; i++) {
         pid_t pid = fork();
         if (pid < 0) {
-            uh_log_info("fork: %s\n", strerror(errno));
+            log_info("fork: %s\n", strerror(errno));
             break;
         }
 

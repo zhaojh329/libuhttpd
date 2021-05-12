@@ -109,25 +109,23 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     sock = accept4(l->sock, (struct sockaddr *)&addr, &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (sock < 0) {
         if (errno != EAGAIN)
-            uh_log_err("accept: %s\n", strerror(errno));
+            log_err("accept: %s\n", strerror(errno));
         return;
     }
 
-    if (uh_log_get_threshold() == LOG_DEBUG) {
-        saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port);
-        uh_log_debug("New Connection from: %s %d\n", addr_str, port);
-    }
+    log_debug("New Connection from: %s %d\n",
+            saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port), port);
 
     if (l->ssl) {
 #ifdef SSL_SUPPORT
         if (!srv->ssl_ctx) {
-            uh_log_err("SSL not initialized\n");
+            log_err("SSL not initialized\n");
             close(sock);
             return;
         }
 #else
         close(sock);
-        uh_log_err("SSL not enabled when build\n");
+        log_err("SSL not enabled when build\n");
         return;
 #endif
     }
@@ -152,7 +150,7 @@ struct uh_server *uh_server_new(struct ev_loop *loop)
 
     srv = malloc(sizeof(struct uh_server_internal));
     if (!srv) {
-        uh_log_err("malloc: %s\n", strerror(errno));
+        log_err("malloc: %s\n", strerror(errno));
         return NULL;
     }
 
@@ -168,17 +166,17 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
 
     srvi->ssl_ctx = ssl_context_new(true);
     if (!srvi->ssl_ctx) {
-        uh_log_err("ssl context init fail\n");
+        log_err("ssl context init fail\n");
         return -1;
     }
 
     if (ssl_load_crt_file(srvi->ssl_ctx, cert)) {
-        uh_log_err("load certificate file fail\n");
+        log_err("load certificate file fail\n");
         return -1;
     }
 
     if (ssl_load_key_file(srvi->ssl_ctx, key)) {
-        uh_log_err("load private key file fail\n");
+        log_err("load private key file fail\n");
         return -1;
     }
 
@@ -196,26 +194,26 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 
     dlh = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (!dlh) {
-        uh_log_err("dlopen fail: %s\n", dlerror());
+        log_err("dlopen fail: %s\n", dlerror());
         return -1;
     }
 
     h = dlsym(dlh, "uh_plugin_handler");
     if (!h) {
         dlclose(dlh);
-        uh_log_err("not found symbol 'uh_plugin_handler'\n");
+        log_err("not found symbol 'uh_plugin_handler'\n");
         return -1;
     }
 
     if (!h->path || !h->path[0] || !h->handler) {
         dlclose(dlh);
-        uh_log_err("invalid plugin\n");
+        log_err("invalid plugin\n");
         return -1;
     }
 
     p = calloc(1, sizeof(struct uh_plugin));
     if (!p) {
-        uh_log_err("calloc: %s\n", strerror(errno));
+        log_err("calloc: %s\n", strerror(errno));
         return -1;
     }
 
@@ -232,7 +230,7 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 
     return 0;
 #else
-    uh_log_err("Not support plugin\n");
+    log_err("Not support plugin\n");
     return -1;
 #endif
 }
@@ -244,7 +242,7 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
 
     h = calloc(1, sizeof(struct uh_path_handler) + strlen(path) + 1);
     if (!h) {
-        uh_log_err("calloc: %s\n", strerror(errno));
+        log_err("calloc: %s\n", strerror(errno));
         return -1;
     }
 
@@ -285,7 +283,7 @@ static int uh_set_docroot(struct uh_server *srv, const char *path)
 
     srvi->docroot = strdup(path);
     if (!srvi->docroot) {
-        uh_log_err("strdup: %s\n", strerror(errno));
+        log_err("strdup: %s\n", strerror(errno));
         return -1;
     }
 
@@ -301,7 +299,7 @@ static int uh_set_index_page(struct uh_server *srv, const char *name)
 
     srvi->index_page = strdup(name);
     if (!srvi->index_page) {
-        uh_log_err("strdup: %s\n", strerror(errno));
+        log_err("strdup: %s\n", strerror(errno));
         return -1;
     }
 
@@ -366,13 +364,13 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
     int sock;
 
     if (parse_address(addr, &host, &port) < 0) {
-        uh_log_err("invalid address\n");
+        log_err("invalid address\n");
         return -1;
     }
 
     status = getaddrinfo(host, port, &hints, &addrs);
     if (status != 0) {
-        uh_log_err("getaddrinfo(): %s\n", gai_strerror(status));
+        log_err("getaddrinfo(): %s\n", gai_strerror(status));
         return -1;
     }
 
@@ -380,36 +378,36 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
     for (p = addrs; p; p = p->ai_next) {
         sock = socket(p->ai_family, p->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, p->ai_protocol);
         if (sock < 0) {
-            uh_log_err("socket: %s\n", strerror(errno));
+            log_err("socket: %s\n", strerror(errno));
             continue;
         }
 
         if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
-            uh_log_err("setsockopt: %s\n", strerror(errno));
+            log_err("setsockopt: %s\n", strerror(errno));
             goto err;
         }
 
         /* required to get parallel v4 + v6 working */
         if (p->ai_family == AF_INET6 && setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int)) < 0) {
-            uh_log_err("setsockopt: %s\n", strerror(errno));
+            log_err("setsockopt: %s\n", strerror(errno));
             goto err;
         }
 
         setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
 
         if (bind(sock, p->ai_addr, p->ai_addrlen) < 0) {
-            uh_log_err("bind: %s\n", strerror(errno));
+            log_err("bind: %s\n", strerror(errno));
             goto err;
         }
 
         if (listen(sock, SOMAXCONN) < 0) {
-            uh_log_err("bind: %s\n", strerror(errno));
+            log_err("bind: %s\n", strerror(errno));
             goto err;
         }
 
         l = calloc(1, sizeof(struct uh_listener));
         if (!l) {
-            uh_log_err("calloc: %s\n", strerror(errno));
+            log_err("calloc: %s\n", strerror(errno));
             goto err;
         }
 
@@ -430,11 +428,11 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
         if (p->ai_family == AF_INET) {
             struct sockaddr_in *ina = (struct sockaddr_in *)p->ai_addr;
             inet_ntop(p->ai_family, &ina->sin_addr, addr_str, sizeof(addr_str));
-            uh_log_debug("Listen on: %s:%d with ssl %s\n", addr_str, ntohs(ina->sin_port), ssl ? "on" : "off");
+            log_debug("Listen on: %s:%d with ssl %s\n", addr_str, ntohs(ina->sin_port), ssl ? "on" : "off");
         } else {
             struct sockaddr_in6 *in6a = (struct sockaddr_in6 *)p->ai_addr;
             inet_ntop(p->ai_family, &in6a->sin6_addr, addr_str, sizeof(addr_str));
-            uh_log_debug("Listen on: [%s]:%d with ssl %s\n", addr_str, ntohs(in6a->sin6_port), ssl ? "on" : "off");
+            log_debug("Listen on: [%s]:%d with ssl %s\n", addr_str, ntohs(in6a->sin6_port), ssl ? "on" : "off");
         }
 
         bound++;

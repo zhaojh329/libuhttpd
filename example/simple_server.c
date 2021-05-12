@@ -39,7 +39,7 @@ static void signal_cb(struct ev_loop *loop, ev_signal *w, int revents)
 {
     if (w->signum == SIGINT) {
         ev_break(loop, EVBREAK_ALL);
-        uh_log_info("Normal quit\n");
+        log_info("Normal quit\n");
     }
 }
 
@@ -97,10 +97,10 @@ int main(int argc, char **argv)
         }
     }
 
-    if (!verbose)
-        uh_log_threshold(LOG_ERR);
+    if (verbose)
+        log_level(LOG_DEBUG);
 
-    uh_log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
+    log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
     signal(SIGPIPE, SIG_IGN);
 
