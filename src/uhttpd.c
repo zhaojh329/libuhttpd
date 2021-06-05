@@ -428,11 +428,11 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
         if (p->ai_family == AF_INET) {
             struct sockaddr_in *ina = (struct sockaddr_in *)p->ai_addr;
             inet_ntop(p->ai_family, &ina->sin_addr, addr_str, sizeof(addr_str));
-            log_debug("Listen on: %s:%d with ssl %s\n", addr_str, ntohs(ina->sin_port), ssl ? "on" : "off");
+            log_info("Listen on: %s:%d%s\n", addr_str, ntohs(ina->sin_port), ssl ? " with ssl" : "");
         } else {
             struct sockaddr_in6 *in6a = (struct sockaddr_in6 *)p->ai_addr;
             inet_ntop(p->ai_family, &in6a->sin6_addr, addr_str, sizeof(addr_str));
-            log_debug("Listen on: [%s]:%d with ssl %s\n", addr_str, ntohs(in6a->sin6_port), ssl ? "on" : "off");
+            log_info("Listen on: [%s]:%d%s\n", addr_str, ntohs(in6a->sin6_port), ssl ? " with ssl" : "");
         }
 
         bound++;
