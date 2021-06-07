@@ -71,7 +71,6 @@ static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 static void conn_send_file(struct uh_connection *conn, const char *path, off_t offset, int64_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    size_t min = 8192;
     struct stat st;
     int fd;
 
@@ -100,9 +99,13 @@ static void conn_send_file(struct uh_connection *conn, const char *path, off_t o
     if (len < 0 || len > st.st_size)
         len = st.st_size;
 
-    /* If the file is not greater than 8K, then append it to the HTTP head, send once */
-    if (len <= min) {
-        buffer_put_fd(&conni->wb, fd, len, NULL);
+    /* If the file is not greater than 2K, then append it to the HTTP head, send once */
+    if (len <= 2048) {
+        bool eof = false;
+
+        while (!eof)
+            buffer_put_fd(&conni->wb, fd, -1, &eof);
+
         close(fd);
     } else {
         conni->file.size = len;
