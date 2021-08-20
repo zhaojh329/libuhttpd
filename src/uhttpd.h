@@ -108,6 +108,14 @@ struct uh_server {
     void (*set_conn_closed_cb)(struct uh_server *srv, uh_con_closed_cb_prototype cb);
     void (*set_default_handler)(struct uh_server *srv, uh_path_handler_prototype handler);
     int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
+    /*
+    ** Similar with 'add_path_handler', but treats 'path' as wildcard
+    **
+    ** ^/cgi-bin/         matches the starting position within the path
+    ** ^/cgi-bin/test$    matches the starting position and the ending position within the path
+    ** test               matches any position within the path
+    */
+    int (*add_path_handler_w)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     int (*set_docroot)(struct uh_server *srv, const char *path);
     int (*set_index_page)(struct uh_server *srv, const char *name);
 };
@@ -123,9 +131,17 @@ struct uh_plugin {
     struct uh_plugin *next;
 };
 
+enum {
+    UH_PATH_WILDCARD    = (1 << 0),
+    UH_PATH_MATCH_START = (1 << 1),
+    UH_PATH_MATCH_END   = (1 << 2)
+};
+
 struct uh_path_handler {
     uh_path_handler_prototype handler;
     struct uh_path_handler *next;
+    uint8_t flags;
+    uint8_t len;
     char path[0];
 };
 

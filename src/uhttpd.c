@@ -235,10 +235,27 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 #endif
 }
 
-static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
+static int __uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler, bool wildcard)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+    int path_len = strlen(path);
     struct uh_path_handler *h;
+    uint8_t flags = 0;
+
+    if (wildcard) {
+        flags |= UH_PATH_WILDCARD;
+
+        if (path[0] == '^') {
+            flags |= UH_PATH_MATCH_START;
+            path_len--;
+            path++;
+        }
+
+        if (path[path_len - 1] == '$') {
+            flags |= UH_PATH_MATCH_END;
+            path_len--;
+        }
+    }
 
     h = calloc(1, sizeof(struct uh_path_handler) + strlen(path) + 1);
     if (!h) {
@@ -247,7 +264,10 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     }
 
     h->handler = handler;
-    strcpy(h->path, path);
+    h->flags = flags;
+    h->len = path_len;
+
+    strncpy(h->path, path, path_len);
 
     if (!srvi->handlers) {
         srvi->handlers = h;
@@ -258,6 +278,16 @@ static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_
     srvi->handlers = h;
 
     return 0;
+}
+
+static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
+{
+    return __uh_add_path_handler(srv, path, handler, false);
+}
+
+static int uh_add_path_handler_wildcard(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
+{
+    return __uh_add_path_handler(srv, path, handler, true);
 }
 
 static void uh_set_conn_abort_cb(struct uh_server *srv, uh_con_closed_cb_prototype cb)
@@ -471,6 +501,7 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
     srv->set_conn_closed_cb = uh_set_conn_abort_cb;
     srv->set_default_handler = uh_set_default_handler;
     srv->add_path_handler = uh_add_path_handler;
+    srv->add_path_handler_w = uh_add_path_handler_wildcard;
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;

@@ -453,12 +453,58 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
     return 0;
 }
 
+static bool set_path_handler(struct uh_connection_internal *conn, struct uh_path_handler *h,
+    struct uh_str *path, bool wildcard)
+{
+    while (h) {
+        if (wildcard) {
+            int match = 0;
+
+            if (!(h->flags & UH_PATH_WILDCARD))
+                goto next;
+
+            if (path->len < h->len)
+                goto next;
+
+            if (h->flags & UH_PATH_MATCH_START) {
+                if (strncmp(path->p, h->path, h->len))
+                    goto next;
+                match++;
+            }
+
+            if (h->flags & UH_PATH_MATCH_END) {
+                if (strncmp(path->p + (path->len - h->len), h->path, h->len))
+                    goto next;
+                match++;
+            }
+
+            if (!match && !memmem(path->p, path->len, h->path, h->len))
+                goto next;
+
+            conn->handler = h->handler;
+            return true;
+        } else {
+            if (h->flags & UH_PATH_WILDCARD)
+                goto next;
+
+            if (h->len == path->len && !strncmp(path->p, h->path, path->len)) {
+                conn->handler = h->handler;
+                return true;
+            }
+        }
+
+next:
+        h = h->next;
+    }
+
+    return false;
+}
+
 static int on_headers_complete(struct http_parser *parser)
 {
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_server_internal *srv = conn->srv;
     struct uh_request *req = &conn->req;
-    struct uh_path_handler *h = srv->handlers;
     struct uh_plugin *p = srv->plugins;
     struct uh_str path;
 
@@ -466,14 +512,15 @@ static int on_headers_complete(struct http_parser *parser)
 
     path = conn->com.get_path(&conn->com);
 
-    while (h) {
-        if (strlen(h->path) == path.len && !strncmp(path.p, h->path, path.len)) {
-            conn->handler = h->handler;
-            goto done;
-        }
-        h = h->next;
-    }
+    /* match non wildcard path handler */
+    if (set_path_handler(conn, srv->handlers, &path, false))
+        goto done;
 
+    /* match wildcard path handler */
+    if (set_path_handler(conn, srv->handlers, &path, true))
+        goto done;
+
+    /* match plugin */
     while (p) {
         if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
             conn->handler = p->h->handler;
