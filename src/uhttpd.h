@@ -120,22 +120,25 @@ struct uh_server {
     int (*set_index_page)(struct uh_server *srv, const char *name);
 };
 
+enum {
+    UH_PATH_WILDCARD    = (1 << 0),
+    UH_PATH_MATCH_START = (1 << 1),
+    UH_PATH_MATCH_END   = (1 << 2)
+};
+
 struct uh_plugin_handler {
     const char *path;
+    bool wildcard;
     uh_path_handler_prototype handler;
 };
 
 struct uh_plugin {
     struct uh_plugin_handler *h;
     void *dlh;
+    uint8_t flags;
     uint8_t len;
+    const char *path;
     struct uh_plugin *next;
-};
-
-enum {
-    UH_PATH_WILDCARD    = (1 << 0),
-    UH_PATH_MATCH_START = (1 << 1),
-    UH_PATH_MATCH_END   = (1 << 2)
 };
 
 struct uh_path_handler {

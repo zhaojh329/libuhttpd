@@ -39,6 +39,7 @@ static void test_handler(struct uh_connection *conn, int event)
 }
 
 struct uh_plugin_handler uh_plugin_handler = {
-    .path = "/test",
+    .path = "^/test$",
+    .wildcard = true,
     .handler = test_handler
 };

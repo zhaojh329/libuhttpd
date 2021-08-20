@@ -219,7 +219,23 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 
     p->h = h;
     p->dlh = dlh;
+    p->path = h->path;
     p->len = strlen(h->path);
+
+    if (h->wildcard) {
+        p->flags |= UH_PATH_WILDCARD;
+
+        if (h->path[0] == '^') {
+            p->flags |= UH_PATH_MATCH_START;
+            p->len--;
+            p->path++;
+        }
+
+        if (p->path[p->len - 1] == '$') {
+            p->flags |= UH_PATH_MATCH_END;
+            p->len--;
+        }
+    }
 
     if (!srvi->plugins) {
         srvi->plugins = p;

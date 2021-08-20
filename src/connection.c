@@ -453,48 +453,69 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
     return 0;
 }
 
+static bool match_path(struct uh_str *path, const char *needle, int needlelen, uint8_t flags, bool wildcard)
+{
+    if (wildcard) {
+        int match = 0;
+
+        if (!(flags & UH_PATH_WILDCARD))
+            return false;
+
+        if (path->len < needlelen)
+            return false;
+
+        if (flags & UH_PATH_MATCH_START) {
+            if (strncmp(path->p, needle, needlelen))
+                return false;
+            match++;
+        }
+
+        if (flags & UH_PATH_MATCH_END) {
+            if (strncmp(path->p + (path->len - needlelen), needle, needlelen))
+                return false;
+            match++;
+        }
+
+        if (!match && !memmem(path->p, path->len, needle, needlelen))
+            return false;
+
+        return true;
+    } else {
+        if (flags & UH_PATH_WILDCARD)
+            return false;
+
+        if (needlelen != path->len || strncmp(path->p, needle, path->len))
+            return false;
+
+        return true;
+    }
+}
+
 static bool set_path_handler(struct uh_connection_internal *conn, struct uh_path_handler *h,
     struct uh_str *path, bool wildcard)
 {
     while (h) {
-        if (wildcard) {
-            int match = 0;
-
-            if (!(h->flags & UH_PATH_WILDCARD))
-                goto next;
-
-            if (path->len < h->len)
-                goto next;
-
-            if (h->flags & UH_PATH_MATCH_START) {
-                if (strncmp(path->p, h->path, h->len))
-                    goto next;
-                match++;
-            }
-
-            if (h->flags & UH_PATH_MATCH_END) {
-                if (strncmp(path->p + (path->len - h->len), h->path, h->len))
-                    goto next;
-                match++;
-            }
-
-            if (!match && !memmem(path->p, path->len, h->path, h->len))
-                goto next;
-
+        if (match_path(path, h->path, h->len, h->flags, wildcard)) {
             conn->handler = h->handler;
             return true;
-        } else {
-            if (h->flags & UH_PATH_WILDCARD)
-                goto next;
-
-            if (h->len == path->len && !strncmp(path->p, h->path, path->len)) {
-                conn->handler = h->handler;
-                return true;
-            }
         }
 
-next:
         h = h->next;
+    }
+
+    return false;
+}
+
+static bool set_plugin_handler(struct uh_connection_internal *conn, struct uh_plugin *p,
+    struct uh_str *path, bool wildcard)
+{
+    while (p) {
+        if (match_path(path, p->path, p->len, p->flags, wildcard)) {
+            conn->handler = p->h->handler;
+            return true;
+        }
+
+        p = p->next;
     }
 
     return false;
@@ -505,7 +526,6 @@ static int on_headers_complete(struct http_parser *parser)
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_server_internal *srv = conn->srv;
     struct uh_request *req = &conn->req;
-    struct uh_plugin *p = srv->plugins;
     struct uh_str path;
 
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
@@ -520,14 +540,12 @@ static int on_headers_complete(struct http_parser *parser)
     if (set_path_handler(conn, srv->handlers, &path, true))
         goto done;
 
-    /* match plugin */
-    while (p) {
-        if (p->len == path.len && !strncmp(path.p, p->h->path, path.len)) {
-            conn->handler = p->h->handler;
-            goto done;
-        }
-        p = p->next;
-    }
+    /* match non wildcard plugin */
+    if (set_plugin_handler(conn, srv->plugins, &path, false))
+        goto done;
+
+    /* match wildcard plugin */
+    set_plugin_handler(conn, srv->plugins, &path, true);
 
 done:
     if (!conn->handler)
