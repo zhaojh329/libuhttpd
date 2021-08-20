@@ -128,6 +128,7 @@ struct uh_plugin_handler {
 struct uh_plugin {
     struct uh_plugin_handler *h;
     void *dlh;
+    uint8_t len;
     struct uh_plugin *next;
 };
 

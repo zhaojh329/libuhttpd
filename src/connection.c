@@ -522,7 +522,7 @@ static int on_headers_complete(struct http_parser *parser)
 
     /* match plugin */
     while (p) {
-        if (strlen(p->h->path) == path.len && !strncmp(path.p, p->h->path, path.len)) {
+        if (p->len == path.len && !strncmp(path.p, p->h->path, path.len)) {
             conn->handler = p->h->handler;
             goto done;
         }

@@ -219,6 +219,7 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 
     p->h = h;
     p->dlh = dlh;
+    p->len = strlen(h->path);
 
     if (!srvi->plugins) {
         srvi->plugins = p;
