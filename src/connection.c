@@ -526,11 +526,17 @@ static int on_headers_complete(struct http_parser *parser)
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
     struct uh_server_internal *srv = conn->srv;
     struct uh_request *req = &conn->req;
+    struct sockaddr *sa = &conn->addr.sa;
+    char addr_str[INET6_ADDRSTRLEN];
     struct uh_str path;
+    int port;
 
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, &conn->url_parser);
 
     path = conn->com.get_path(&conn->com);
+
+    log_debug("%s %.*s from %s %d\n", http_method_str(parser->method), (int)path.len, path.p,
+            addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     /* match non wildcard path handler */
     if (set_path_handler(conn, srv->handlers, &path, false))
