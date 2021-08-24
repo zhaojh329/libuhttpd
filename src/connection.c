@@ -34,7 +34,6 @@
 #include "utils.h"
 #include "file.h"
 
-
 static void conn_done(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -208,17 +207,25 @@ static void conn_send_head(struct uh_connection *conn, int code, int64_t content
     conn_send(conn, "\r\n", 2);
 }
 
-static void conn_error(struct uh_connection *conn, int code, const char *reason)
+static void conn_error(struct uh_connection *conn, int code, const char *reason, ...)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    char buf[256];
+    va_list arg;
+    int len;
 
     if (conni->flags & CONN_F_SEND_AND_CLOSE)
         return;
 
     if (!reason)
         reason = http_status_str(code);
-    conn_send_head(conn, code, strlen(reason), "Content-Type: text/plain\r\nConnection: close\r\n");
-    conn_send(conn, reason, strlen(reason));
+
+    va_start(arg, reason);
+    len = vsnprintf(buf, sizeof(buf), reason, arg);
+    va_end(arg);
+
+    conn_send_head(conn, code, len, "Content-Type: text/plain\r\nConnection: close\r\n");
+    conn_send(conn, buf, len);
 
     conni->flags |= CONN_F_SEND_AND_CLOSE;
 

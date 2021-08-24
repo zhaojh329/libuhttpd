@@ -78,13 +78,13 @@ void upload_handler(struct uh_connection *conn, int event)
         if (fd < 0) {
             fd = open("upload.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
             if (fd < 0) {
-                conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
+                conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "open: %s", strerror(errno));
                 return;
             }
         }
 
         if (write(fd, body.p, body.len) < 0) {
-            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, strerror(errno));
+            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "write: %s", strerror(errno));
             close(fd);
             return;
         }
