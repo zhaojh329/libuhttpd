@@ -113,8 +113,8 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         return;
     }
 
-    log_debug("New Connection from: %s %d\n",
-            saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port), port);
+    log_debug("New Connection from: %s %d\n", addr_str,
+            (saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     if (l->ssl) {
 #ifdef SSL_SUPPORT

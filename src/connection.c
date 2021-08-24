@@ -673,8 +673,8 @@ void conn_free(struct uh_connection_internal *conn)
     if (conn->sock > 0)
         close(conn->sock);
 
-    log_debug("Connection(%s %d) closed\n",
-            saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port), port);
+    log_debug("Connection(%s %d) closed\n", addr_str,
+            (saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     conn_decref((struct uh_connection *)conn);
 }
