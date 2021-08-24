@@ -89,3 +89,45 @@ int urldecode(char *buf, int blen, const char *src, int slen)
 
     return (i == slen) ? len : -1;
 }
+
+const char *canonpath(char *path, size_t *len)
+{
+    char *resolved = path;
+    const char *p = path;
+    int rel = 0;
+
+    while ((*len)--) {
+        if (*p != '/')
+            goto next;
+
+        /* skip repeating / */
+        if (p[1] == '/') {
+            p++;
+            continue;
+        }
+
+        /* /./ or /../ */
+        if (p[1] == '.') {
+            /* skip /./ */
+            if (p[2] == '/' || p[2] == '\0') {
+                p += 2;
+                continue;
+            }
+
+            /* collapse /x/../ */
+            if (p[2] == '.' && (p[3] == '/' || p[3] == '\0')) {
+                p += 3;
+                continue;
+            }
+        }
+
+next:
+        *resolved++ = *p++;
+        rel++;
+    }
+
+    *resolved = '\0';
+    *len = rel;
+
+    return path;
+}

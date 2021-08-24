@@ -49,4 +49,6 @@ bool support_so_reuseport();
 */
 int urldecode(char *buf, int blen, const char *src, int slen);
 
+const char *canonpath(char *path, size_t *len);
+
 #endif
