@@ -72,6 +72,7 @@ struct uh_connection {
     const struct sockaddr *(*get_addr)(struct uh_connection *conn); /* peer address */
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
+    struct uh_str (*get_uri)(struct uh_connection *conn);
     struct uh_str (*get_path)(struct uh_connection *conn);
     struct uh_str (*get_query)(struct uh_connection *conn);
     struct uh_str (*get_header)(struct uh_connection *conn, const char *name);

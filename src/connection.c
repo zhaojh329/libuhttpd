@@ -281,6 +281,18 @@ static const char *conn_get_method_str(struct uh_connection *conn)
 /* data of the request field */
 #define O2D(c, o) ((const char *)c->rb.data + o)
 
+static struct uh_str conn_get_uri(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct uh_request *req = &conni->req;
+    struct uh_str uri;
+
+    uri.p = O2D(conni, req->url.offset);
+    uri.len = req->url.length;
+
+    return uri;
+}
+
 static struct uh_str conn_get_path(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -539,13 +551,12 @@ static int on_headers_complete(struct http_parser *parser)
     struct uh_str path;
     int port;
 
+    canonpath((char *)O2D(conn, req->url.offset), &req->url.length);
+
     http_parser_parse_url(O2D(conn, req->url.offset), req->url.length, false, u);
 
     path.p = O2D(conn, u->field_data[UF_PATH].off) + req->url.offset;
     path.len = u->field_data[UF_PATH].len;
-
-    canonpath((char *)path.p, &path.len);
-    u->field_data[UF_PATH].len = path.len;
 
     log_debug("%s %.*s from %s %d\n", http_method_str(parser->method), (int)path.len, path.p,
             addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0));
@@ -976,6 +987,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->get_addr = conn_get_addr;
     conn->get_method = conn_get_method;
     conn->get_method_str = conn_get_method_str;
+    conn->get_uri = conn_get_uri;
     conn->get_path = conn_get_path;
     conn->get_query = conn_get_query;
     conn->get_header = conn_get_header;
