@@ -41,6 +41,68 @@
 #include "utils.h"
 #include "file.h"
 
+struct path_info *parse_path_info(struct uh_connection_internal *conn)
+{
+    struct uh_server_internal *srv = conn->srv;
+    struct uh_str path = conn->com.get_path(&conn->com);
+    const char *docroot = srv->docroot;
+    const char *index_page = srv->index_page;
+    static char buf[PATH_MAX];
+    static char path_phys[PATH_MAX];
+    static char path_info[PATH_MAX];
+    static struct path_info pi = {};
+    int docroot_len, i;
+
+    if (!docroot || !docroot[0])
+        docroot = ".";
+
+    docroot_len = strlen(docroot);
+
+    if (docroot[docroot_len - 1] == '/')
+        docroot_len--;
+
+    if (!index_page || !index_page[0])
+        index_page = "index.html";
+
+    memcpy(buf, docroot, docroot_len);
+
+    if (path.len == 1) {
+        buf[docroot_len] = '/';
+        strcpy(buf + docroot_len + 1, index_page);
+    } else if (urldecode(buf + docroot_len, PATH_MAX - docroot_len, path.p, path.len) < 0) {
+        return NULL;
+    }
+
+    for (i = strlen(buf); i > docroot_len; i--) {
+        char ch = buf[i];
+
+        if (ch != '\0' && ch != '/')
+            continue;
+
+        memcpy(path_phys, buf, i);
+        path_phys[i] = '\0';
+
+        if (access(path_phys, F_OK))
+            continue;
+
+        snprintf(path_info, sizeof(path_info), "%s", buf + i);
+        break;
+    }
+
+    if (i > docroot_len) {
+        pi.phys = path_phys;
+        pi.name = &path_phys[docroot_len];
+    } else {
+        pi.phys = buf;
+        pi.name = &buf[docroot_len];
+    }
+
+    pi.root = docroot;
+    pi.info = path_info;
+
+    return &pi;
+}
+
 static const char *file_mktag(struct stat *s, char *buf, int len)
 {
     snprintf(buf, len, "\"%" PRIx64 "-%" PRIx64 "-%" PRIx64 "\"",
@@ -253,36 +315,18 @@ err:
 void serve_file(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    const struct uh_str path = conn->get_path(conn);
-    struct uh_server_internal *srv = conni->srv;
-    const char *docroot = srv->docroot;
-    const char *index_page = srv->index_page;
-    static char fullpath[PATH_MAX];
+    struct path_info *pi = parse_path_info(conni);
     uint64_t start, end;
-    int docroot_len;
     const char *mime;
     struct stat st;
     bool ranged;
 
-    if (!docroot || !docroot[0])
-        docroot = ".";
-
-    if (!index_page || !index_page[0])
-        index_page = "index.html";
-
-    docroot_len = strlen(docroot);
-
-    memcpy(fullpath, docroot, docroot_len);
-
-    if (!strncmp(path.p, "/", path.len)) {
-        fullpath[docroot_len] = '/';
-        strcpy(fullpath + docroot_len + 1, index_page);
-    } else if (urldecode(fullpath + docroot_len, PATH_MAX - docroot_len, path.p, path.len) < 0) {
-        conn->error(conn, HTTP_STATUS_NOT_FOUND, NULL);
+    if (!pi) {
+        conn->error(conn, HTTP_STATUS_BAD_REQUEST, NULL);
         return;
     }
 
-    if (stat(fullpath, &st) < 0) {
+    if (stat(pi->phys, &st) < 0) {
         int code;
 
         switch (errno) {
@@ -331,7 +375,7 @@ void serve_file(struct uh_connection *conn)
 
     file_response_ok_hdrs(conn, &st);
 
-    mime = file_mime_lookup(fullpath);
+    mime = file_mime_lookup(pi->phys);
 
     conn->printf(conn, "Content-Type: %s\r\n", mime);
     conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", end - start + 1);
@@ -339,14 +383,14 @@ void serve_file(struct uh_connection *conn)
     if (ranged)
         conn->printf(conn, "Content-Range: bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64 "\r\n", start, end, (uint64_t)st.st_size);
     else
-        file_if_gzip(conn, fullpath, mime);
+        file_if_gzip(conn, pi->phys, mime);
 
     conn->printf(conn, "\r\n");
 
     if (conn->get_method(conn) == HTTP_HEAD)
         return;
 
-    conn->send_file(conn, fullpath, start, end - start + 1);
+    conn->send_file(conn, pi->phys, start, end - start + 1);
 
     conn->done(conn);
 }
