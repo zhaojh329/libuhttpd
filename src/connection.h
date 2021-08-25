@@ -29,6 +29,7 @@
 
 #include "buffer.h"
 #include "uhttpd.h"
+#include "list.h"
 
 #define UHTTPD_CONNECTION_TIMEOUT   30.0
 #define UHTTPD_MAX_HEADER_NUM       50
@@ -68,6 +69,7 @@ struct uh_request {
 
 struct uh_connection_internal {
     struct uh_connection com;
+    struct list_head list;
     int sock;
     void *ssl;
     uint8_t flags;
@@ -91,8 +93,6 @@ struct uh_connection_internal {
     } addr; /* peer address */
     struct http_parser parser;
     struct http_parser_url url_parser;
-    struct uh_connection_internal *prev;
-    struct uh_connection_internal *next;
     void (*handler)(struct uh_connection *conn, int event);
 };
 

@@ -36,16 +36,57 @@
 #include "connection.h"
 #include "utils.h"
 
+static void uh_server_free_conns(struct list_head *head)
+{
+    struct uh_connection_internal *pos, *n;
+
+    list_for_each_entry_safe(pos, n, head, list) {
+        conn_free(pos);
+    }
+}
+
+static void uh_server_free_handlers(struct list_head *head)
+{
+    struct uh_path_handler *pos, *n;
+
+    list_for_each_entry_safe(pos, n, head, list) {
+        list_del(&pos->list);
+        free(pos);
+    }
+}
+
+static void uh_server_free_plugins(struct list_head *head)
+{
+#ifdef HAVE_DLOPEN
+    struct uh_plugin *pos, *n;
+
+    list_for_each_entry_safe(pos, n, head, list) {
+        list_del(&pos->list);
+        dlclose(pos->dlh);
+        free(pos);
+    }
+#endif
+}
+
+static void uh_server_free_listeners(struct list_head *head)
+{
+    struct uh_listener *pos, *n;
+
+    list_for_each_entry_safe(pos, n, head, list) {
+        ev_io_stop(pos->srv->loop, &pos->ior);
+
+        list_del(&pos->list);
+
+        if (pos->sock > 0)
+            close(pos->sock);
+
+        free(pos);
+    }
+}
 
 static void uh_server_free(struct uh_server *srv)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
-    struct uh_connection_internal *conn = srvi->conns;
-    struct uh_path_handler *h = srvi->handlers;
-    struct uh_listener *l = srvi->listeners;
-#ifdef HAVE_DLOPEN
-    struct uh_plugin *p = srvi->plugins;
-#endif
 
     if (srvi->docroot)
         free(srvi->docroot);
@@ -53,38 +94,10 @@ static void uh_server_free(struct uh_server *srv)
     if (srvi->index_page)
         free(srvi->index_page);
 
-    while (conn) {
-        struct uh_connection_internal *next = conn->next;
-        conn_free(conn);
-        conn = next;
-    }
-
-    while (h) {
-        struct uh_path_handler *temp = h;
-        h = h->next;
-        free(temp);
-    }
-
-    while (l) {
-        struct uh_listener *temp = l;
-
-        ev_io_stop(srvi->loop, &l->ior);
-
-        if (l->sock > 0)
-            close(l->sock);
-
-        l = l->next;
-        free(temp);
-    }
-
-#ifdef HAVE_DLOPEN
-    while (p) {
-        struct uh_plugin *temp = p;
-        dlclose(p->dlh);
-        p = p->next;
-        free(temp);
-    }
-#endif
+    uh_server_free_conns(&srvi->conns);
+    uh_server_free_handlers(&srvi->handlers);
+    uh_server_free_plugins(&srvi->plugins);
+    uh_server_free_listeners(&srvi->listeners);
 
 #ifdef SSL_SUPPORT
     ssl_context_free(srvi->ssl_ctx);
@@ -134,14 +147,7 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
     if (!conn)
         return;
 
-    if (!srv->conns) {
-        srv->conns = conn;
-        return;
-    }
-
-    conn->next = srv->conns;
-    srv->conns->prev = conn;
-    srv->conns = conn;
+    list_add(&conn->list, &srv->conns);
 }
 
 struct uh_server *uh_server_new(struct ev_loop *loop)
@@ -237,13 +243,7 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
         }
     }
 
-    if (!srvi->plugins) {
-        srvi->plugins = p;
-        return 0;
-    }
-
-    p->next = srvi->plugins;
-    srvi->plugins = p;
+    list_add(&p->list, &srvi->plugins);
 
     return 0;
 #else
@@ -286,13 +286,7 @@ static int __uh_add_path_handler(struct uh_server *srv, const char *path, uh_pat
 
     strncpy(h->path, path, path_len);
 
-    if (!srvi->handlers) {
-        srvi->handlers = h;
-        return 0;
-    }
-
-    h->next = srvi->handlers;
-    srvi->handlers = h;
+    list_add(&h->list, &srvi->handlers);
 
     return 0;
 }
@@ -465,12 +459,7 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
         ev_io_init(&l->ior, uh_accept_cb, sock, EV_READ);
         ev_io_start(srvi->loop, &l->ior);
 
-        if (!srvi->listeners) {
-            srvi->listeners = l;
-        } else {
-            l->next = srvi->listeners;
-            srvi->listeners = l;
-        }
+        list_add(&l->list, &srvi->listeners);
 
         if (p->ai_family == AF_INET) {
             struct sockaddr_in *ina = (struct sockaddr_in *)p->ai_addr;
@@ -501,6 +490,11 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
 
     memset(srvi, 0, sizeof(struct uh_server_internal));
+
+    INIT_LIST_HEAD(&srvi->listeners);
+    INIT_LIST_HEAD(&srvi->handlers);
+    INIT_LIST_HEAD(&srvi->plugins);
+    INIT_LIST_HEAD(&srvi->conns);
 
     srvi->loop = loop ? loop : EV_DEFAULT;
 

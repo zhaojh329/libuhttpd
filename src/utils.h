@@ -30,14 +30,6 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 
-#ifndef container_of
-#define container_of(ptr, type, member)                 \
-    ({                              \
-        const __typeof__(((type *) NULL)->member) *__mptr = (ptr);  \
-        (type *) ((char *) __mptr - offsetof(type, member));    \
-    })
-#endif
-
 const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port);
 
 bool support_so_reuseport();

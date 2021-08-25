@@ -53,6 +53,7 @@ install(
         uhttpd.h
         log/log.h
         utils.h
+        list.h
         buffer/buffer.h
         http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/config.h

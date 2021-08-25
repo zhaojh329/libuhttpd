@@ -133,23 +133,6 @@ struct uh_plugin_handler {
     uh_path_handler_prototype handler;
 };
 
-struct uh_plugin {
-    struct uh_plugin_handler *h;
-    void *dlh;
-    uint8_t flags;
-    uint8_t len;
-    const char *path;
-    struct uh_plugin *next;
-};
-
-struct uh_path_handler {
-    uh_path_handler_prototype handler;
-    struct uh_path_handler *next;
-    uint8_t flags;
-    uint8_t len;
-    char path[0];
-};
-
 /*
  *  uh_server_new - creat an uh_server struct and init it
  *  @loop: If NULL will use EV_DEFAULT

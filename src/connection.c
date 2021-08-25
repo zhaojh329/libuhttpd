@@ -510,31 +510,31 @@ static bool match_path(struct uh_str *path, const char *needle, int needlelen, u
     }
 }
 
-static bool set_path_handler(struct uh_connection_internal *conn, struct uh_path_handler *h,
+static bool set_path_handler(struct uh_connection_internal *conn, struct list_head *head,
     struct uh_str *path, bool wildcard)
 {
-    while (h) {
+    struct uh_path_handler *h;
+
+    list_for_each_entry(h, head, list) {
         if (match_path(path, h->path, h->len, h->flags, wildcard)) {
             conn->handler = h->handler;
             return true;
         }
-
-        h = h->next;
     }
 
     return false;
 }
 
-static bool set_plugin_handler(struct uh_connection_internal *conn, struct uh_plugin *p,
+static bool set_plugin_handler(struct uh_connection_internal *conn, struct list_head *head,
     struct uh_str *path, bool wildcard)
 {
-    while (p) {
+    struct uh_plugin *p;
+
+    list_for_each_entry(p, head, list) {
         if (match_path(path, p->path, p->len, p->flags, wildcard)) {
             conn->handler = p->h->handler;
             return true;
         }
-
-        p = p->next;
     }
 
     return false;
@@ -562,19 +562,19 @@ static int on_headers_complete(struct http_parser *parser)
             addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     /* match non wildcard path handler */
-    if (set_path_handler(conn, srv->handlers, &path, false))
+    if (set_path_handler(conn, &srv->handlers, &path, false))
         goto done;
 
     /* match wildcard path handler */
-    if (set_path_handler(conn, srv->handlers, &path, true))
+    if (set_path_handler(conn, &srv->handlers, &path, true))
         goto done;
 
     /* match non wildcard plugin */
-    if (set_plugin_handler(conn, srv->plugins, &path, false))
+    if (set_plugin_handler(conn, &srv->plugins, &path, false))
         goto done;
 
     /* match wildcard plugin */
-    set_plugin_handler(conn, srv->plugins, &path, true);
+    set_plugin_handler(conn, &srv->plugins, &path, true);
 
 done:
     if (!conn->handler)
@@ -684,13 +684,7 @@ void conn_free(struct uh_connection_internal *conn)
     if (conn->file.fd > 0)
         close(conn->file.fd);
 
-    if (conn->prev)
-        conn->prev->next = conn->next;
-    else
-        conn->srv->conns = conn->next;
-
-    if (conn->next)
-        conn->next->prev = conn->prev;
+    list_del(&conn->list);
 
 #ifdef SSL_SUPPORT
     ssl_session_free(conn->ssl);
