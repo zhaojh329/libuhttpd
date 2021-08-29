@@ -51,25 +51,9 @@ struct uh_server;
 struct uh_connection {
     struct uh_server *(*get_server)(struct uh_connection *conn);
     struct ev_loop *(*get_loop)(struct uh_connection *conn);
-    /*
-    ** Indicates the end of request processing
-    ** Must be called at last, if not call 'error', 'redirect' and 'serve_file'
-    */
-    void (*done)(struct uh_connection *conn);
-    void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*send_file)(struct uh_connection *conn, const char *path, off_t offset, int64_t len);
-    void (*printf)(struct uh_connection *conn, const char *format, ...) __attribute__((format(printf, 2, 3)));
-    void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
-    void (*send_status_line)(struct uh_connection *conn, int code, const char *extra_headers);
-    void (*send_head)(struct uh_connection *conn, int code, int64_t content_length, const char *extra_headers);
-    void (*error)(struct uh_connection *conn, int code, const char *reason, ...) __attribute__((format(printf, 3, 4)));
-    void (*redirect)(struct uh_connection *conn, int code, const char *location, ...) __attribute__((format(printf, 3, 4)));
-    void (*serve_file)(struct uh_connection *conn);
-    void (*chunk_send)(struct uh_connection *conn, const void *data, ssize_t len);
-    void (*chunk_printf)(struct uh_connection *conn, const char *format, ...) __attribute__((format(printf, 2, 3)));
-    void (*chunk_vprintf)(struct uh_connection *conn, const char *format, va_list arg);
-    void (*chunk_end)(struct uh_connection *conn);
-    const struct sockaddr *(*get_addr)(struct uh_connection *conn); /* peer address */
+
+    const struct sockaddr *(*get_paddr)(struct uh_connection *conn); /* peer address */
+    const struct sockaddr *(*get_saddr)(struct uh_connection *conn); /* server address */
     enum http_method (*get_method)(struct uh_connection *conn);
     const char *(*get_method_str)(struct uh_connection *conn);
     struct uh_str (*get_uri)(struct uh_connection *conn);
@@ -82,9 +66,62 @@ struct uh_connection {
     struct uh_str (*get_body)(struct uh_connection *conn);
     /* The remain body data will be discurd after this function called */
     struct uh_str (*extract_body)(struct uh_connection *conn);
+
+    /*
+    ** This must be called first.
+    ** Sends a response head to the client which consist of a status line and some headers.
+    ** This method will sends a HTTP header 'Content-Length: num' if content_length is nonnegative,
+    ** otherwise sends a HTTP header 'Transfer-Encoding: chunked' for chunked transfer.
+    */
+    void (*send_head)(struct uh_connection *conn, int code, int64_t content_length,
+        const char *reason, ...) __attribute__((format(printf, 4, 5)));
+
+    /* Sends a HTTP header */
+    void (*send_header)(struct uh_connection *conn,
+        const char *name, const char *value, ...) __attribute__((format(printf, 3, 4)));
+    /*
+    ** Sends a blank line (indicating the end of the HTTP headers in the response).
+    ** This must be called before send body.
+    */
+    void (*end_headers)(struct uh_connection *conn);
+
+    /*
+    ** Sends a complete error reply to the client.
+    ** The numeric code specifies the HTTP error code, with reason as an optional,
+    ** short, human readable description of the error.
+    */
+    void (*send_error)(struct uh_connection *conn, int code, const char *reason, ...)
+        __attribute__((format(printf, 3, 4)));
+
+    /*
+    ** Sends a complete redirect reply to the client.
+    ** The numeric code specifies the redirect type(HTTP_STATUS_MOVED_PERMANENTLY or HTTP_STATUS_FOUND)
+    ** The location specifies the resource path.
+    */
+    void (*send_redirect)(struct uh_connection *conn, int code, const char *location, ...)
+        __attribute__((format(printf, 3, 4)));
+
+    /*
+    ** These three methods sends HTTP body to the client.
+    ** These three methods can only be called after calls 'end_headers'.
+    */
+    void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
+    /* restriction: cannot send over 6553 bytes */
+    void (*printf)(struct uh_connection *conn, const char *format, ...)
+        __attribute__((format(printf, 2, 3)));
+    /* restriction: cannot send over 6553 bytes */
+    void (*vprintf)(struct uh_connection *conn, const char *format, va_list arg);
+
+    /* Tells libuhttpd that we has replied all data to the client, no any more data to send */
+    void (*end_response)(struct uh_connection *conn);
+
+    /* handle file */
+    void (*serve_file)(struct uh_connection *conn);
+
     void (*close)(struct uh_connection *conn);  /* close low level TCP connection */
     void (*incref)(struct uh_connection *conn);
     void (*decref)(struct uh_connection *conn);
+
     void *userdata;
 };
 
@@ -108,28 +145,23 @@ struct uh_server {
     int (*load_plugin)(struct uh_server *srv, const char *path);
     void (*set_conn_closed_cb)(struct uh_server *srv, uh_con_closed_cb_prototype cb);
     void (*set_default_handler)(struct uh_server *srv, uh_path_handler_prototype handler);
-    int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     /*
-    ** Similar with 'add_path_handler', but treats 'path' as wildcard
-    **
     ** ^/cgi-bin/         matches the starting position within the path
     ** ^/cgi-bin/test$    matches the starting position and the ending position within the path
-    ** test               matches any position within the path
+    ** /test               matches any position within the path
     */
-    int (*add_path_handler_w)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
+    int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     int (*set_docroot)(struct uh_server *srv, const char *path);
     int (*set_index_page)(struct uh_server *srv, const char *name);
 };
 
 enum {
-    UH_PATH_WILDCARD    = (1 << 0),
-    UH_PATH_MATCH_START = (1 << 1),
-    UH_PATH_MATCH_END   = (1 << 2)
+    UH_PATH_MATCH_START = (1 << 0),
+    UH_PATH_MATCH_END   = (1 << 1)
 };
 
 struct uh_plugin_handler {
     const char *path;
-    bool wildcard;
     uh_path_handler_prototype handler;
 };
 
@@ -140,5 +172,29 @@ struct uh_plugin_handler {
 struct uh_server *uh_server_new(struct ev_loop *loop);
 
 void uh_server_init(struct uh_server *srv, struct ev_loop *loop);
+
+
+static inline bool uh_str_equal(const struct uh_str *us, const char *s)
+{
+    size_t len = strlen(s);
+
+    if (len != us->len)
+        return false;
+
+    return !memcmp(us->p, s, len);
+}
+
+/* ignoring case */
+static inline bool uh_str_equal_case(const struct uh_str *us, const char *s)
+{
+    size_t len = strlen(s);
+
+    if (len != us->len)
+        return false;
+
+    return !strncasecmp(us->p, s, len);
+}
+
+#include "handler.h"
 
 #endif

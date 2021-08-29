@@ -61,10 +61,12 @@ int main(int argc, char **argv)
     struct ev_signal signal_watcher;
     struct uh_server *srv = NULL;
     const char *plugin_path = NULL;
-    bool verbose = false;
     const char *docroot = ".";
     const char *index_page = "index.html";
+    int verbose = 0;
     int opt;
+
+    log_level(LOG_ERR);
 
     srv = uh_server_new(loop);
     if (!srv)
@@ -90,15 +92,17 @@ int main(int argc, char **argv)
             plugin_path = optarg;
             break;
         case 'v':
-            verbose = true;
+            if (!verbose) {
+                verbose++;
+                log_level(LOG_INFO);
+            } else {
+                log_level(LOG_DEBUG);
+            }
             break;
         default:
             usage(argv[0]);
         }
     }
-
-    if (verbose)
-        log_level(LOG_DEBUG);
 
     log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
@@ -112,9 +116,9 @@ int main(int argc, char **argv)
     srv->set_index_page(srv, index_page);
 
     srv->set_conn_closed_cb(srv, conn_closed_cb);
-    srv->set_default_handler(srv, default_handler);
-    srv->add_path_handler(srv, "/echo", echo_handler);
-    srv->add_path_handler(srv, "/upload", upload_handler);
+    srv->set_default_handler(srv, file_handler);
+    srv->add_path_handler(srv, "^/echo$", echo_handler);
+    srv->add_path_handler(srv, "^/upload$", upload_handler);
 
     if (plugin_path)
         srv->load_plugin(srv, plugin_path);

@@ -32,7 +32,7 @@
 
 #include "utils.h"
 
-const char *saddr2str(struct sockaddr *addr, char buf[], int len, int *port)
+const char *saddr2str(const struct sockaddr *addr, char buf[], int len, int *port)
 {
     if (addr->sa_family == AF_INET) {
         struct sockaddr_in *sin = (struct sockaddr_in *)addr;

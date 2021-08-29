@@ -27,9 +27,8 @@
 
 #include <arpa/inet.h>
 
+#include "uhttpd_internal.h"
 #include "buffer.h"
-#include "uhttpd.h"
-#include "list.h"
 
 #define UHTTPD_CONNECTION_TIMEOUT   30.0
 #define UHTTPD_MAX_HEADER_NUM       50
@@ -67,6 +66,10 @@ struct uh_request {
     } body;
 };
 
+struct uh_response {
+    bool chunked;
+};
+
 struct uh_connection_internal {
     struct uh_connection com;
     struct list_head list;
@@ -85,18 +88,24 @@ struct uh_connection_internal {
     ev_tstamp activity;
     struct ev_timer timer;
     struct uh_request req;
-    struct uh_server_internal *srv;
+    struct uh_response resp;
+    struct uh_listener *l;
     union {
         struct sockaddr     sa;
         struct sockaddr_in  sin;
         struct sockaddr_in6 sin6;
-    } addr; /* peer address */
+    } saddr; /* server address */
+    union {
+        struct sockaddr     sa;
+        struct sockaddr_in  sin;
+        struct sockaddr_in6 sin6;
+    } paddr; /* peer address */
     struct http_parser parser;
     struct http_parser_url url_parser;
     void (*handler)(struct uh_connection *conn, int event);
 };
 
-struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr);
+void uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr);
 
 void conn_free(struct uh_connection_internal *conn);
 

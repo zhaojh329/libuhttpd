@@ -28,7 +28,6 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 * Lightweight and fully asynchronous
 * Use [libev] as its event backend
 * Support HTTPS - OpenSSL, mbedtls and CyaSSl(wolfssl)
-* Support HTTP pipelining
 * Support IPv6
 * Support plugin
 * Support upload large file
@@ -69,25 +68,20 @@ A very flexible, lightweight and fully asynchronous HTTP server library based on
 	Requests/sec: 281328.83
 	Transfer/sec:     54.46MB
 
-# Configure
-See which configuration are supported
+# Build
 
 	~/libuhttpd/$ mkdir build && cd build
-	~/libuhttpd/build$ cmake .. -L
-	~/libuhttpd/build$ cmake .. -LH
-
-# Build and install
-
-	~/libuhttpd/build$ make && sudo make install
+	~/libuhttpd/build$ cmake ..
+	~/libuhttpd/build$ make
 
 # Run Example	
 Run
 
-	~/libuhttpd/build$ ./example/simple_server -v
+	~/libuhttpd/build$ ./example/simple_server -v -a :8080
 	
-Then use the command curl or browser to test
+Then use the curl to test
 
-	$ curl 'https://127.0.0.1:8000' -v
+	$ curl 'http://127.0.0.1:8000/echo' -v
 
 # Install on OpenWrt
     opkg update

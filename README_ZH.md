@@ -28,13 +28,12 @@
 * 轻量、全异步
 * 使用[libev]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
-* 支持 HTTP 流水线
 * 支持 IPv6
 * 支持插件
 * 支持上传大文件
 * 支持 HTTP 范围请求
 * 支持多进程模型 - 和 Nginx 一样的多进程模型
-* 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备HTTP/HTTPS服务
+* 可伸缩 - 你可以非常方便的扩展你的应用程序，使之具备 HTTP/HTTPS 服务
 * 代码结构简洁通俗易懂，亦适合学习
 
 # 依赖
@@ -69,25 +68,20 @@
 	Requests/sec: 281328.83
 	Transfer/sec:     54.46MB
 
-# 配置
-查看支持哪些配置选项
+# 编译
 
 	~/libuhttpd/$ mkdir build && cd build
-	~/libuhttpd/build$ cmake .. -L
-	~/libuhttpd/build$ cmake .. -LH
-
-# 编译和安装
-
-	~/libuhttpd/build$ make && sudo make install
+	~/libuhttpd/build$ cmake ..
+	~/libuhttpd/build$ make
 
 # 运行示例程序
 运行
 
-	~/libuhttpd/build$ ./example/simple_server -v
+	~/libuhttpd/build$ ./example/simple_server -v -a :8080
 	
-然后使用命令curl或者浏览器进行测试
+然后使用命令curl进行测试
 
-	$ curl -k 'https://127.0.0.1:8000/hello'
+	$ curl 'http://127.0.0.1:8000/echo'
 
 # 安装到OpenWRT
     opkg update

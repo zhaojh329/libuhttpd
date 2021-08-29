@@ -1,0 +1,31 @@
+#!/usr/bin/lua
+
+local envs = {
+    "GATEWAY_INTERFACE",
+    "SERVER_SOFTWARE",
+    "SCRIPT_NAME",
+    "SCRIPT_FILENAME",
+    "DOCUMENT_ROOT",
+    "QUERY_STRING",
+    "REQUEST_URI",
+    "SERVER_PROTOCOL",
+    "REQUEST_METHOD",
+    "REMOTE_ADDR",
+    "REMOTE_PORT",
+    "HTTP_HOST",
+    "HTTP_USER_AGENT",
+    "CONTENT_TYPE",
+    "CONTENT_LENGTH"
+}
+
+print("Content-Type: text/plain")
+print()
+
+for _, env in ipairs(envs) do
+    print(env .. ":", os.getenv(env))
+end
+
+if os.getenv("REQUEST_METHOD") == "POST" then
+    local body = io.read("*a")
+    print("BODY:", body)
+end

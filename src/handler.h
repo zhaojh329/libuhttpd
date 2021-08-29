@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2019 Jianhui Zhao <zhaojh329@gmail.com>
+ * Copyright (c) 2021 Jianhui Zhao <zhaojh329@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,15 @@
  * SOFTWARE.
  */
 
-#ifndef LIBUHTTPD_UTILS_H
-#define LIBUHTTPD_UTILS_H
+#ifndef LIBUHTTPD_HANDLER_H
+#define LIBUHTTPD_HANDLER_H
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <inttypes.h>
-#include <sys/socket.h>
+static inline void file_handler(struct uh_connection *conn, int event)
+{
+    if (event != UH_EV_COMPLETE)
+        return;
 
-const char *saddr2str(const struct sockaddr *addr, char buf[], int len, int *port);
-
-bool support_so_reuseport();
-
-/*
-** blen is the size of buf; slen is the length of src.  The input-string need
-** not be, and the output string will not be, null-terminated.  Returns the
-** length of the decoded string, -1 on buffer overflow, -2 on malformed string.
-*/
-int urldecode(char *buf, int blen, const char *src, int slen);
-
-const char *canonpath(char *path, size_t *len);
+    conn->serve_file(conn);
+}
 
 #endif

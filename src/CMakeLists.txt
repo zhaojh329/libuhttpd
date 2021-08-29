@@ -54,6 +54,7 @@ install(
         log/log.h
         utils.h
         list.h
+        handler.h
         buffer/buffer.h
         http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/config.h

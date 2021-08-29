@@ -95,9 +95,9 @@ static void start_server(const char *addr, const char *addrs, const char *docroo
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 
-    srv->set_default_handler(srv, default_handler);
-    srv->add_path_handler(srv, "/echo", echo_handler);
-    srv->add_path_handler(srv, "/upload", upload_handler);
+    srv->set_default_handler(srv, file_handler);
+    srv->add_path_handler(srv, "^/echo$", echo_handler);
+    srv->add_path_handler(srv, "^/upload$", upload_handler);
 
     if (plugin)
         srv->load_plugin(srv, plugin);

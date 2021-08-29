@@ -27,7 +27,6 @@
 
 #include "uhttpd.h"
 
-void default_handler(struct uh_connection *conn, int event);
 void echo_handler(struct uh_connection *conn, int event);
 void upload_handler(struct uh_connection *conn, int event);
 

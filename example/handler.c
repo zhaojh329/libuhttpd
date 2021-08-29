@@ -31,14 +31,6 @@
 
 #include "uhttpd.h"
 
-void default_handler(struct uh_connection *conn, int event)
-{
-    if (event != UH_EV_COMPLETE)
-        return;
-
-    conn->serve_file(conn);
-}
-
 void echo_handler(struct uh_connection *conn, int event)
 {
     if (event == UH_EV_COMPLETE) {
@@ -48,14 +40,17 @@ void echo_handler(struct uh_connection *conn, int event)
         struct uh_str body = conn->get_body(conn);
 
         conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
-        conn->chunk_printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
-        conn->chunk_printf(conn, "Method: %s\n", conn->get_method_str(conn));
-        conn->chunk_printf(conn, "Path: %.*s\n", (int)path.len, path.p);
-        conn->chunk_printf(conn, "Query: %.*s\n", (int)query.len, query.p);
-        conn->chunk_printf(conn, "User-Agent: %.*s\n", (int)ua.len, ua.p);
-        conn->chunk_printf(conn, "Body: %.*s\n", (int)body.len, body.p);
-        conn->chunk_end(conn);
-        conn->done(conn);
+        conn->send_header(conn, "Content-Type", "text/plain");
+        conn->end_headers(conn);
+
+        conn->printf(conn, "I'm Libuhttpd: %s\n", UHTTPD_VERSION_STRING);
+        conn->printf(conn, "Method: %s\n", conn->get_method_str(conn));
+        conn->printf(conn, "Path: %.*s\n", (int)path.len, path.p);
+        conn->printf(conn, "Query: %.*s\n", (int)query.len, query.p);
+        conn->printf(conn, "User-Agent: %.*s\n", (int)ua.len, ua.p);
+        conn->printf(conn, "Body: %.*s\n", (int)body.len, body.p);
+
+        conn->end_response(conn);
     }
 }
 
@@ -65,7 +60,7 @@ void upload_handler(struct uh_connection *conn, int event)
         uint64_t content_length = conn->get_content_length(conn);
 
         if (content_length > 1024 * 1024 * 1024) {
-            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "Too big");
+            conn->send_error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "Too big");
             return;
         }
 
@@ -78,13 +73,13 @@ void upload_handler(struct uh_connection *conn, int event)
         if (fd < 0) {
             fd = open("upload.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
             if (fd < 0) {
-                conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "open: %s", strerror(errno));
+                conn->send_error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "open: %s", strerror(errno));
                 return;
             }
         }
 
         if (write(fd, body.p, body.len) < 0) {
-            conn->error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "write: %s", strerror(errno));
+            conn->send_error(conn, HTTP_STATUS_INTERNAL_SERVER_ERROR, "write: %s", strerror(errno));
             close(fd);
             return;
         }
@@ -96,6 +91,7 @@ void upload_handler(struct uh_connection *conn, int event)
         size_t size = 0;
 
         conn->send_head(conn, HTTP_STATUS_OK, -1, NULL);
+        conn->end_headers(conn);
 
         if (fd > 0) {
             fstat(fd, &st);
@@ -105,8 +101,7 @@ void upload_handler(struct uh_connection *conn, int event)
             size = st.st_size;
         }
 
-        conn->chunk_printf(conn, "Upload size: %zd\n", size);
-        conn->chunk_end(conn);
-        conn->done(conn);
+        conn->printf(conn, "Upload size: %zd\n", size);
+        conn->end_response(conn);
     }
 }

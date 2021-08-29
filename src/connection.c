@@ -34,12 +34,162 @@
 #include "utils.h"
 #include "file.h"
 
-static void conn_done(struct uh_connection *conn)
+
+static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct ev_loop *loop = conni->srv->loop;
 
-    if (conni->flags & CONN_F_CLOSED)
+    if (unlikely(conni->flags & CONN_F_CLOSED))
+        return;
+
+    buffer_put_data(&conni->wb, data, len);
+    ev_io_start(conni->l->srv->loop, &conni->iow);
+}
+
+static void conn_send_chunk(struct uh_connection *conn, const void *data, ssize_t len)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
+
+    if (unlikely(conni->flags & CONN_F_CLOSED))
+        return;
+
+    buffer_put_printf(wb, "%X\r\n", (unsigned int)len);
+    buffer_put_data(wb, data, len);
+    buffer_put_data(wb, "\r\n", 2);
+    ev_io_start(conni->l->srv->loop, &conni->iow);
+}
+
+static void conn_vprintf(struct uh_connection *conn, const char *format, va_list arg)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    if (unlikely(conni->flags & CONN_F_CLOSED))
+        return;
+
+    buffer_put_vprintf(&conni->wb, format, arg);
+    ev_io_start(conni->l->srv->loop, &conni->iow);
+}
+
+static void conn_vprintf_chunk(struct uh_connection *conn, const char *format, va_list arg)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
+    size_t offset = 0;
+    char *buf;
+    int len;
+
+    if (unlikely(conni->flags & CONN_F_CLOSED))
+        return;
+
+    offset = buffer_length(wb);
+    buffer_put(wb, 4);
+
+    len = buffer_put_vprintf(wb, format, arg);
+
+    buf = buffer_data(wb) + offset;
+    sprintf(buf, "%02X", len);
+    memcpy(buf + 2, "\r\n", 2);
+    buffer_put_data(wb, "\r\n", 2);
+
+    ev_io_start(conni->l->srv->loop, &conni->iow);
+}
+
+static inline void conn_printf(struct uh_connection *conn, const char *format, ...)
+{
+    va_list arg;
+
+    va_start(arg, format);
+    conn_vprintf(conn, format, arg);
+    va_end(arg);
+}
+
+static inline void conn_printf_chunk(struct uh_connection *conn, const char *format, ...)
+{
+    va_list arg;
+
+    va_start(arg, format);
+    conn_vprintf_chunk(conn, format, arg);
+    va_end(arg);
+}
+
+static void conn_send_header_v(struct uh_connection *conn, const char *name, const char *value, va_list arg)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
+
+    buffer_put_printf(wb, "%s: ", name);
+    buffer_put_vprintf(wb, value, arg);
+    buffer_put_data(wb, "\r\n", 2);
+}
+
+static inline void conn_send_header(struct uh_connection *conn, const char *name, const char *value, ...)
+{
+    va_list arg;
+
+    va_start(arg, value);
+    conn_send_header_v(conn, name, value, arg);
+    va_end(arg);
+}
+
+static inline void conn_end_headers(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    buffer_put_data(&conni->wb, "\r\n", 2);
+
+    if (conni->resp.chunked) {
+        conn->send = conn_send_chunk;
+        conn->printf = conn_printf_chunk;
+        conn->vprintf = conn_vprintf_chunk;
+    } else {
+        conn->send = conn_send;
+        conn->printf = conn_printf;
+        conn->vprintf = conn_vprintf;
+    }
+}
+
+static void conn_send_head_v(struct uh_connection *conn, int code, int64_t content_length, const char *reason, va_list arg)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct buffer *wb = &conni->wb;
+
+    if (likely(!reason))
+        reason = http_status_str(code);
+
+    buffer_put_printf(wb, "HTTP/1.1 %d ", code);
+    buffer_put_vprintf(wb, reason, arg);
+    buffer_put_printf(wb, "\r\nServer: Libuhttpd/%s\r\n", UHTTPD_VERSION_STRING);
+
+    if (content_length < 0)
+        buffer_put_printf(wb, "%s", "Transfer-Encoding: chunked\r\n");
+    else
+        buffer_put_printf(wb, "Content-Length: %" PRIu64 "\r\n", content_length);
+
+    if (!http_should_keep_alive(&conni->parser))
+        buffer_put_printf(wb, "%s", "Connection: close\r\n");
+
+    conni->resp.chunked = content_length < 0;
+
+    conn->send_header = conn_send_header;
+    conn->end_headers = conn_end_headers;
+}
+
+static inline void conn_send_head(struct uh_connection *conn, int code, int64_t content_length, const char *reason, ...)
+{
+    va_list arg;
+
+    va_start(arg, reason);
+    conn_send_head_v(conn, code, content_length, reason, arg);
+    va_end(arg);
+}
+
+static void conn_end_response(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct ev_loop *loop = conni->l->srv->loop;
+
+    if (unlikely(conni->flags & CONN_F_CLOSED))
         return;
 
     if (!http_should_keep_alive(&conni->parser))
@@ -48,227 +198,84 @@ static void conn_done(struct uh_connection *conn)
     if (conni->flags & CONN_F_SEND_AND_CLOSE)
         ev_io_stop(loop, &conni->ior);
 
+    /* end chunk */
+    if (conni->resp.chunked)
+        conn->send(conn, NULL, 0);
+
     ev_io_start(loop, &conni->iow);
 
     ev_timer_stop(loop, &conni->timer);
 
-    /* This is needed for a connection requested multiple times on different path */
     conni->handler = NULL;
+
+    conn->send_header = NULL;
+    conn->end_headers = NULL;
+    conn->send = NULL;
+    conn->printf = NULL;
+    conn->vprintf = NULL;
 }
 
-static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
+static void conn_send_error(struct uh_connection *conn, int code, const char *reason, ...)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-
-    if (conni->flags & CONN_F_CLOSED)
-        return;
-
-    buffer_put_data(&conni->wb, data, len);
-    ev_io_start(conni->srv->loop, &conni->iow);
-}
-
-static void conn_send_file(struct uh_connection *conn, const char *path, off_t offset, int64_t len)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct stat st;
-    int fd;
-
-    if (conni->flags & CONN_F_CLOSED)
-        return;
-
-    if (len == 0)
-        return;
-
-    fd = open(path, O_RDONLY);
-    if (fd < 0) {
-        log_err("open: %s\n", strerror(errno));
-        return;
-    }
-
-    fstat(fd, &st);
-
-    if (offset >= st.st_size) {
-        close(fd);
-        return;
-    }
-
-    lseek(fd, offset, SEEK_SET);
-    st.st_size -= offset;
-
-    if (len < 0 || len > st.st_size)
-        len = st.st_size;
-
-    /* If the file is not greater than 2K, then append it to the HTTP head, send once */
-    if (len <= 2048) {
-        bool eof = false;
-
-        while (!eof)
-            buffer_put_fd(&conni->wb, fd, -1, &eof);
-
-        close(fd);
-    } else {
-        conni->file.size = len;
-        conni->file.fd = fd;
-#ifdef SSL_SUPPORT
-        if (conni->ssl)
-            fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
-#endif
-    }
-
-    ev_io_start(conni->srv->loop, &conni->iow);
-}
-
-static void conn_printf(struct uh_connection *conn, const char *format, ...)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct buffer *wb = &conni->wb;
     va_list arg;
 
-    if (conni->flags & CONN_F_CLOSED)
+    if (unlikely(conni->flags & CONN_F_SEND_AND_CLOSE))
         return;
-
-    va_start(arg, format);
-    buffer_put_vprintf(wb, format, arg);
-    va_end(arg);
-
-    ev_io_start(conni->srv->loop, &conni->iow);
-}
-
-static void conn_vprintf(struct uh_connection *conn, const char *format, va_list arg)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-
-    if (conni->flags & CONN_F_CLOSED)
-        return;
-
-    buffer_put_vprintf(&conni->wb, format, arg);
-    ev_io_start(conni->srv->loop, &conni->iow);
-}
-
-static void conn_chunk_send(struct uh_connection *conn, const void *data, ssize_t len)
-{
-    conn_printf(conn, "%X\r\n", len);
-    conn_send(conn, data, len);
-    conn_printf(conn, "\r\n", len);
-}
-
-static void conn_chunk_vprintf(struct uh_connection *conn, const char *format, va_list arg)
-{
-    char buf[256];
-    va_list arg2;
-    int len;
-
-    va_copy(arg2, arg);
-    len = vsnprintf(buf, sizeof(buf), format, arg2);
-    va_end(arg2);
-
-    conn_printf(conn, "%X\r\n", len);
-    if (len < sizeof(buf))
-        conn_send(conn, buf, len);
-    else
-        conn_vprintf(conn, format, arg);
-    conn_printf(conn, "\r\n", len);
-}
-
-static void conn_chunk_printf(struct uh_connection *conn, const char *format, ...)
-{
-    va_list arg;
-
-    va_start(arg, format);
-    conn_chunk_vprintf(conn, format, arg);
-    va_end(arg);
-}
-
-static inline void conn_chunk_end(struct uh_connection *conn)
-{
-    conn_chunk_send(conn, NULL, 0);
-}
-
-static void conn_send_status_line(struct uh_connection *conn, int code, const char *extra_headers)
-{
-    conn_printf(conn, "HTTP/1.1 %d %s\r\nServer: Libuhttpd/%s\r\n", code, http_status_str(code), UHTTPD_VERSION_STRING);
-    if (extra_headers)
-        conn_send(conn, extra_headers, strlen(extra_headers));
-}
-
-static void conn_send_head(struct uh_connection *conn, int code, int64_t content_length, const char *extra_headers)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-
-    conn_send_status_line(conn, code, extra_headers);
-    if (content_length < 0)
-        conn_printf(conn, "%s", "Transfer-Encoding: chunked\r\n");
-    else
-        conn_printf(conn, "Content-Length: %" PRIu64 "\r\n", content_length);
-
-    if (!http_should_keep_alive(&conni->parser))
-        conn_printf(conn, "%s", "Connection: close\r\n");
-
-    conn_send(conn, "\r\n", 2);
-}
-
-static void conn_error(struct uh_connection *conn, int code, const char *reason, ...)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    char buf[256];
-    va_list arg;
-    int len;
-
-    if (conni->flags & CONN_F_SEND_AND_CLOSE)
-        return;
-
-    if (!reason)
-        reason = http_status_str(code);
 
     va_start(arg, reason);
-    len = vsnprintf(buf, sizeof(buf), reason, arg);
+    conn_send_head_v(conn, code, 0, reason, arg);
     va_end(arg);
 
-    conn_send_head(conn, code, len, "Content-Type: text/plain\r\nConnection: close\r\n");
-    conn_send(conn, buf, len);
+    conn_send_header(conn, "Content-Type", "text/plain");
+
+    if (http_should_keep_alive(&conni->parser))
+        conn_send_header(conn, "Connection", "close");
 
     conni->flags |= CONN_F_SEND_AND_CLOSE;
 
-    conn_done(conn);
+    conn_end_headers(conn);
+    conn_end_response(conn);
 }
 
-static void conn_redirect(struct uh_connection *conn, int code, const char *location, ...)
+static void conn_send_redirect(struct uh_connection *conn, int code, const char *location, ...)
 {
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct buffer *wb = &conni->wb;
     va_list arg;
 
     assert((code == HTTP_STATUS_MOVED_PERMANENTLY || code == HTTP_STATUS_FOUND) && location);
 
-    conn_send_status_line(conn, code, NULL);
+    conn_send_head(conn, code, 0, NULL);
 
-    conn_printf(conn, "Location: ");
     va_start(arg, location);
-    buffer_put_vprintf(wb, location, arg);
+    conn_send_header_v(conn, "Location", location, arg);
     va_end(arg);
-    conn_send(conn, "\r\n", 2);
 
-    conn_printf(conn, "Content-Length: 0\r\n");
-    conn_send(conn, "\r\n", 2);
-
-    conn_done(conn);
+    conn_end_headers(conn);
+    conn_end_response(conn);
 }
 
-static const struct sockaddr *conn_get_addr(struct uh_connection *conn)
+static inline const struct sockaddr *conn_get_paddr(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
-    return &conni->addr.sa;
+    return &conni->paddr.sa;
 }
 
-static enum http_method conn_get_method(struct uh_connection *conn)
+static inline const struct sockaddr *conn_get_saddr(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return &conni->saddr.sa;
+}
+
+static inline enum http_method conn_get_method(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
     return conni->parser.method;
 }
 
-static const char *conn_get_method_str(struct uh_connection *conn)
+static inline const char *conn_get_method_str(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
@@ -413,12 +420,13 @@ static int on_message_begin_cb(struct http_parser *parser)
     struct uh_request *req = &conn->req;
 
     memset(req, 0, sizeof(struct uh_request));
+    memset(&conn->resp, 0, sizeof(struct uh_response));
 
     req->last_was_header_value = true;
 
     http_parser_url_init(&conn->url_parser);
 
-    ev_timer_start(conn->srv->loop, &conn->timer);
+    ev_timer_start(conn->l->srv->loop, &conn->timer);
 
     return 0;
 }
@@ -472,81 +480,63 @@ static int on_header_value_cb(struct http_parser *parser, const char *at, size_t
     return 0;
 }
 
-static bool match_path(struct uh_str *path, const char *needle, int needlelen, uint8_t flags, bool wildcard)
+static bool match_path(struct uh_str *path, const char *needle, int needlelen, uint8_t flags)
 {
-    if (wildcard) {
-        int match = 0;
+    int match = 0;
 
-        if (!(flags & UH_PATH_WILDCARD))
+    if (path->len < needlelen)
+        return false;
+
+    if (flags & UH_PATH_MATCH_START) {
+        if (strncmp(path->p, needle, needlelen))
             return false;
-
-        if (path->len < needlelen)
-            return false;
-
-        if (flags & UH_PATH_MATCH_START) {
-            if (strncmp(path->p, needle, needlelen))
-                return false;
-            match++;
-        }
-
-        if (flags & UH_PATH_MATCH_END) {
-            if (strncmp(path->p + (path->len - needlelen), needle, needlelen))
-                return false;
-            match++;
-        }
-
-        if (!match && !memmem(path->p, path->len, needle, needlelen))
-            return false;
-
-        return true;
-    } else {
-        if (flags & UH_PATH_WILDCARD)
-            return false;
-
-        if (needlelen != path->len || strncmp(path->p, needle, path->len))
-            return false;
-
-        return true;
+        match++;
     }
+
+    if (flags & UH_PATH_MATCH_END) {
+        if (strncmp(path->p + (path->len - needlelen), needle, needlelen))
+            return false;
+        match++;
+    }
+
+    if (!match && !memmem(path->p, path->len, needle, needlelen))
+        return false;
+
+    return true;
 }
 
-static bool set_path_handler(struct uh_connection_internal *conn, struct list_head *head,
-    struct uh_str *path, bool wildcard)
+static void *find_path_handler(struct uh_connection_internal *conn, struct list_head *head, struct uh_str *path)
 {
     struct uh_path_handler *h;
 
     list_for_each_entry(h, head, list) {
-        if (match_path(path, h->path, h->len, h->flags, wildcard)) {
-            conn->handler = h->handler;
-            return true;
-        }
+        if (match_path(path, h->path, h->len, h->flags))
+            return h->handler;
     }
 
-    return false;
+    return NULL;
 }
 
-static bool set_plugin_handler(struct uh_connection_internal *conn, struct list_head *head,
-    struct uh_str *path, bool wildcard)
+static void *find_plugin_handler(struct uh_connection_internal *conn, struct list_head *head, struct uh_str *path)
 {
     struct uh_plugin *p;
 
     list_for_each_entry(p, head, list) {
-        if (match_path(path, p->path, p->len, p->flags, wildcard)) {
-            conn->handler = p->h->handler;
-            return true;
-        }
+        if (match_path(path, p->path, p->len, p->flags))
+            return p->h->handler;
     }
 
-    return false;
+    return NULL;
 }
 
 static int on_headers_complete(struct http_parser *parser)
 {
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
-    struct uh_server_internal *srv = conn->srv;
+    struct uh_server_internal *srv = conn->l->srv;
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
-    struct sockaddr *sa = &conn->addr.sa;
+    struct sockaddr *sa = &conn->paddr.sa;
+    uh_path_handler_prototype handler;
     char addr_str[INET6_ADDRSTRLEN];
     struct uh_str path;
     int port;
@@ -558,34 +548,23 @@ static int on_headers_complete(struct http_parser *parser)
     path.p = O2D(conn, u->field_data[UF_PATH].off) + req->url.offset;
     path.len = u->field_data[UF_PATH].len;
 
-    log_debug("%s %.*s from %s %d\n", http_method_str(parser->method), (int)path.len, path.p,
-            addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0));
+    log_info("%s %d  %s %.*s\n", addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0),
+        http_method_str(parser->method), (int)path.len, path.p);
 
-    /* match non wildcard path handler */
-    if (set_path_handler(conn, &srv->handlers, &path, false))
-        goto done;
+    handler = find_path_handler(conn, &srv->handlers, &path);
+    if (!handler)
+        handler = find_plugin_handler(conn, &srv->plugins, &path);
 
-    /* match wildcard path handler */
-    if (set_path_handler(conn, &srv->handlers, &path, true))
-        goto done;
+    if (!handler)
+        handler = srv->default_handler;
 
-    /* match non wildcard plugin */
-    if (set_plugin_handler(conn, &srv->plugins, &path, false))
-        goto done;
-
-    /* match wildcard plugin */
-    set_plugin_handler(conn, &srv->plugins, &path, true);
-
-done:
-    if (!conn->handler)
-        conn->handler = srv->default_handler;
-
-    if (!conn->handler) {
-        conn_error(&conn->com, HTTP_STATUS_NOT_FOUND, NULL);
+    if (!handler) {
+        conn_send_error(&conn->com, HTTP_STATUS_NOT_FOUND, NULL);
         return -1;
     }
 
-    conn->handler(&conn->com, UH_EV_HEAD_COMPLETE);
+    conn->handler = handler;
+    handler(&conn->com, UH_EV_HEAD_COMPLETE);
 
     if (conn->flags & CONN_F_SEND_AND_CLOSE)
         return -1;
@@ -620,7 +599,7 @@ static int on_body_cb(struct http_parser *parser, const char *at, size_t length)
 static int on_message_complete_cb(struct http_parser *parser)
 {
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
-    struct uh_server_internal *srv = conn->srv;
+    struct uh_server_internal *srv = conn->l->srv;
 
     ev_timer_stop(srv->loop, &conn->timer);
 
@@ -668,7 +647,7 @@ static void conn_decref(struct uh_connection *conn)
 
 void conn_free(struct uh_connection_internal *conn)
 {
-    struct ev_loop *loop = conn->srv->loop;
+    struct ev_loop *loop = conn->l->srv->loop;
     char addr_str[INET6_ADDRSTRLEN];
     int port;
 
@@ -690,14 +669,14 @@ void conn_free(struct uh_connection_internal *conn)
     ssl_session_free(conn->ssl);
 #endif
 
-  if (conn->srv->conn_closed_cb)
-        conn->srv->conn_closed_cb(&conn->com);
+  if (conn->l->srv->conn_closed_cb)
+        conn->l->srv->conn_closed_cb(&conn->com);
 
     if (conn->sock > 0)
         close(conn->sock);
 
-    log_debug("Connection(%s %d) closed\n", addr_str,
-            (saddr2str(&conn->addr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
+    log_info("Connection(%s %d) closed\n", addr_str,
+            (saddr2str(&conn->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     conn_decref((struct uh_connection *)conn);
 }
@@ -724,7 +703,7 @@ static void conn_http_parse(struct uh_connection_internal *conn)
     case HPE_PAUSED:
     case HPE_OK:
         if (parser->upgrade) {
-            conn_error(&conn->com, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
+            conn_send_error(&conn->com, HTTP_STATUS_NOT_IMPLEMENTED, NULL);
             return;
         }
 
@@ -738,7 +717,7 @@ static void conn_http_parse(struct uh_connection_internal *conn)
         return;
 
     default:
-        conn_error(&conn->com, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
+        conn_send_error(&conn->com, HTTP_STATUS_BAD_REQUEST, http_errno_description(parser->http_errno));
         return;
     }
 }
@@ -863,12 +842,21 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         if (conn->flags & CONN_F_SEND_AND_CLOSE) {
             goto err;
         } else {
+            char addr_str[INET6_ADDRSTRLEN];
+            int port;
+
             ev_io_stop(loop, w);
 
-            http_parser_pause(&conn->parser, false);
+            /* already called conn_end_response, then enable parsing */
+            if (!conn->handler) {
+                log_debug("%s %d response end\n", addr_str,
+                    (saddr2str(&conn->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
-            if (buffer_length(&conn->rb) > 0)
-                conn_http_parse(conn);
+                http_parser_pause(&conn->parser, false);
+
+                if (buffer_length(&conn->rb) > 0)
+                    conn_http_parse(conn);
+            }
         }
     }
 
@@ -941,44 +929,30 @@ static void keepalive_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
         return;
     }
 
-    conn_error(&conn->com, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
+    conn_send_error(&conn->com, HTTP_STATUS_REQUEST_TIMEOUT, NULL);
 }
 
 static struct uh_server *conn_get_server(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
-    return &conni->srv->com;
+    return &conni->l->srv->com;
 }
 
 static struct ev_loop *conn_get_loop(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
-    return conni->srv->loop;
+    return conni->l->srv->loop;
 }
 
 static void conn_init_cb(struct uh_connection *conn)
 {
     conn->get_server = conn_get_server;
     conn->get_loop = conn_get_loop;
-    conn->done = conn_done;
-    conn->send = conn_send;
-    conn->send_file = conn_send_file;
-    conn->printf = conn_printf;
-    conn->vprintf = conn_vprintf;
-    conn->send_status_line = conn_send_status_line;
-    conn->send_head = conn_send_head;
-    conn->error = conn_error;
-    conn->redirect = conn_redirect;
-    conn->serve_file = serve_file;
 
-    conn->chunk_send = conn_chunk_send;
-    conn->chunk_printf = conn_chunk_printf;
-    conn->chunk_vprintf = conn_chunk_vprintf;
-    conn->chunk_end = conn_chunk_end;
-
-    conn->get_addr = conn_get_addr;
+    conn->get_paddr = conn_get_paddr;
+    conn->get_saddr = conn_get_saddr;
     conn->get_method = conn_get_method;
     conn->get_method_str = conn_get_method_str;
     conn->get_uri = conn_get_uri;
@@ -990,31 +964,43 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->get_body = conn_get_body;
     conn->extract_body = conn_extract_body;
 
+    conn->send_head = conn_send_head;
+
+    conn->send_error = conn_send_error;
+    conn->send_redirect = conn_send_redirect;
+
+    conn->end_response = conn_end_response;
+
+    conn->serve_file = serve_file;
+
     conn->close = conn_close;
 
     conn->incref = conn_incref;
     conn->decref = conn_decref;
 }
 
-struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr)
+void uh_new_connection(struct uh_listener *l, int sock, struct sockaddr *addr)
 {
+    socklen_t sl = sizeof(struct sockaddr_in6);
     struct uh_server_internal *srv = l->srv;
     struct uh_connection_internal *conn;
 
     conn = calloc(1, sizeof(struct uh_connection_internal));
     if (!conn) {
         log_err("malloc: %s\n", strerror(errno));
-        return NULL;
+        return;
     }
 
-    conn->srv = srv;
+    conn->l = l;
     conn->sock = sock;
     conn->activity = ev_now(srv->loop);
 
     if (addr->sa_family == AF_INET)
-        memcpy(&conn->addr, addr, sizeof(struct sockaddr_in));
+        memcpy(&conn->paddr, addr, sizeof(struct sockaddr_in));
     else
-        memcpy(&conn->addr, addr, sizeof(struct sockaddr_in6));
+        memcpy(&conn->paddr, addr, sizeof(struct sockaddr_in6));
+
+    getsockname(sock, &conn->saddr.sa, &sl);
 
     ev_io_init(&conn->iow, conn_write_cb, sock, EV_WRITE);
 
@@ -1037,7 +1023,7 @@ struct uh_connection_internal *uh_new_connection(struct uh_listener *l, int sock
 
     conn_incref((struct uh_connection *)conn);
 
-    log_debug("New connection: %p\n", conn);
+    list_add(&conn->list, &srv->conns);
 
-    return conn;
+    log_debug("Alloc connection: %p\n", conn);
 }

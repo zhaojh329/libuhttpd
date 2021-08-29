@@ -107,8 +107,6 @@ static void uh_server_free(struct uh_server *srv)
 static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
     struct uh_listener *l = container_of(w, struct uh_listener, ior);
-    struct uh_server_internal *srv = l->srv;
-    struct uh_connection_internal *conn;
     union {
         struct sockaddr     sa;
         struct sockaddr_in  sin;
@@ -126,12 +124,12 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         return;
     }
 
-    log_debug("New Connection from: %s %d\n", addr_str,
+    log_info("New Connection from %s %d\n", addr_str,
             (saddr2str(&addr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     if (l->ssl) {
 #ifdef SSL_SUPPORT
-        if (!srv->ssl_ctx) {
+        if (!l->srv->ssl_ctx) {
             log_err("SSL not initialized\n");
             close(sock);
             return;
@@ -143,11 +141,7 @@ static void uh_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 #endif
     }
 
-    conn = uh_new_connection(l, sock, &addr.sa);
-    if (!conn)
-        return;
-
-    list_add(&conn->list, &srv->conns);
+    uh_new_connection(l, sock, &addr.sa);
 }
 
 struct uh_server *uh_server_new(struct ev_loop *loop)
@@ -228,19 +222,15 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
     p->path = h->path;
     p->len = strlen(h->path);
 
-    if (h->wildcard) {
-        p->flags |= UH_PATH_WILDCARD;
+    if (h->path[0] == '^') {
+        p->flags |= UH_PATH_MATCH_START;
+        p->len--;
+        p->path++;
+    }
 
-        if (h->path[0] == '^') {
-            p->flags |= UH_PATH_MATCH_START;
-            p->len--;
-            p->path++;
-        }
-
-        if (p->path[p->len - 1] == '$') {
-            p->flags |= UH_PATH_MATCH_END;
-            p->len--;
-        }
+    if (p->path[p->len - 1] == '$') {
+        p->flags |= UH_PATH_MATCH_END;
+        p->len--;
     }
 
     list_add(&p->list, &srvi->plugins);
@@ -252,26 +242,22 @@ static int uh_load_plugin(struct uh_server *srv, const char *path)
 #endif
 }
 
-static int __uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler, bool wildcard)
+static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
     int path_len = strlen(path);
     struct uh_path_handler *h;
     uint8_t flags = 0;
 
-    if (wildcard) {
-        flags |= UH_PATH_WILDCARD;
+    if (path[0] == '^') {
+        flags |= UH_PATH_MATCH_START;
+        path_len--;
+        path++;
+    }
 
-        if (path[0] == '^') {
-            flags |= UH_PATH_MATCH_START;
-            path_len--;
-            path++;
-        }
-
-        if (path[path_len - 1] == '$') {
-            flags |= UH_PATH_MATCH_END;
-            path_len--;
-        }
+    if (path[path_len - 1] == '$') {
+        flags |= UH_PATH_MATCH_END;
+        path_len--;
     }
 
     h = calloc(1, sizeof(struct uh_path_handler) + strlen(path) + 1);
@@ -289,16 +275,6 @@ static int __uh_add_path_handler(struct uh_server *srv, const char *path, uh_pat
     list_add(&h->list, &srvi->handlers);
 
     return 0;
-}
-
-static int uh_add_path_handler(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
-{
-    return __uh_add_path_handler(srv, path, handler, false);
-}
-
-static int uh_add_path_handler_wildcard(struct uh_server *srv, const char *path, uh_path_handler_prototype handler)
-{
-    return __uh_add_path_handler(srv, path, handler, true);
 }
 
 static void uh_set_conn_abort_cb(struct uh_server *srv, uh_con_closed_cb_prototype cb)
@@ -512,7 +488,6 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
     srv->set_conn_closed_cb = uh_set_conn_abort_cb;
     srv->set_default_handler = uh_set_default_handler;
     srv->add_path_handler = uh_add_path_handler;
-    srv->add_path_handler_w = uh_add_path_handler_wildcard;
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;

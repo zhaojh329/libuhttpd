@@ -43,7 +43,7 @@
 
 struct path_info *parse_path_info(struct uh_connection_internal *conn)
 {
-    struct uh_server_internal *srv = conn->srv;
+    struct uh_server_internal *srv = conn->l->srv;
     struct uh_str path = conn->com.get_path(&conn->com);
     const char *docroot = srv->docroot;
     const char *index_page = srv->index_page;
@@ -140,18 +140,19 @@ static void file_response_ok_hdrs(struct uh_connection *conn, struct stat *s)
     char buf[128];
     
     if (s) {
-        conn->printf(conn, "ETag: %s\r\n", file_mktag(s, buf, sizeof(buf)));
-        conn->printf(conn, "Last-Modified: %s\r\n", unix2date(s->st_mtime, buf, sizeof(buf)));
-
+        conn->send_header(conn, "ETag", "%s", file_mktag(s, buf, sizeof(buf)));
+        conn->send_header(conn, "Last-Modified", "%s", unix2date(s->st_mtime, buf, sizeof(buf)));
     }
-    conn->printf(conn, "Date: %s\r\n", unix2date(time(NULL), buf, sizeof(buf)));
+    conn->send_header(conn, "Date", "%s", unix2date(time(NULL), buf, sizeof(buf)));
 }
 
 static void file_response_304(struct uh_connection *conn, struct stat *s)
 {
-    conn->send_status_line(conn, HTTP_STATUS_NOT_MODIFIED, NULL);
+    conn->send_head(conn, HTTP_STATUS_NOT_MODIFIED, 0, NULL);
 
     file_response_ok_hdrs(conn, s);
+
+    conn->end_headers(conn);
 }
 
 static bool file_if_modified_since(struct uh_connection *conn, struct stat *s)
@@ -172,7 +173,7 @@ static bool file_if_range(struct uh_connection *conn, struct stat *s)
 {
     const struct uh_str hdr = conn->get_header(conn, "If-Range");
     if (hdr.p) {
-        conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
+        conn->send_error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
 
@@ -183,7 +184,7 @@ static bool file_if_unmodified_since(struct uh_connection *conn, struct stat *s)
 {
     const struct uh_str hdr = conn->get_header(conn, "If-Unmodified-Since");
     if (hdr.p && date2unix(hdr) <= s->st_mtime) {
-        conn->error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
+        conn->send_error(conn, HTTP_STATUS_PRECONDITION_FAILED, NULL);
         return false;
     }
 
@@ -213,15 +214,12 @@ static void file_if_gzip(struct uh_connection *conn, const char *path, const cha
     if (magic[0] != 0x1f || magic[1] != 0x8b)
         return;
 
-    conn->printf(conn, "Content-Encoding: gzip\r\n");
+    conn->send_header(conn, "Content-Encoding", "gzip");
 }
 
 static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *start, uint64_t *end, bool *ranged)
 {
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     const struct uh_str hdr = conn->get_header(conn, "Range");
-    int content_length;
-    const char *reason;
     const char *p, *e;
     char buf[32];
     int i;
@@ -235,20 +233,20 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
     }
 
     if (hdr.len < 8)
-        goto err;
+        return false;
 
     p = hdr.p;
     e = hdr.p + hdr.len;
 
     if (strncmp(p, "bytes=", 6))
-        goto err;
+        return false;
 
     p += 6;
     i = 0;
 
     while (p < e) {
         if (i >= sizeof(buf) - 1)
-            goto err;
+            return false;
 
         if (isdigit(*p)) {
             buf[i++] = *p++;
@@ -256,7 +254,7 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
         }
 
         if (*p != '-')
-            goto err;
+            return false;
 
         p++;
         buf[i] = '\0';
@@ -270,7 +268,7 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
 
     while (p < e) {
         if (i >= (sizeof(buf) - 1) || !isdigit(*p))
-            goto err;
+            return false;
         buf[i++] = *p++;
     }
 
@@ -278,13 +276,13 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
     *end = strtoull(buf, NULL, 0);
 
     if (*start >= size)
-        goto err;
+        return false;
 
     if (*end == 0)
         *end = size - 1;
 
     if (*end < *start)
-        goto err;
+        return false;
 
     if (*end > size - 1)
         *end = size - 1;
@@ -292,24 +290,6 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
     *ranged = true;
 
     return true;
-
-err:
-    reason = http_status_str(HTTP_STATUS_RANGE_NOT_SATISFIABLE);
-    content_length = strlen(reason);
-
-    conn->send_status_line(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, "Content-Type: text/plain\r\nConnection: close\r\n");
-    conn->printf(conn, "Content-Length: %d\r\n", content_length);
-    conn->printf(conn, "Content-Range: bytes */%" PRIu64 "\r\n", size);
-
-    conn->send(conn, "\r\n", 2);
-
-    conn->send(conn, reason, content_length);
-
-    conni->flags |= CONN_F_SEND_AND_CLOSE;
-
-    conn->done(conn);
-
-    return false;
 }
 
 void serve_file(struct uh_connection *conn)
@@ -320,9 +300,10 @@ void serve_file(struct uh_connection *conn)
     const char *mime;
     struct stat st;
     bool ranged;
+    int fd, len;
 
     if (!pi) {
-        conn->error(conn, HTTP_STATUS_BAD_REQUEST, NULL);
+        conn->send_error(conn, HTTP_STATUS_BAD_REQUEST, NULL);
         return;
     }
 
@@ -340,12 +321,12 @@ void serve_file(struct uh_connection *conn)
             code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
         };
 
-        conn->error(conn, code, NULL);
+        conn->send_error(conn, code, NULL);
         return;
     }
 
     if (!S_ISLNK(st.st_mode) && !S_ISREG(st.st_mode)) {
-        conn->error(conn, 403, NULL);
+        conn->send_error(conn, HTTP_STATUS_FORBIDDEN, NULL);
         return;
     }
 
@@ -354,43 +335,75 @@ void serve_file(struct uh_connection *conn)
     case HTTP_HEAD:
         break;
     default:
-        conn->error(conn, HTTP_STATUS_METHOD_NOT_ALLOWED, NULL);
+        conn->send_error(conn, HTTP_STATUS_METHOD_NOT_ALLOWED, NULL);
         return;
     }
 
-    if (!file_range(conn, st.st_size, &start, &end, &ranged))
+    if (!file_range(conn, st.st_size, &start, &end, &ranged)) {
+        conn->send_head(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, 0, NULL);
+        conn->send_header(conn, "Content-Range", "bytes */%" PRIu64, st.st_size);
+        conn->send_header(conn, "Content-Type", "text/plain");
+        conn->send_header(conn, "Connection", "close");
+        conn->end_headers(conn);
+        conni->flags |= CONN_F_SEND_AND_CLOSE;
         return;
+    }
 
     if (!file_if_modified_since(conn, &st) ||
         !file_if_range(conn, &st) ||
         !file_if_unmodified_since(conn, &st)) {
-        conn->printf(conn, "\r\n");
+        conn->end_response(conn);
         return;
     }
 
     if (ranged)
-        conn->send_status_line(conn, HTTP_STATUS_PARTIAL_CONTENT, NULL);
+        conn->send_head(conn, HTTP_STATUS_PARTIAL_CONTENT, end - start + 1, NULL);
     else
-        conn->send_status_line(conn, HTTP_STATUS_OK, NULL);
+        conn->send_head(conn, HTTP_STATUS_OK, end - start + 1, NULL);
 
     file_response_ok_hdrs(conn, &st);
 
     mime = file_mime_lookup(pi->phys);
 
-    conn->printf(conn, "Content-Type: %s\r\n", mime);
-    conn->printf(conn, "Content-Length: %" PRIu64 "\r\n", end - start + 1);
+    conn->send_header(conn, "Content-Type", "%s", mime);
 
     if (ranged)
-        conn->printf(conn, "Content-Range: bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64 "\r\n", start, end, (uint64_t)st.st_size);
+        conn->send_header(conn, "Content-Range", "bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64, start, end, (uint64_t)st.st_size);
     else
         file_if_gzip(conn, pi->phys, mime);
 
-    conn->printf(conn, "\r\n");
+    conn->end_headers(conn);
 
     if (conn->get_method(conn) == HTTP_HEAD)
+        goto done;
+
+    fd = open(pi->phys, O_RDONLY);
+    if (fd < 0) {
+        log_err("open: %s\n", strerror(errno));
+        conn->close(conn);
         return;
+    }
 
-    conn->send_file(conn, pi->phys, start, end - start + 1);
+    lseek(fd, start, SEEK_SET);
+    st.st_size -= start;
 
-    conn->done(conn);
+    len = end - start + 1;
+
+    /* If the file is greater than 2K, use sendfile */
+    if (len > 2048) {
+        conni->file.size = len;
+        conni->file.fd = fd;
+#ifdef SSL_SUPPORT
+        if (conni->ssl)
+            fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+#endif
+    } else {
+        while (len)
+            len -= buffer_put_fd(&conni->wb, fd, len, NULL);
+
+        close(fd);
+    }
+
+done:
+    conn->end_response(conn);
 }
