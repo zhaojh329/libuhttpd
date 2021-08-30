@@ -22,20 +22,30 @@
  * SOFTWARE.
  */
 
-#ifndef LIBUHTTPD_HANDLER_H
-#define LIBUHTTPD_HANDLER_H
+#ifndef LIBUHTTPD_CGI_H
+#define LIBUHTTPD_CGI_H
 
-static inline void file_handler(struct uh_connection *conn, int event)
-{
-    if (event != UH_EV_COMPLETE)
-        return;
+#include "connection.h"
 
-    conn->serve_file(conn);
-}
+#define CGI_TIMEOUT 60
 
-static inline void cgi_handler(struct uh_connection *conn, int event)
-{
-    conn->serve_cgi(conn, event);
-}
+struct uh_cgi {
+    struct uh_connection *conn;
+    struct buffer rb;
+    struct buffer wb;
+    struct ev_io ior;
+    struct ev_io iow;
+    struct ev_timer tmr;
+    struct ev_child proc;
+    bool header_end;
+    bool skip_data;
+    int status_code;
+    char status_msg[256];
+    struct buffer headers;
+    uint64_t content_length;
+};
+
+void serve_cgi(struct uh_connection *conn, int event);
+void cgi_free(struct uh_connection_internal *conn);
 
 #endif

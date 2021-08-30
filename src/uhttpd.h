@@ -118,6 +118,9 @@ struct uh_connection {
     /* handle file */
     void (*serve_file)(struct uh_connection *conn);
 
+    /* handle cgi */
+    void (*serve_cgi)(struct uh_connection *conn, int event);
+
     void (*close)(struct uh_connection *conn);  /* close low level TCP connection */
     void (*incref)(struct uh_connection *conn);
     void (*decref)(struct uh_connection *conn);

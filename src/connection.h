@@ -29,6 +29,7 @@
 
 #include "uhttpd_internal.h"
 #include "buffer.h"
+#include "cgi.h"
 
 #define UHTTPD_CONNECTION_TIMEOUT   30.0
 #define UHTTPD_MAX_HEADER_NUM       50
@@ -89,6 +90,7 @@ struct uh_connection_internal {
     struct ev_timer timer;
     struct uh_request req;
     struct uh_response resp;
+    struct uh_cgi *cgi;
     struct uh_listener *l;
     union {
         struct sockaddr     sa;

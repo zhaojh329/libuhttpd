@@ -33,7 +33,7 @@
 #include "uhttpd_internal.h"
 #include "utils.h"
 #include "file.h"
-
+#include "cgi.h"
 
 static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
 {
@@ -675,6 +675,8 @@ void conn_free(struct uh_connection_internal *conn)
     if (conn->sock > 0)
         close(conn->sock);
 
+    cgi_free(conn);
+
     log_info("Connection(%s %d) closed\n", addr_str,
             (saddr2str(&conn->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
@@ -848,7 +850,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
             ev_io_stop(loop, w);
 
             /* already called conn_end_response, then enable parsing */
-            if (!conn->handler) {
+            if (!conn->handler && !conn->cgi) {
                 log_debug("%s %d response end\n", addr_str,
                     (saddr2str(&conn->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
@@ -972,6 +974,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->end_response = conn_end_response;
 
     conn->serve_file = serve_file;
+    conn->serve_cgi = serve_cgi;
 
     conn->close = conn_close;
 

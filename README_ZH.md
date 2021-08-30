@@ -29,6 +29,7 @@
 * 使用[libev]作为其事件后端
 * 支持HTTPS - OpenSSL, mbedtls 和 CyaSSl(wolfssl)
 * 支持 IPv6
+* 支持 CGI
 * 支持插件
 * 支持上传大文件
 * 支持 HTTP 范围请求
