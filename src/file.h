@@ -40,5 +40,6 @@ struct path_info {
 struct path_info *parse_path_info(struct uh_connection_internal *conn);
 
 void serve_file(struct uh_connection *conn);
+void download_file(struct uh_connection *conn, const char *path, const char *filename);
 
 #endif

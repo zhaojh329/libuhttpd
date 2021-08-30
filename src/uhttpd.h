@@ -118,6 +118,14 @@ struct uh_connection {
     /* handle file */
     void (*serve_file)(struct uh_connection *conn);
 
+    /*
+    ** Content-Disposition: attachment; filename="filename.jpg"
+    **
+    ** path: The physical path which to download in the server
+    ** filename: Most browsers presenting a 'Save as' dialog, prefilled with the value of the filename parameters.
+    */
+    void (*download_file)(struct uh_connection *conn, const char *path, const char *filename);
+
     /* handle cgi */
     void (*serve_cgi)(struct uh_connection *conn, int event);
 

@@ -299,22 +299,14 @@ static bool file_range(struct uh_connection *conn, uint64_t size, uint64_t *star
     return true;
 }
 
-void serve_file(struct uh_connection *conn)
+static void __serve_file(struct uh_connection *conn, struct stat *st, const char *path, const char *filename)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct path_info *pi = parse_path_info(conni);
     uint64_t start, end;
     const char *mime;
-    struct stat *st;
     bool ranged;
     int fd, len;
 
-    if (!pi) {
-        conn->send_error(conn, HTTP_STATUS_BAD_REQUEST, NULL);
-        return;
-    }
-
-    st = pi->st;
     if (!st) {
         conn->send_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
         return;
@@ -322,15 +314,6 @@ void serve_file(struct uh_connection *conn)
 
     if (!S_ISREG(st->st_mode)) {
         conn->send_error(conn, HTTP_STATUS_FORBIDDEN, NULL);
-        return;
-    }
-
-    switch (conn->get_method(conn)) {
-    case HTTP_GET:
-    case HTTP_HEAD:
-        break;
-    default:
-        conn->send_error(conn, HTTP_STATUS_METHOD_NOT_ALLOWED, NULL);
         return;
     }
 
@@ -358,21 +341,26 @@ void serve_file(struct uh_connection *conn)
 
     file_response_ok_hdrs(conn, st);
 
-    mime = file_mime_lookup(pi->phys);
+    mime = file_mime_lookup(path);
 
-    conn->send_header(conn, "Content-Type", "%s", mime);
+    if (filename) {
+        conn->send_header(conn, "Content-Disposition", "attachment; filename=\"%s\"", filename);
+        conn->send_header(conn, "Content-Type", "application/octet-stream");
+    } else {
+        conn->send_header(conn, "Content-Type", "%s", mime);
+    }
 
     if (ranged)
         conn->send_header(conn, "Content-Range", "bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64, start, end, (uint64_t)st->st_size);
     else
-        file_if_gzip(conn, pi->phys, mime);
+        file_if_gzip(conn, path, mime);
 
     conn->end_headers(conn);
 
     if (conn->get_method(conn) == HTTP_HEAD)
         goto done;
 
-    fd = open(pi->phys, O_RDONLY);
+    fd = open(path, O_RDONLY);
     if (fd < 0) {
         log_err("open: %s\n", strerror(errno));
         conn->close(conn);
@@ -401,4 +389,36 @@ void serve_file(struct uh_connection *conn)
 
 done:
     conn->end_response(conn);
+}
+
+void serve_file(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct path_info *pi = parse_path_info(conni);
+
+    if (!pi) {
+        conn->send_error(conn, HTTP_STATUS_BAD_REQUEST, NULL);
+        return;
+    }
+
+    switch (conn->get_method(conn)) {
+    case HTTP_GET:
+    case HTTP_HEAD:
+        break;
+    default:
+        conn->send_error(conn, HTTP_STATUS_METHOD_NOT_ALLOWED, NULL);
+        return;
+    }
+
+    __serve_file(conn, pi->st, pi->phys, NULL);
+}
+
+void download_file(struct uh_connection *conn, const char *path, const char *filename)
+{
+    struct stat st;
+
+    if (stat(path, &st))
+        __serve_file(conn, NULL, path, filename);
+    else
+        __serve_file(conn, &st, path, filename);
 }

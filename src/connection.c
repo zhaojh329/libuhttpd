@@ -974,6 +974,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->end_response = conn_end_response;
 
     conn->serve_file = serve_file;
+    conn->download_file = download_file;
     conn->serve_cgi = serve_cgi;
 
     conn->close = conn_close;
