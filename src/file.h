@@ -34,6 +34,7 @@ struct path_info {
     const char *phys;
     const char *name;
     const char *info;
+    struct stat *st;
 };
 
 struct path_info *parse_path_info(struct uh_connection_internal *conn);

@@ -391,7 +391,7 @@ void serve_cgi(struct uh_connection *conn, int event)
 
     if (event == UH_EV_HEAD_COMPLETE) {
         struct path_info *pi;
-        struct stat st;
+        struct stat *st;
 
         pi = parse_path_info(conni);
         if (!pi) {
@@ -399,25 +399,13 @@ void serve_cgi(struct uh_connection *conn, int event)
             return;
         }
 
-        if (stat(pi->phys, &st) < 0) {
-            int code;
-
-            switch (errno) {
-            case EACCES:
-                code = HTTP_STATUS_FORBIDDEN;
-            break;
-                case ENOENT:
-                code = HTTP_STATUS_NOT_FOUND;
-            break;
-            default:
-                code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-            };
-
-            conn->send_error(conn, code, NULL);
+        st = pi->st;
+        if (!st) {
+            conn->send_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
             return;
         }
 
-        if (!S_ISLNK(st.st_mode) && !S_ISREG(st.st_mode)) {
+        if (!S_ISREG(st->st_mode)) {
             conn->send_error(conn, 403, NULL);
             return;
         }

@@ -51,6 +51,7 @@ struct path_info *parse_path_info(struct uh_connection_internal *conn)
     static char path_phys[PATH_MAX];
     static char path_info[PATH_MAX];
     static struct path_info pi = {};
+    static struct stat st;
     int docroot_len, i;
 
     if (!docroot || !docroot[0])
@@ -82,23 +83,29 @@ struct path_info *parse_path_info(struct uh_connection_internal *conn)
         memcpy(path_phys, buf, i);
         path_phys[i] = '\0';
 
-        if (access(path_phys, F_OK))
+        if (stat(path_phys, &st) || !S_ISREG(st.st_mode))
             continue;
 
         snprintf(path_info, sizeof(path_info), "%s", buf + i);
         break;
     }
 
+    memset(&pi, 0, sizeof(struct path_info));
+
     if (i > docroot_len) {
         pi.phys = path_phys;
         pi.name = &path_phys[docroot_len];
+        pi.st = &st;
     } else {
         pi.phys = buf;
         pi.name = &buf[docroot_len];
+        pi.st = stat(pi.phys, &st) ? NULL : &st;
     }
 
     pi.root = docroot;
     pi.info = path_info;
+
+    log_info("phys: %s, name: %s, info: %s\n", pi.phys, pi.name, pi.info);
 
     return &pi;
 }
@@ -298,7 +305,7 @@ void serve_file(struct uh_connection *conn)
     struct path_info *pi = parse_path_info(conni);
     uint64_t start, end;
     const char *mime;
-    struct stat st;
+    struct stat *st;
     bool ranged;
     int fd, len;
 
@@ -307,25 +314,13 @@ void serve_file(struct uh_connection *conn)
         return;
     }
 
-    if (stat(pi->phys, &st) < 0) {
-        int code;
-
-        switch (errno) {
-        case EACCES:
-            code = HTTP_STATUS_FORBIDDEN;
-        break;
-            case ENOENT:
-            code = HTTP_STATUS_NOT_FOUND;
-        break;
-        default:
-            code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-        };
-
-        conn->send_error(conn, code, NULL);
+    st = pi->st;
+    if (!st) {
+        conn->send_error(conn, HTTP_STATUS_NOT_FOUND, NULL);
         return;
     }
 
-    if (!S_ISLNK(st.st_mode) && !S_ISREG(st.st_mode)) {
+    if (!S_ISREG(st->st_mode)) {
         conn->send_error(conn, HTTP_STATUS_FORBIDDEN, NULL);
         return;
     }
@@ -339,9 +334,9 @@ void serve_file(struct uh_connection *conn)
         return;
     }
 
-    if (!file_range(conn, st.st_size, &start, &end, &ranged)) {
+    if (!file_range(conn, st->st_size, &start, &end, &ranged)) {
         conn->send_head(conn, HTTP_STATUS_RANGE_NOT_SATISFIABLE, 0, NULL);
-        conn->send_header(conn, "Content-Range", "bytes */%" PRIu64, st.st_size);
+        conn->send_header(conn, "Content-Range", "bytes */%" PRIu64, st->st_size);
         conn->send_header(conn, "Content-Type", "text/plain");
         conn->send_header(conn, "Connection", "close");
         conn->end_headers(conn);
@@ -349,9 +344,9 @@ void serve_file(struct uh_connection *conn)
         return;
     }
 
-    if (!file_if_modified_since(conn, &st) ||
-        !file_if_range(conn, &st) ||
-        !file_if_unmodified_since(conn, &st)) {
+    if (!file_if_modified_since(conn, st) ||
+        !file_if_range(conn, st) ||
+        !file_if_unmodified_since(conn, st)) {
         conn->end_response(conn);
         return;
     }
@@ -361,14 +356,14 @@ void serve_file(struct uh_connection *conn)
     else
         conn->send_head(conn, HTTP_STATUS_OK, end - start + 1, NULL);
 
-    file_response_ok_hdrs(conn, &st);
+    file_response_ok_hdrs(conn, st);
 
     mime = file_mime_lookup(pi->phys);
 
     conn->send_header(conn, "Content-Type", "%s", mime);
 
     if (ranged)
-        conn->send_header(conn, "Content-Range", "bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64, start, end, (uint64_t)st.st_size);
+        conn->send_header(conn, "Content-Range", "bytes %" PRIu64 "-%" PRIu64 "/%" PRIu64, start, end, (uint64_t)st->st_size);
     else
         file_if_gzip(conn, pi->phys, mime);
 
@@ -385,7 +380,7 @@ void serve_file(struct uh_connection *conn)
     }
 
     lseek(fd, start, SEEK_SET);
-    st.st_size -= start;
+    st->st_size -= start;
 
     len = end - start + 1;
 
