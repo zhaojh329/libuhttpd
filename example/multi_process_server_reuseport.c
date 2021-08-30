@@ -66,7 +66,7 @@ static void usage(const char *prog)
     exit(1);
 }
 
-static void start_server(const char *addr, const char *addrs, const char *docroot, const char *index_page, const char *plugin, bool ssl)
+static void start_server(const char *addr, const char *docroot)
 {
     struct ev_loop *loop = ev_loop_new(0);
     struct uh_server *srv = NULL;
@@ -77,30 +77,13 @@ static void start_server(const char *addr, const char *addrs, const char *docroo
     if (!srv)
         return;
 
-    if (addr) {
-        if (srv->listen(srv, addrs, false) < 0)
-            return;
-    } else if (addrs) {
-        if (srv->listen(srv, addrs, true) < 0)
-            return;
-    } else {
+    if (srv->listen(srv, addr, false) < 0)
         return;
-    }
-
-#ifdef SSL_SUPPORT
-    if (ssl && srv->ssl_init(srv, "cert.pem", "key.pem") < 0)
-        return;
-#endif
 
     srv->set_docroot(srv, docroot);
-    srv->set_index_page(srv, index_page);
 
     srv->set_default_handler(srv, file_handler);
     srv->add_path_handler(srv, "^/echo$", echo_handler);
-    srv->add_path_handler(srv, "^/upload$", upload_handler);
-
-    if (plugin)
-        srv->load_plugin(srv, plugin);
 
     ev_run(loop, 0);
 }
@@ -109,49 +92,45 @@ int main(int argc, char **argv)
 {
     struct ev_loop *loop = EV_DEFAULT;
     struct ev_signal signal_watcher;
-    const char *plugin_path = NULL;
-    bool verbose = false;
-    bool ssl = false;
-    const char *docroot = ".";
-    const char *index_page = "index.html";
-    const char *addr = NULL;
-    const char *addrs = NULL;
     pid_t workers[MAX_WORKER] = {};
     int nworker = get_nprocs();
+    const char *docroot = ".";
+    const char *addr = NULL;
+    int verbose = 0;
     int opt, i;
 
-    while ((opt = getopt(argc, argv, "h:i:a:s:P:w:v")) != -1) {
+    log_level(LOG_ERR);
+
+    while ((opt = getopt(argc, argv, "h:a:w:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
             break;
-        case 'i':
-            index_page = optarg;
-            break;
         case 'a':
             addr = optarg;
-            break;
-        case 's':
-            addrs = optarg;
-            break;
-        case 'P':
-            plugin_path = optarg;
             break;
         case 'w':
             nworker = atoi(optarg);
             break;
         case 'v':
-            verbose = true;
+             if (!verbose) {
+                verbose++;
+                log_level(LOG_INFO);
+            } else {
+                log_level(LOG_DEBUG);
+            }
             break;
         default: /* '?' */
             usage(argv[0]);
         }
     }
 
-    if (verbose)
-        log_level(LOG_ERR);
-
     log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
+
+    if (!addr) {
+        log_err("Please specify a address to listen by '-a'\n");
+        return -1;
+    }
 
     if (!support_so_reuseport()) {
         log_err("Not support SO_REUSEPORT\n");
@@ -170,11 +149,13 @@ int main(int argc, char **argv)
 
         if (pid == 0) {
             prctl(PR_SET_PDEATHSIG, SIGKILL);
-            start_server(addr, addrs, docroot, index_page, plugin_path, ssl);
+            start_server(addr, docroot);
             return 0;
         }
 
         workers[i] = pid;
+
+        log_info("worker %d running...\n", pid);
     }
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);

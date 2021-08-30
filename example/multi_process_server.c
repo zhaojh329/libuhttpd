@@ -72,49 +72,42 @@ int main(int argc, char **argv)
     struct ev_loop *loop = EV_DEFAULT;
     struct ev_signal signal_watcher;
     struct uh_server *srv = NULL;
-    const char *plugin_path = NULL;
-    bool verbose = false;
-    const char *docroot = ".";
-    const char *index_page = "index.html";
     pid_t workers[MAX_WORKER] = {};
     int nworker = get_nprocs();
+    const char *docroot = ".";
+    int verbose = 0;
     int opt, i;
+
+    log_level(LOG_ERR);
 
     srv = uh_server_new(loop);
     if (!srv)
         return -1;
 
-    while ((opt = getopt(argc, argv, "h:i:a:s:P:w:v")) != -1) {
+    while ((opt = getopt(argc, argv, "h:a:w:v")) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
-            break;
-        case 'i':
-            index_page = optarg;
             break;
         case 'a':
             if (srv->listen(srv, optarg, false) < 1)
                 goto err;
             break;
-        case 's':
-            if (srv->listen(srv, optarg, true) < 1)
-                goto err;
-            break;
-        case 'P':
-            plugin_path = optarg;
-            break;
         case 'w':
             nworker = atoi(optarg);
+            break;
         case 'v':
-            verbose = true;
+            if (!verbose) {
+                verbose++;
+                log_level(LOG_INFO);
+            } else {
+                log_level(LOG_DEBUG);
+            }
             break;
         default: /* '?' */
             usage(argv[0]);
         }
     }
-
-    if (verbose)
-        log_level(LOG_ERR);
 
     log_info("libuhttpd version: %s\n", UHTTPD_VERSION_STRING);
 
@@ -123,19 +116,10 @@ int main(int argc, char **argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-#ifdef SSL_SUPPORT
-    srv->ssl_init(srv, "cert.pem", "key.pem");
-#endif
-
     srv->set_docroot(srv, docroot);
-    srv->set_index_page(srv, index_page);
 
     srv->set_default_handler(srv, file_handler);
     srv->add_path_handler(srv, "^/echo$", echo_handler);
-    srv->add_path_handler(srv, "^/upload$", upload_handler);
-
-    if (plugin_path)
-        srv->load_plugin(srv, plugin_path);
 
     for (i = 0; i < nworker - 1; i++) {
         pid_t pid = fork();
@@ -152,6 +136,8 @@ int main(int argc, char **argv)
         }
 
         workers[i] = pid;
+
+        log_info("worker %d running...\n", pid);
     }
 
     ev_signal_init(&signal_watcher, signal_cb, SIGINT);
