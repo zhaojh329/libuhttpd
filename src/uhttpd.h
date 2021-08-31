@@ -164,6 +164,8 @@ struct uh_server {
     int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     int (*set_docroot)(struct uh_server *srv, const char *path);
     int (*set_index_page)(struct uh_server *srv, const char *name);
+
+    void *userdata;
 };
 
 enum {
