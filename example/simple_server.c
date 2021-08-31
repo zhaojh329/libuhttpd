@@ -49,7 +49,9 @@ static void usage(const char *prog)
             "          -h docroot     # Document root, default is .\n"
             "          -i index_page  # Index page, default is index.html\n"
             "          -a addr        # address to listen\n"
+#ifdef SSL_SUPPORT
             "          -s addr        # address to listen with ssl\n"
+#endif
             "          -P             # plugin path\n"
             "          -v             # verbose\n", prog);
     exit(1);
@@ -63,7 +65,10 @@ int main(int argc, char **argv)
     const char *plugin_path = NULL;
     const char *docroot = ".";
     const char *index_page = "index.html";
+    const char *shortopts = "h:i:a:P:v";
+#ifdef SSL_SUPPORT
     bool ssl = false;
+#endif
     int verbose = 0;
     int opt;
 
@@ -73,7 +78,11 @@ int main(int argc, char **argv)
     if (!srv)
         return -1;
 
-    while ((opt = getopt(argc, argv, "h:i:a:s:P:v")) != -1) {
+#ifdef SSL_SUPPORT
+    shortopts = "h:i:a:s:P:v";
+#endif
+
+    while ((opt = getopt(argc, argv, shortopts)) != -1) {
         switch (opt) {
         case 'h':
             docroot = optarg;
@@ -85,11 +94,13 @@ int main(int argc, char **argv)
             if (srv->listen(srv, optarg, false) < 1)
                 goto err;
             break;
+#ifdef SSL_SUPPORT
         case 's':
             if (srv->listen(srv, optarg, true) < 1)
                 goto err;
             ssl = true;
             break;
+#endif
         case 'P':
             plugin_path = optarg;
             break;
