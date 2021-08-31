@@ -63,6 +63,7 @@ int main(int argc, char **argv)
     const char *plugin_path = NULL;
     const char *docroot = ".";
     const char *index_page = "index.html";
+    bool ssl = false;
     int verbose = 0;
     int opt;
 
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
         case 's':
             if (srv->listen(srv, optarg, true) < 1)
                 goto err;
+            ssl = true;
             break;
         case 'P':
             plugin_path = optarg;
@@ -109,7 +111,8 @@ int main(int argc, char **argv)
     signal(SIGPIPE, SIG_IGN);
 
 #ifdef SSL_SUPPORT
-    srv->ssl_init(srv, "cert.pem", "key.pem");
+    if (ssl)
+        srv->ssl_init(srv, "cert.pem", "key.pem");
 #endif
 
     srv->set_docroot(srv, docroot);
