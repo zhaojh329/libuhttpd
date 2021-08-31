@@ -152,10 +152,16 @@ static inline void conn_end_headers(struct uh_connection *conn)
 static void conn_send_head_v(struct uh_connection *conn, int code, int64_t content_length, const char *reason, va_list arg)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    const struct uh_str path = conn->get_path(conn);
     struct buffer *wb = &conni->wb;
+    char addr_str[INET6_ADDRSTRLEN];
+    int port;
 
     if (likely(!reason))
         reason = http_status_str(code);
+
+    log_info("%s %d  %s %.*s - %d %s\n", addr_str, (saddr2str(&conni->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0),
+        http_method_str(conni->parser.method), (int)path.len, path.p, code, reason);
 
     buffer_put_printf(wb, "HTTP/1.1 %d ", code);
     buffer_put_vprintf(wb, reason, arg);
@@ -535,11 +541,8 @@ static int on_headers_complete(struct http_parser *parser)
     struct uh_server_internal *srv = conn->l->srv;
     struct http_parser_url *u = &conn->url_parser;
     struct uh_request *req = &conn->req;
-    struct sockaddr *sa = &conn->paddr.sa;
     uh_path_handler_prototype handler;
-    char addr_str[INET6_ADDRSTRLEN];
     struct uh_str path;
-    int port;
 
     canonpath((char *)O2D(conn, req->url.offset), &req->url.length);
 
@@ -547,9 +550,6 @@ static int on_headers_complete(struct http_parser *parser)
 
     path.p = O2D(conn, u->field_data[UF_PATH].off) + req->url.offset;
     path.len = u->field_data[UF_PATH].len;
-
-    log_info("%s %d  %s %.*s\n", addr_str, (saddr2str(sa, addr_str, sizeof(addr_str), &port) ? port : 0),
-        http_method_str(parser->method), (int)path.len, path.p);
 
     handler = find_path_handler(conn, &srv->handlers, &path);
     if (!handler)
@@ -677,7 +677,7 @@ void conn_free(struct uh_connection_internal *conn)
 
     cgi_free(conn);
 
-    log_info("Connection(%s %d) closed\n", addr_str,
+    log_debug("Connection(%s %d) closed\n", addr_str,
             (saddr2str(&conn->paddr.sa, addr_str, sizeof(addr_str), &port) ? port : 0));
 
     conn_decref((struct uh_connection *)conn);
