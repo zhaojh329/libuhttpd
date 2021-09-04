@@ -35,7 +35,7 @@
 #include "file.h"
 #include "cgi.h"
 
-static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
+static void conn_send(struct uh_connection *conn, const void *data, size_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
@@ -46,7 +46,7 @@ static void conn_send(struct uh_connection *conn, const void *data, ssize_t len)
     ev_io_start(conni->l->srv->loop, &conni->iow);
 }
 
-static void conn_send_chunk(struct uh_connection *conn, const void *data, ssize_t len)
+static void conn_send_chunk(struct uh_connection *conn, const void *data, size_t len)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
     struct buffer *wb = &conni->wb;
@@ -54,7 +54,7 @@ static void conn_send_chunk(struct uh_connection *conn, const void *data, ssize_
     if (unlikely(conni->flags & CONN_F_CLOSED))
         return;
 
-    buffer_put_printf(wb, "%X\r\n", (unsigned int)len);
+    buffer_put_printf(wb, "%zX\r\n", len);
     buffer_put_data(wb, data, len);
     buffer_put_data(wb, "\r\n", 2);
     ev_io_start(conni->l->srv->loop, &conni->iow);

@@ -105,7 +105,7 @@ struct uh_connection {
     ** These three methods sends HTTP body to the client.
     ** These three methods can only be called after calls 'end_headers'.
     */
-    void (*send)(struct uh_connection *conn, const void *data, ssize_t len);
+    void (*send)(struct uh_connection *conn, const void *data, size_t len);
     /* restriction: cannot send over 6553 bytes */
     void (*printf)(struct uh_connection *conn, const char *format, ...)
         __attribute__((format(printf, 2, 3)));
