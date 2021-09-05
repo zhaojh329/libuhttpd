@@ -157,11 +157,8 @@ next:
     buffer_pull(&cgi->rb, NULL, buffer_length(&cgi->rb));
 
 check_eof:
-    if (eof) {
+    if (eof)
         ev_io_stop(loop, w);
-        close(w->fd);
-        w->fd = -1;
-    }
 
     ev_timer_stop(loop, &cgi->tmr);
     ev_timer_set(&cgi->tmr, CGI_TIMEOUT, 0);
@@ -178,9 +175,8 @@ static void ev_cgi_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
         cgi->content_length -= ret;
 
     if (cgi->content_length == 0) {
-        close(w->fd);
         ev_io_stop(loop, w);
-        w->fd = -1;
+        close(w->fd);
         return;
     }
 
@@ -445,15 +441,11 @@ void cgi_free(struct uh_connection_internal *conn)
     buffer_free(&cgi->rb);
     buffer_free(&cgi->wb);
 
-    if (cgi->ior.fd > -1) {
-        close(cgi->ior.fd);
-        ev_io_stop(loop, &cgi->ior);
-    }
+    ev_io_stop(loop, &cgi->ior);
+    close(cgi->ior.fd);
 
-    if (cgi->iow.fd > -1) {
-        close(cgi->ior.fd);
-        ev_io_stop(loop, &cgi->iow);
-    }
+    ev_io_stop(loop, &cgi->iow);
+    close(cgi->iow.fd);
 
     free(cgi);
 
