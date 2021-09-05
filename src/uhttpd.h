@@ -141,6 +141,8 @@ typedef void (*uh_path_handler_prototype)(struct uh_connection *conn, int event)
 
 struct uh_server {
     struct ev_loop *(*get_loop)(struct uh_server *srv);
+    /* Replace the existing loop. Can only be called before calling the listen */
+    void (*set_loop)(struct uh_server *srv, struct ev_loop *loop);
     void (*free)(struct uh_server *srv);
     /*
     ** listen an address, multiple call allowed

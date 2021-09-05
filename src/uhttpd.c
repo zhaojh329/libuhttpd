@@ -330,6 +330,13 @@ static struct ev_loop *uh_get_loop(struct uh_server *srv)
     return srvi->loop;
 }
 
+static void uh_set_loop(struct uh_server *srv, struct ev_loop *loop)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    srvi->loop = loop;
+}
+
 static int parse_address(const char *addr, char **host, char **port)
 {
     static char buf[256];
@@ -475,6 +482,7 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
     srvi->loop = loop ? loop : EV_DEFAULT;
 
     srv->get_loop = uh_get_loop;
+    srv->set_loop = uh_set_loop;
     srv->free = uh_server_free;
 
     srv->listen = uh_server_listen;
