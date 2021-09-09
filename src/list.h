@@ -51,6 +51,7 @@
 #ifndef _LINUX_LIST_H_
 #define _LINUX_LIST_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifndef container_of
