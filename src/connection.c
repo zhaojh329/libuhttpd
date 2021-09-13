@@ -121,6 +121,7 @@ static void conn_send_header_v(struct uh_connection *conn, const char *name, con
     buffer_put_printf(wb, "%s: ", name);
     buffer_put_vprintf(wb, value, arg);
     buffer_put_data(wb, "\r\n", 2);
+    ev_io_start(conni->l->srv->loop, &conni->iow);
 }
 
 static inline void conn_send_header(struct uh_connection *conn, const char *name, const char *value, ...)
@@ -137,6 +138,7 @@ static inline void conn_end_headers(struct uh_connection *conn)
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
 
     buffer_put_data(&conni->wb, "\r\n", 2);
+    ev_io_start(conni->l->srv->loop, &conni->iow);
 
     if (conni->resp.chunked) {
         conn->send = conn_send_chunk;
@@ -179,6 +181,8 @@ static void conn_send_head_v(struct uh_connection *conn, int code, int64_t conte
 
     conn->send_header = conn_send_header;
     conn->end_headers = conn_end_headers;
+
+    ev_io_start(conni->l->srv->loop, &conni->iow);
 }
 
 static inline void conn_send_head(struct uh_connection *conn, int code, int64_t content_length, const char *reason, ...)
