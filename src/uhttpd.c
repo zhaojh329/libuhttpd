@@ -323,6 +323,13 @@ static int uh_set_index_page(struct uh_server *srv, const char *name)
     return 0;
 }
 
+static void uh_https_redirect(struct uh_server *srv, bool enable)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    srvi->https_redirect = enable;
+}
+
 static struct ev_loop *uh_get_loop(struct uh_server *srv)
 {
     struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
@@ -499,4 +506,6 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
 
     srv->set_docroot = uh_set_docroot;
     srv->set_index_page = uh_set_index_page;
+
+    srv->https_redirect = uh_https_redirect;
 }

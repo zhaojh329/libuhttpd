@@ -95,7 +95,11 @@ struct uh_connection {
 
     /*
     ** Sends a complete redirect reply to the client.
-    ** The numeric code specifies the redirect type(HTTP_STATUS_MOVED_PERMANENTLY or HTTP_STATUS_FOUND)
+    ** The numeric code specifies the redirect type:
+    **   301: HTTP_STATUS_MOVED_PERMANENTLY
+    **   302: HTTP_STATUS_FOUND
+    **   307: HTTP_STATUS_TEMPORARY_REDIRECT
+    **   308: HTTP_STATUS_PERMANENT_REDIRECT
     ** The location specifies the resource path.
     */
     void (*send_redirect)(struct uh_connection *conn, int code, const char *location, ...)
@@ -169,6 +173,9 @@ struct uh_server {
     int (*add_path_handler)(struct uh_server *srv, const char *path, uh_path_handler_prototype handler);
     int (*set_docroot)(struct uh_server *srv, const char *path);
     int (*set_index_page)(struct uh_server *srv, const char *name);
+
+    /* Redirect HTTP requests to HTTPS if possible */
+    void (*https_redirect)(struct uh_server *srv, bool enable);
 
     void *userdata;
 };

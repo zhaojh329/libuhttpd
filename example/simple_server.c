@@ -126,6 +126,7 @@ int main(int argc, char **argv)
         srv->ssl_init(srv, "cert.pem", "key.pem");
 #endif
 
+    srv->https_redirect(srv, true);
     srv->set_docroot(srv, docroot);
     srv->set_index_page(srv, index_page);
 

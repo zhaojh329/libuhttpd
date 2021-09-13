@@ -66,6 +66,7 @@ struct uh_server_internal {
     struct uh_server com;
     char *docroot;
     char *index_page;
+    bool https_redirect;
     struct ev_loop *loop;
     void (*conn_closed_cb)(struct uh_connection *conn);
     void (*default_handler)(struct uh_connection *conn, int event);
