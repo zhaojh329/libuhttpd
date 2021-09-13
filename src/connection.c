@@ -264,6 +264,16 @@ static void conn_send_redirect(struct uh_connection *conn, int code, const char 
     conn_end_response(conn);
 }
 
+static void conn_check_expect_100_continue(struct uh_connection *conn)
+{
+    struct uh_str expect = conn->get_header(conn, "Expect");
+
+    if (uh_str_equal_case(&expect, "100-continue")) {
+        conn->send_head(conn, HTTP_STATUS_CONTINUE, 0, NULL);
+        conn->end_headers(conn);
+    }
+}
+
 static inline const struct sockaddr *conn_get_paddr(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -974,6 +984,8 @@ static void conn_init_cb(struct uh_connection *conn)
 
     conn->send_error = conn_send_error;
     conn->send_redirect = conn_send_redirect;
+
+    conn->check_expect_100_continue = conn_check_expect_100_continue;
 
     conn->end_response = conn_end_response;
 

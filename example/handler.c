@@ -64,6 +64,8 @@ void upload_handler(struct uh_connection *conn, int event)
             return;
         }
 
+        conn->check_expect_100_continue(conn);
+
         conn->userdata = (void *)(intptr_t)-1;
 
     } if (event == UH_EV_BODY) {
