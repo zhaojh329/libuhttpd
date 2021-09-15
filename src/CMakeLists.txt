@@ -1,6 +1,6 @@
 # The version number.
 set(UHTTPD_VERSION_MAJOR 3)
-set(UHTTPD_VERSION_MINOR 13)
+set(UHTTPD_VERSION_MINOR 14)
 set(UHTTPD_VERSION_PATCH 0)
 
 aux_source_directory(. SOURCES)
