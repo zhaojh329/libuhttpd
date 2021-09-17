@@ -824,7 +824,7 @@ static int ssl_negotiated(struct uh_connection_internal *conn)
         return 0;
 
     if (ret == SSL_ERROR) {
-        log_err("ssl connect error(%d): %s\n", ssl_err_code, ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+        log_err("ssl connect error: %s\n", ssl_last_error_string(err_buf, sizeof(err_buf)));
         return -1;
     }
 
@@ -841,8 +841,7 @@ static int conn_ssl_read(int fd, void *buf, size_t count, void *arg)
 
     ret = ssl_read(conn->ssl, buf, count);
     if (ret == SSL_ERROR) {
-        log_err("ssl_read(%d): %s\n", ssl_err_code,
-                ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+        log_err("ssl_read: %s\n", ssl_last_error_string(err_buf, sizeof(err_buf)));
         return P_FD_ERR;
     }
 
@@ -873,8 +872,7 @@ static void conn_write_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 
         ret = ssl_write(conn->ssl, buffer_data(b), buffer_length(b));
         if (ret == SSL_ERROR) {
-            log_err("ssl_write(%d): %s\n", ssl_err_code,
-                    ssl_strerror(ssl_err_code, err_buf, sizeof(err_buf)));
+            log_err("ssl_write: %s\n", ssl_last_error_string(err_buf, sizeof(err_buf)));
             goto err;
         }
 
