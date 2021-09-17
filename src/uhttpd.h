@@ -105,6 +105,9 @@ struct uh_connection {
     void (*send_redirect)(struct uh_connection *conn, int code, const char *location, ...)
         __attribute__((format(printf, 3, 4)));
 
+    /* Redirect HTTP requests to HTTPS if possible */
+    bool (*https_redirect)(struct uh_connection *conn);
+
     /* If received the header 'Expect: 100-continue', then response 'HTTP/1.1 100 Continue' */
     void (*check_expect_100_continue)(struct uh_connection *conn);
 

@@ -262,6 +262,76 @@ static void conn_send_redirect(struct uh_connection *conn, int code, const char 
     conn_end_response(conn);
 }
 
+static bool conn_https_redirect(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+    struct uh_str host = conn->get_header(conn, "host");
+    struct uh_str url = conn->get_uri(conn);
+    struct sockaddr_in6 sin6;
+    struct uh_listener *l;
+    int tls_port = -1;
+    int host_len = 0;
+    const char *p;
+
+    if (conni->l->ssl)
+        return false;
+
+    list_for_each_entry(l, &conni->l->srv->listeners, list) {
+        socklen_t sl = sizeof(struct sockaddr_in6);
+
+        if (!l->ssl)
+            continue;
+
+        getsockname(l->sock, (struct sockaddr *)&sin6, &sl);
+
+        if (sin6.sin6_family != conni->saddr.sa.sa_family)
+            continue;
+
+        if (tls_port != -1 && ntohs(sin6.sin6_port) != 443)
+			continue;
+
+		tls_port = ntohs(sin6.sin6_port);
+    }
+
+    if (tls_port == -1)
+        return false;
+
+    if (host.len == 0)
+        return false;
+
+    host_len = 0;
+    p = host.p;
+
+    while (p < host.p + host.len) {
+        if (*p++ == ']') {
+            host_len = p - host.p - 1;
+            break;
+        }
+    }
+
+    if (host_len == 0) {
+        p = host.p;
+        while (p < host.p + host.len) {
+            if (*p++ == ':') {
+                host_len = p - host.p - 1;
+                break;
+            }
+        }
+    }
+
+    if (host_len == 0)
+        host_len = host.len;
+
+    if (tls_port == 443)
+        conn->send_redirect(conn, HTTP_STATUS_TEMPORARY_REDIRECT,
+            "https://%.*s%.*s", host_len, host.p, (int)url.len, url.p);
+    else
+        conn->send_redirect(conn, HTTP_STATUS_TEMPORARY_REDIRECT,
+            "https://%.*s:%d%.*s", host_len, host.p, tls_port, (int)url.len, url.p);
+
+    return true;
+}
+
 static void conn_check_expect_100_continue(struct uh_connection *conn)
 {
     struct uh_str expect = conn->get_header(conn, "Expect");
@@ -547,76 +617,6 @@ static void *find_plugin_handler(struct uh_connection_internal *conn, struct lis
     return NULL;
 }
 
-static bool https_redirect(struct uh_connection *conn)
-{
-    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
-    struct uh_str host = conn->get_header(conn, "host");
-    struct uh_str url = conn->get_uri(conn);
-    struct sockaddr_in6 sin6;
-    struct uh_listener *l;
-    int tls_port = -1;
-    int host_len = 0;
-    const char *p;
-
-    if (!conni->l->srv->https_redirect || conni->l->ssl)
-        return false;
-
-    list_for_each_entry(l, &conni->l->srv->listeners, list) {
-        socklen_t sl = sizeof(struct sockaddr_in6);
-
-        if (!l->ssl)
-            continue;
-
-        getsockname(l->sock, (struct sockaddr *)&sin6, &sl);
-
-        if (sin6.sin6_family != conni->saddr.sa.sa_family)
-            continue;
-
-        if (tls_port != -1 && ntohs(sin6.sin6_port) != 443)
-			continue;
-
-		tls_port = ntohs(sin6.sin6_port);
-    }
-
-    if (tls_port == -1)
-        return false;
-
-    if (host.len == 0)
-        return false;
-
-    host_len = 0;
-    p = host.p;
-
-    while (p < host.p + host.len) {
-        if (*p++ == ']') {
-            host_len = p - host.p - 1;
-            break;
-        }
-    }
-
-    if (host_len == 0) {
-        p = host.p;
-        while (p < host.p + host.len) {
-            if (*p++ == ':') {
-                host_len = p - host.p - 1;
-                break;
-            }
-        }
-    }
-
-    if (host_len == 0)
-        host_len = host.len;
-
-    if (tls_port == 443)
-        conn->send_redirect(conn, HTTP_STATUS_TEMPORARY_REDIRECT,
-            "https://%.*s%.*s", host_len, host.p, (int)url.len, url.p);
-    else
-        conn->send_redirect(conn, HTTP_STATUS_TEMPORARY_REDIRECT,
-            "https://%.*s:%d%.*s", host_len, host.p, tls_port, (int)url.len, url.p);
-
-    return true;
-}
-
 static int on_headers_complete(struct http_parser *parser)
 {
     struct uh_connection_internal *conn = (struct uh_connection_internal *)parser->data;
@@ -685,7 +685,7 @@ static int on_message_complete_cb(struct http_parser *parser)
 
     ev_timer_stop(srv->loop, &conn->timer);
 
-    if (!https_redirect(&conn->com))
+    if (!conn->l->srv->https_redirect || !conn_https_redirect(&conn->com))
         conn->handler(&conn->com, UH_EV_COMPLETE);
 
     http_parser_pause(parser, true);
@@ -1051,6 +1051,7 @@ static void conn_init_cb(struct uh_connection *conn)
 
     conn->send_error = conn_send_error;
     conn->send_redirect = conn_send_redirect;
+    conn->https_redirect = conn_https_redirect;
 
     conn->check_expect_100_continue = conn_check_expect_100_continue;
 
