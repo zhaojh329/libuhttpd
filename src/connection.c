@@ -819,7 +819,7 @@ static int ssl_negotiated(struct uh_connection_internal *conn)
     char err_buf[128];
     int ret;
 
-    ret = ssl_connect(conn->ssl, true, on_ssl_verify_error, NULL);
+    ret = ssl_accept(conn->ssl, on_ssl_verify_error, NULL);
     if (ret == SSL_PENDING)
         return 0;
 
