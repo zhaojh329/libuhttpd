@@ -139,6 +139,7 @@ struct uh_connection {
     /* handle cgi */
     void (*serve_cgi)(struct uh_connection *conn, int event);
 
+    bool (*closed)(struct uh_connection *conn);
     void (*close)(struct uh_connection *conn);  /* close low level TCP connection */
     void (*incref)(struct uh_connection *conn);
     void (*decref)(struct uh_connection *conn);

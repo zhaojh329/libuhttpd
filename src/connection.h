@@ -81,6 +81,7 @@ struct uh_connection_internal {
         int fd;
         uint64_t size;
     } file;
+    uint8_t closed;
     size_t refcount;
     struct ev_io ior;
     struct ev_io iow;

@@ -703,6 +703,13 @@ static struct http_parser_settings settings = {
     .on_message_complete = on_message_complete_cb
 };
 
+static bool conn_closed(struct uh_connection *conn)
+{
+    struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
+
+    return __sync_fetch_and_or(&conni->closed, 0);
+}
+
 static void conn_incref(struct uh_connection *conn)
 {
     struct uh_connection_internal *conni = (struct uh_connection_internal *)conn;
@@ -735,6 +742,11 @@ void conn_free(struct uh_connection_internal *conn)
     int port;
 
     conn->flags |= CONN_F_CLOSED;
+
+    if (__sync_fetch_and_or(&conn->closed, 1)) {
+        conn_decref((struct uh_connection *)conn);
+        return;
+    }
 
     ev_timer_stop(loop, &conn->timer);
     ev_io_stop(loop, &conn->ior);
@@ -1061,6 +1073,7 @@ static void conn_init_cb(struct uh_connection *conn)
     conn->download_file = download_file;
     conn->serve_cgi = serve_cgi;
 
+    conn->closed = conn_closed;
     conn->close = conn_close;
 
     conn->incref = conn_incref;
