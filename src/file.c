@@ -38,7 +38,6 @@
 
 #include "uhttpd_internal.h"
 #include "mimetypes.h"
-#include "utils.h"
 #include "file.h"
 
 struct path_info *parse_path_info(struct uh_connection_internal *conn)
