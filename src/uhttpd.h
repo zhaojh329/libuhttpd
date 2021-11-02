@@ -155,6 +155,7 @@ struct uh_server {
     /* Replace the existing loop. Can only be called before calling the listen */
     void (*set_loop)(struct uh_server *srv, struct ev_loop *loop);
     void (*free)(struct uh_server *srv);
+    void (*reuse_port)(struct uh_server *srv, bool val);
     /*
     ** listen an address, multiple call allowed
     ** returns the number of successful listen

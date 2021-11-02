@@ -77,6 +77,8 @@ static void start_server(const char *addr, const char *docroot)
     if (!srv)
         return;
 
+    srv->reuse_port(srv, true);
+
     if (srv->listen(srv, addr, false) < 0)
         return;
 

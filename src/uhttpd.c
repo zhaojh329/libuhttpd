@@ -344,6 +344,13 @@ static void uh_set_loop(struct uh_server *srv, struct ev_loop *loop)
     srvi->loop = loop;
 }
 
+static void uh_reuse_port(struct uh_server *srv, bool val)
+{
+    struct uh_server_internal *srvi = (struct uh_server_internal *)srv;
+
+    srvi->reuse_port = val;
+}
+
 static int parse_address(const char *addr, char **host, char **port)
 {
     static char buf[256];
@@ -420,11 +427,14 @@ static int uh_server_listen(struct uh_server *srv, const char *addr, bool ssl)
 
         /* required to get parallel v4 + v6 working */
         if (p->ai_family == AF_INET6 && setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(int)) < 0) {
-            log_err("setsockopt: %s\n", strerror(errno));
+            log_err("setsockopt: IPV6_V6ONLY: %s\n", strerror(errno));
             goto err;
         }
 
-        setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int));
+        if (srvi->reuse_port && setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int))) {
+            log_err("setsockopt: SO_REUSEPORT: %s\n", strerror(errno));
+            goto err;
+        }
 
         if (bind(sock, p->ai_addr, p->ai_addrlen) < 0) {
             log_err("bind: %s\n", strerror(errno));
@@ -492,6 +502,7 @@ void uh_server_init(struct uh_server *srv, struct ev_loop *loop)
     srv->set_loop = uh_set_loop;
     srv->free = uh_server_free;
 
+    srv->reuse_port = uh_reuse_port;
     srv->listen = uh_server_listen;
 
 #ifdef SSL_SUPPORT
