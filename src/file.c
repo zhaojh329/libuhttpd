@@ -206,7 +206,8 @@ static void file_if_gzip(struct uh_connection *conn, const char *path, const cha
     if (!hdr.p || !memmem(hdr.p, hdr.len, "gzip", 4))
         return;
 
-    if (strcmp(mime, "text/css") && strcmp(mime, "text/javascript") && strcmp(mime, "text/html"))
+    if (strcmp(mime, "text/css") && strcmp(mime, "text/javascript") && strcmp(mime, "text/html") &&
+        strcmp(mime, "application/json"))
         return;
 
     fd = open(path, O_RDONLY);
