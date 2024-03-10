@@ -38,22 +38,22 @@ struct cgi_header_env {
 };
 
 static struct cgi_header_env header_envs[] = {
-    {"accept", strlen("accept"), "HTTP_ACCEPT"},
-    {"accept-charset", strlen("accept-charset"), "HTTP_ACCEPT_CHARSET"},
-    {"accept-encoding", strlen("accept-encoding"), "HTTP_ACCEPT_ENCODING"},
-    {"accept-language", strlen("accept-language"), "HTTP_ACCEPT_LANGUAGE"},
-    {"authorization", strlen("authorization"), "HTTP_AUTHORIZATION"},
-    {"connection", strlen("connection"), "HTTP_CONNECTION"},
-    {"cookie", strlen("cookie"), "HTTP_COOKIE"},
-    {"host", strlen("host"), "HTTP_HOST"},
-    {"origin", strlen("host"), "HTTP_ORIGIN"},
-    {"referer", strlen("referer"), "HTTP_REFERER"},
-    {"user-agent", strlen("user-agent"), "HTTP_USER_AGENT"},
-    {"x-http-method-override", strlen("x-http-method-override"), "HTTP_X_HTTP_METHOD_OVERRIDE"},
-    {"auth-user", strlen("auth-user"), "HTTP_AUTH_USER"},
-    {"auth-pass", strlen("auth-pass"), "HTTP_AUTH_PASS"},
-    {"content-type", strlen("content-type"), "CONTENT_TYPE"},
-    {"content-length", strlen("content-length"), "CONTENT_LENGTH"},
+    {"accept", sizeof("accept")-1, "HTTP_ACCEPT"},
+    {"accept-charset", sizeof("accept-charset")-1, "HTTP_ACCEPT_CHARSET"},
+    {"accept-encoding", sizeof("accept-encoding")-1, "HTTP_ACCEPT_ENCODING"},
+    {"accept-language", sizeof("accept-language")-1, "HTTP_ACCEPT_LANGUAGE"},
+    {"authorization", sizeof("authorization")-1, "HTTP_AUTHORIZATION"},
+    {"connection", sizeof("connection")-1, "HTTP_CONNECTION"},
+    {"cookie", sizeof("cookie")-1, "HTTP_COOKIE"},
+    {"host", sizeof("host")-1, "HTTP_HOST"},
+    {"origin", sizeof("host")-1, "HTTP_ORIGIN"},
+    {"referer", sizeof("referer")-1, "HTTP_REFERER"},
+    {"user-agent", sizeof("user-agent")-1, "HTTP_USER_AGENT"},
+    {"x-http-method-override", sizeof("x-http-method-override")-1, "HTTP_X_HTTP_METHOD_OVERRIDE"},
+    {"auth-user", sizeof("auth-user")-1, "HTTP_AUTH_USER"},
+    {"auth-pass", sizeof("auth-pass")-1, "HTTP_AUTH_PASS"},
+    {"content-type", sizeof("content-type")-1, "CONTENT_TYPE"},
+    {"content-length", sizeof("content-length")-1, "CONTENT_LENGTH"},
     {}
 };
 
