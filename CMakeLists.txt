@@ -7,7 +7,13 @@ include(CheckLibraryExists)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 add_definitions(-D_GNU_SOURCE -D_FILE_OFFSET_BITS=64)
-add_compile_options(-O -Wall -Werror --std=gnu99)
+add_compile_options(-O -Wall --std=gnu99)
+
+option(BUILD_WERROR "Build with -Werror" ON)
+
+if(BUILD_WERROR)
+    add_compile_options(-Werror)
+endif()
 
 option(BUILD_STATIC "Build static library" OFF)
 
