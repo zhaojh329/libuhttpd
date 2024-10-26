@@ -170,7 +170,7 @@ static int uh_server_ssl_init(struct uh_server *srv, const char *cert, const cha
         return -1;
     }
 
-    if (ssl_load_crt_file(srvi->ssl_ctx, cert)) {
+    if (ssl_load_cert_file(srvi->ssl_ctx, cert)) {
         log_err("load certificate file fail\n");
         return -1;
     }
