@@ -840,7 +840,7 @@ static int ssl_negotiated(struct uh_connection_internal *conn)
         return -1;
     }
 
-    conn->flags &= CONN_F_SSL_HANDSHAKE_DONE;
+    conn->flags |= CONN_F_SSL_HANDSHAKE_DONE;
 
     return 1;
 }
