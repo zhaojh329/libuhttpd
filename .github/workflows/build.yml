@@ -11,6 +11,11 @@ jobs:
           - ssl: openssl
             name: OPENSSL
             pkg: libssl-dev
+          # Ubuntu only packages OpenSSL 3.x, so build 4.x from the release
+          - ssl: openssl4
+            name: OPENSSL
+            openssl_version: 4.0.3
+            openssl_sha256: 325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9
           - ssl: mbedtls
             name: MBEDTLS
             pkg: libmbedtls-dev
@@ -21,12 +26,39 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+      - name: cache OpenSSL
+        if: matrix.openssl_version
+        id: cache-openssl
+        uses: actions/cache@v4
+        with:
+          path: ~/openssl
+          key: openssl-${{ matrix.openssl_version }}-ubuntu-24.04
+      - name: build OpenSSL
+        if: matrix.openssl_version && steps.cache-openssl.outputs.cache-hit != 'true'
+        env:
+          version: ${{ matrix.openssl_version }}
+          sha256: ${{ matrix.openssl_sha256 }}
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "https://github.com/openssl/openssl/releases/download/openssl-$version/openssl-$version.tar.gz"
+          echo "$sha256  openssl-$version.tar.gz" | sha256sum -c
+          tar -xzf "openssl-$version.tar.gz"
+          cd "openssl-$version"
+          ./Configure --prefix="$HOME/openssl" --libdir=lib shared no-docs no-tests
+          make -j"$(nproc)"
+          make install_sw
       - name: build
         env:
           name: ${{ matrix.name }}
           pkg: ${{ matrix.pkg }}
+          openssl_version: ${{ matrix.openssl_version }}
         run: |
           sudo apt install -y libev-dev
           [ -n "$pkg" ] && sudo apt install -y $pkg
+          [ -n "$openssl_version" ] && export PKG_CONFIG_PATH="$HOME/openssl/lib/pkgconfig"
           [ "$name" = "none" ] && cmake . -DSSL_SUPPORT=OFF || cmake . -DUSE_$name=ON
           make
+          # Fail if the build used another OpenSSL than the one built above
+          if [ -n "$openssl_version" ]; then
+            readelf -d src/libuhttpd.so | grep "Shared library: \[libssl.so.${openssl_version%%.*}\]"
+          fi
